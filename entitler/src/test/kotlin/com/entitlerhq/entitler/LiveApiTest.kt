@@ -42,7 +42,7 @@ class LiveApiTest {
     @AfterAll
     fun tearDown() {
         if (key == null) return
-        runBlocking {
+        runBlocking<Unit> {
             created.forEach { id -> runCatching { server.customer(id).delete(erase = true) } }
         }
         server.close()
@@ -64,7 +64,7 @@ class LiveApiTest {
 
     @Test
     fun `scopes, pricing with a visitor, and the sample features`() =
-        runBlocking {
+        runBlocking<Unit> {
             val scopes = server.scopes()
             assertTrue(Scope.PlansRead in scopes)
             assertTrue(Scope.TracksAssign in scopes)
@@ -95,7 +95,7 @@ class LiveApiTest {
 
     @Test
     fun `register creates, then stores changed details, and details and update read them`() =
-        runBlocking {
+        runBlocking<Unit> {
             val id = newId()
             created += id
             val customer = server.customer(id)
@@ -110,7 +110,7 @@ class LiveApiTest {
 
     @Test
     fun `checks, entitlements and a group on the default plan, revalidated with a 304`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             val check = customer.check(Feature.OnOff("export_pdf"))
             assertFalse(check.entitled)
@@ -133,7 +133,7 @@ class LiveApiTest {
 
     @Test
     fun `usage reports in gate and observe modes`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             val key = "report-" + UUID.randomUUID()
             val recorded = customer.recordUsage(credits, 5, idempotencyKey = key)
@@ -161,7 +161,7 @@ class LiveApiTest {
 
     @Test
     fun `holds settle, release, read back, and wrap work`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             val held = customer.holdUsage(credits, 10, ttl = 2.minutes)
             assertEquals(UsageOutcome.Held, held.outcome)
@@ -180,7 +180,7 @@ class LiveApiTest {
 
     @Test
     fun `a batch with a replayed event`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             val key = "batch-" + UUID.randomUUID()
             val events =
@@ -196,7 +196,7 @@ class LiveApiTest {
 
     @Test
     fun `plan space and customer pricing`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             val space = customer.planSpace()
             assertTrue(space.held.any { it.plan.key == "free" })
@@ -206,7 +206,7 @@ class LiveApiTest {
 
     @Test
     fun `an in-app client with a customer token provider`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             EntitlerClient({ customer.token(ttl = 5.minutes).token }).use { client ->
                 val scopes = client.scopes()
@@ -224,7 +224,7 @@ class LiveApiTest {
 
     @Test
     fun `a snapshot verifies against the snapshot keys`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             val environment = customer.check(credits).environment.id
             val snapshot = customer.snapshot(ttl = 10.minutes)
@@ -235,7 +235,7 @@ class LiveApiTest {
 
     @Test
     fun `tracks move a customer to Beta and back`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             val beta = server.customer("test_1013").check(Feature.OnOff("sso")).track
             assertEquals("Beta", beta.name)
@@ -245,7 +245,7 @@ class LiveApiTest {
 
     @Test
     fun `as-of reads answer or are refused with limit_reached`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             EntitlerServer(key!!) { asOf = Instant.now().minusSeconds(3600) }.use { past ->
                 try {
@@ -259,7 +259,7 @@ class LiveApiTest {
 
     @Test
     fun `billing moves, add-ons, grants, and provider pages without Stripe`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             assertEquals(
                 "pro",
@@ -311,7 +311,7 @@ class LiveApiTest {
 
     @Test
     fun `the customer list finds a customer, and delete erases them`() =
-        runBlocking {
+        runBlocking<Unit> {
             val customer = registered()
             assertEquals(
                 customer.id,
@@ -332,7 +332,7 @@ class LiveApiTest {
 
     @Test
     fun `errors decode with their codes and request ids`() =
-        runBlocking {
+        runBlocking<Unit> {
             val unregistered = server.customer(newId())
             val notFound = assertFailsWith<EntitlerApiException> { unregistered.recordUsage(credits, 1) }
             assertEquals(ErrorCode.CustomerNotFound, notFound.code)
