@@ -1,0 +1,621 @@
+@file:UseSerializers(InstantSerializer::class)
+
+package com.entitlerhq.entitler
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
+import java.time.Instant
+
+/**
+ * The environment an answer comes from.
+ *
+ * @property id The environment's id.
+ * @property name The environment's name, such as `development`.
+ * @property kind Whether it is a test or live environment.
+ */
+@Serializable
+public data class Environment(
+    val id: String,
+    val name: String,
+    val kind: EnvironmentKind,
+)
+
+/**
+ * A track: the catalogue release a group of customers is served.
+ *
+ * @property id The track's id.
+ * @property name The track's name, such as `All customers`.
+ */
+@Serializable
+public data class Track(
+    val id: String,
+    val name: String,
+)
+
+/**
+ * The experiment arm a customer or visitor is in.
+ *
+ * @property id The experiment's id.
+ * @property arm The arm: `control` or `variant`.
+ */
+@Serializable
+public data class Experiment(
+    val id: String,
+    val arm: String,
+)
+
+/**
+ * A plan the customer could move to for more of a feature.
+ *
+ * @property plan The plan's key.
+ * @property name The plan's name.
+ * @property move The move: `subscribe`, `upgrade`, `switch` or `add`.
+ * @property salesLed True when only the vendor can make the move.
+ */
+@Serializable
+public data class Upgrade(
+    val plan: String,
+    val name: String,
+    val move: String,
+    val salesLed: Boolean,
+)
+
+/**
+ * Where a feature's value comes from, with its share of the value.
+ *
+ * The [type] decides which other properties are set.
+ *
+ * @property type `plan`, `addon`, `grant`, `banked` or `group`.
+ * @property plan The plan's key, for a plan or add-on.
+ * @property name The plan's name, for a plan or add-on.
+ * @property version The plan's version, for a plan or add-on.
+ * @property byDefault For a plan: true when the customer holds no plan yet and reads as the default plan.
+ * @property quantity How many of the add-on the customer holds.
+ * @property grant The grant's id.
+ * @property until When the grant ends, or null when it does not.
+ * @property value This source's share of the value.
+ * @property features The members of a group, every one held.
+ */
+@Serializable
+public data class EntitlementSource(
+    val type: String,
+    val plan: String? = null,
+    val name: String? = null,
+    val version: Long? = null,
+    val byDefault: Boolean? = null,
+    val quantity: Long? = null,
+    val grant: String? = null,
+    val until: Instant? = null,
+    val value: FeatureValue? = null,
+    val features: List<String>? = null,
+)
+
+/**
+ * The answer to a check of one feature for one customer.
+ *
+ * @property customer The customer's external id.
+ * @property feature The feature's key.
+ * @property type The feature's type.
+ * @property entitled Whether the customer is entitled: the server's decision.
+ * @property value The customer's value of the feature; `Amount(0)` when they hold none.
+ * @property sources Where the value comes from.
+ * @property used For a metered feature, how much is used this period or window.
+ * @property held For a metered feature, how much open holds reserve.
+ * @property remaining For a metered feature, how much remains.
+ * @property resetsAt For a metered feature, when the meter starts again, or null.
+ * @property upgrades Plans the customer could move to when not entitled.
+ * @property asOf The instant the answer is for.
+ * @property environment The environment.
+ * @property track The customer's track.
+ * @property release The catalogue release the track serves, or null when it follows a change.
+ * @property change The change the track follows, or null.
+ * @property testers True on a track for testers and in a test environment.
+ * @property experiment The customer's experiment arm, or null.
+ * @property stale True only when the SDK answered from a kept copy because Entitler was unreachable.
+ */
+@Serializable
+public data class Check(
+    val customer: String,
+    val feature: String,
+    val type: FeatureType,
+    val entitled: Boolean,
+    val value: FeatureValue,
+    val sources: List<EntitlementSource>,
+    val used: Long? = null,
+    val held: Long? = null,
+    val remaining: Limit? = null,
+    val resetsAt: Instant? = null,
+    val upgrades: List<Upgrade>,
+    val asOf: Instant,
+    val environment: Environment,
+    val track: Track,
+    val release: Long? = null,
+    val change: String? = null,
+    val testers: Boolean,
+    val experiment: Experiment? = null,
+    val stale: Boolean = false,
+)
+
+/**
+ * The answer to a check of a metered feature, with its meter.
+ *
+ * @property customer The customer's external id.
+ * @property feature The feature's key.
+ * @property type The feature's type, `metered`.
+ * @property entitled Whether the customer is entitled: the server's decision.
+ * @property value The customer's allowance.
+ * @property sources Where the allowance comes from.
+ * @property used How much is used this period or window.
+ * @property held How much open holds reserve; counted in [remaining].
+ * @property remaining How much remains.
+ * @property resetsAt When the meter starts again, or null.
+ * @property upgrades Plans the customer could move to when not entitled.
+ * @property asOf The instant the answer is for.
+ * @property environment The environment.
+ * @property track The customer's track.
+ * @property release The catalogue release the track serves, or null when it follows a change.
+ * @property change The change the track follows, or null.
+ * @property testers True on a track for testers and in a test environment.
+ * @property experiment The customer's experiment arm, or null.
+ * @property stale True only when the SDK answered from a kept copy because Entitler was unreachable.
+ */
+@Serializable
+public data class MeteredCheck(
+    val customer: String,
+    val feature: String,
+    val type: FeatureType,
+    val entitled: Boolean,
+    val value: FeatureValue,
+    val sources: List<EntitlementSource>,
+    val used: Long,
+    val held: Long,
+    val remaining: Limit,
+    val resetsAt: Instant? = null,
+    val upgrades: List<Upgrade>,
+    val asOf: Instant,
+    val environment: Environment,
+    val track: Track,
+    val release: Long? = null,
+    val change: String? = null,
+    val testers: Boolean,
+    val experiment: Experiment? = null,
+    val stale: Boolean = false,
+)
+
+/**
+ * One feature in a customer's entitlement list.
+ *
+ * @property key The feature's key.
+ * @property type The feature's type.
+ * @property entitled Whether the customer is entitled: the server's decision.
+ * @property value The customer's value of the feature.
+ * @property sources Where the value comes from.
+ * @property used For a metered feature, how much is used this period or window.
+ * @property held For a metered feature, how much open holds reserve.
+ * @property remaining For a metered feature, how much remains.
+ * @property resetsAt For a metered feature, when the meter starts again, or null.
+ */
+@Serializable
+public data class Entitlement(
+    val key: String,
+    val type: FeatureType,
+    val entitled: Boolean,
+    val value: FeatureValue,
+    val sources: List<EntitlementSource>,
+    val used: Long? = null,
+    val held: Long? = null,
+    val remaining: Limit? = null,
+    val resetsAt: Instant? = null,
+)
+
+/**
+ * A customer's entitlements, groups included, each with the server's decision.
+ *
+ * ```kotlin
+ * val entitlements = customer.entitlements()
+ * if (entitlements.has(Features.collaboration)) showTeamTools()
+ * ```
+ *
+ * @property customer The customer's external id.
+ * @property entitlements Every feature the list holds.
+ * @property asOf The instant the answer is for.
+ * @property environment The environment; null in a verified snapshot, whose environment id is on the snapshot.
+ * @property track The customer's track.
+ * @property release The catalogue release the track serves, or null when it follows a change.
+ * @property change The change the track follows, or null.
+ * @property testers True on a track for testers and in a test environment.
+ * @property experiment The customer's experiment arm, or null.
+ * @property stale True only when the SDK answered from a kept copy because Entitler was unreachable.
+ */
+@Serializable
+public data class Entitlements(
+    val customer: String,
+    val entitlements: List<Entitlement>,
+    val asOf: Instant,
+    val environment: Environment? = null,
+    val track: Track,
+    val release: Long? = null,
+    val change: String? = null,
+    val testers: Boolean,
+    val experiment: Experiment? = null,
+    val stale: Boolean = false,
+) {
+    /** The entitlement for [feature], or null when the list does not hold it. */
+    public operator fun get(feature: Feature): Entitlement? = get(feature.key)
+
+    /** The entitlement for the feature with [key], or null when the list does not hold it. */
+    public operator fun get(key: String): Entitlement? = entitlements.firstOrNull { it.key == key }
+
+    /** Whether the customer is entitled to [feature]; false when the list does not hold it. */
+    public fun has(feature: Feature): Boolean = has(feature.key)
+
+    /** Whether the customer is entitled to the feature with [key]; false when the list does not hold it. */
+    public fun has(key: String): Boolean = get(key)?.entitled ?: false
+}
+
+/**
+ * A plan, named by its id, key and name.
+ *
+ * @property id The plan's public id.
+ * @property key The plan's key.
+ * @property name The plan's name.
+ * @property kind `plan` or `addon`, where the answer says.
+ * @property version The plan's version, where the answer says.
+ * @property product The plan's product key, where the answer says.
+ */
+@Serializable
+public data class PlanSummary(
+    val id: String,
+    val key: String,
+    val name: String,
+    val kind: String? = null,
+    val version: Long? = null,
+    val product: String? = null,
+)
+
+/**
+ * A product, named by its key and name.
+ *
+ * @property key The product's key.
+ * @property name The product's name.
+ */
+@Serializable
+public data class ProductSummary(
+    val key: String,
+    val name: String,
+)
+
+/**
+ * A plan the customer holds, in their plan space.
+ *
+ * @property plan The plan.
+ * @property product The plan's product, or null.
+ * @property version The version held, or null.
+ * @property byDefault True when the customer holds no plan yet and reads as the default plan.
+ */
+@Serializable
+public data class HeldPlan(
+    val plan: PlanSummary,
+    val product: ProductSummary? = null,
+    val version: Long? = null,
+    val byDefault: Boolean,
+)
+
+/**
+ * What a move changes for the customer.
+ *
+ * @property kind `Gains`, `Loses`, `Changes` or `Same`.
+ * @property text The change in words.
+ */
+@Serializable
+public data class Impact(
+    val kind: String,
+    val text: String,
+)
+
+/**
+ * A price at a payment provider.
+ *
+ * @property amount The amount in the currency's smallest unit.
+ * @property currency The currency code, such as `aud`.
+ * @property interval `day`, `week`, `month` or `year`, or null for a one-time price.
+ * @property intervalCount How many intervals each charge covers.
+ * @property tax `inclusive`, `exclusive` or `unspecified`.
+ */
+@Serializable
+public data class ProviderPrice(
+    val amount: Long,
+    val currency: String,
+    val interval: String? = null,
+    val intervalCount: Long,
+    val tax: String,
+)
+
+/**
+ * A SKU a payment provider sells a plan's period as.
+ *
+ * @property period The plan's period.
+ * @property connector The connector, such as `stripe`.
+ * @property ids The provider's ids for the SKU.
+ * @property price The provider's price, or null when unknown.
+ */
+@Serializable
+public data class OfferedSku(
+    val period: String,
+    val connector: String,
+    val ids: Map<String, String>,
+    val price: ProviderPrice? = null,
+)
+
+/**
+ * A move the customer could make from their plan space.
+ *
+ * @property plan The plan to move to.
+ * @property product The plan's product, or null.
+ * @property move `subscribe`, `move`, `add` or `replace`.
+ * @property from The plan it moves from, or null.
+ * @property direction `up`, `down` or `cross`.
+ * @property mode `self-serve` or `sales-led`.
+ * @property selfServe Whether the customer may make it themselves.
+ * @property disabledReason Why the move is not available now, or null.
+ * @property timing When it takes effect: `now` or `end` (the API's `when`).
+ * @property impact What it changes.
+ * @property skus The SKUs that sell it.
+ */
+@Serializable
+public data class MoveOption(
+    val plan: PlanSummary,
+    val product: ProductSummary? = null,
+    val move: String,
+    val from: PlanSummary? = null,
+    val direction: String,
+    val mode: String,
+    val selfServe: Boolean,
+    val disabledReason: String? = null,
+    @SerialName("when") val timing: String,
+    val impact: List<Impact>,
+    val skus: List<OfferedSku>,
+)
+
+/**
+ * A customer's plan space: the plans they hold and the moves open to them.
+ *
+ * @property customer The customer's external id.
+ * @property held The plans they hold.
+ * @property options The moves open to them.
+ * @property asOf The instant the answer is for.
+ * @property environment The environment.
+ * @property track The customer's track.
+ * @property release The catalogue release the track serves, or null when it follows a change.
+ * @property change The change the track follows, or null.
+ * @property testers True on a track for testers and in a test environment.
+ * @property experiment The customer's experiment arm, or null.
+ * @property stale True only when the SDK answered from a kept copy because Entitler was unreachable.
+ */
+@Serializable
+public data class PlanSpace(
+    val customer: String,
+    val held: List<HeldPlan>,
+    val options: List<MoveOption>,
+    val asOf: Instant,
+    val environment: Environment,
+    val track: Track,
+    val release: Long? = null,
+    val change: String? = null,
+    val testers: Boolean,
+    val experiment: Experiment? = null,
+    val stale: Boolean = false,
+)
+
+/**
+ * A product on the pricing page.
+ *
+ * @property key The product's key.
+ * @property name The product's name.
+ * @property defaultPlan The key of the plan a new customer reads as, or null.
+ */
+@Serializable
+public data class PublishedProduct(
+    val key: String,
+    val name: String,
+    val defaultPlan: String? = null,
+)
+
+/**
+ * A billing period a plan is sold for.
+ *
+ * @property label The period's label, such as `Monthly`.
+ * @property count How many units it lasts.
+ * @property unit `days`, `weeks` or `months`.
+ */
+@Serializable
+public data class BillingPeriod(
+    val label: String,
+    val count: Int,
+    val unit: String,
+)
+
+/**
+ * A payment provider connection.
+ *
+ * @property provider `stripe`, `apple` or `google`.
+ * @property connectionId The connection's id.
+ */
+@Serializable
+public data class Channel(
+    val provider: String,
+    val connectionId: String,
+)
+
+/**
+ * Where a plan's period is listed for sale.
+ *
+ * @property channel The connection.
+ * @property name The connection's name.
+ * @property mode `live` or `test`, or null.
+ * @property purchasable Whether it can be bought there now.
+ * @property ids The provider's ids, or null.
+ * @property price The provider's price, or null.
+ */
+@Serializable
+public data class ListingChannel(
+    val channel: Channel,
+    val name: String,
+    val mode: String? = null,
+    val purchasable: Boolean,
+    val ids: Map<String, String>? = null,
+    val price: ProviderPrice? = null,
+)
+
+/**
+ * A plan period's listings.
+ *
+ * @property period The period's label.
+ * @property channels Where it is listed.
+ */
+@Serializable
+public data class PeriodListing(
+    val period: String,
+    val channels: List<ListingChannel>,
+)
+
+/**
+ * A plan on the pricing page.
+ *
+ * @property id The plan's public id.
+ * @property key The plan's key.
+ * @property name The plan's name.
+ * @property description The plan's description.
+ * @property kind `plan` or `addon`.
+ * @property product The plan's product key, or null.
+ * @property salesLed True when only the vendor sells it.
+ * @property status `active` or `legacy`.
+ * @property version The plan's version, or null.
+ * @property default True for the plan a new customer reads as.
+ * @property periods The periods it is sold for.
+ * @property attachesTo For an add-on, the plans it attaches to.
+ * @property features Each feature's value in the plan, by key.
+ * @property listings Where each period is listed for sale.
+ */
+@Serializable
+public data class PricingPlan(
+    val id: String,
+    val key: String,
+    val name: String,
+    val description: String,
+    val kind: String,
+    val product: String? = null,
+    val salesLed: Boolean,
+    val status: String,
+    val version: Long? = null,
+    val default: Boolean,
+    val periods: List<BillingPeriod>,
+    val attachesTo: List<String>,
+    val features: Map<String, FeatureValue>,
+    val listings: List<PeriodListing>,
+)
+
+/**
+ * Pricing: the plans on sale, always computed now.
+ *
+ * @property customer The customer's external id for customer pricing, else null.
+ * @property defaultPlan The key of the plan a new customer reads as, or null.
+ * @property products The products on sale.
+ * @property plans The plans on sale.
+ * @property environment The environment.
+ * @property track The track whose catalogue is on sale.
+ * @property release The catalogue release the track serves, or null when it follows a change.
+ * @property change The change the track follows, or null.
+ * @property testers True on a track for testers and in a test environment.
+ * @property experiment The experiment arm, or null.
+ * @property stale True only when the SDK answered from a kept copy because Entitler was unreachable.
+ */
+@Serializable
+public data class Pricing(
+    val customer: String? = null,
+    val defaultPlan: String? = null,
+    val products: List<PublishedProduct>,
+    val plans: List<PricingPlan>,
+    val environment: Environment,
+    val track: Track,
+    val release: Long? = null,
+    val change: String? = null,
+    val testers: Boolean,
+    val experiment: Experiment? = null,
+    val stale: Boolean = false,
+)
+
+/**
+ * How often a metered feature's meter starts again.
+ *
+ * @property count How many units.
+ * @property unit `hours`, `days`, `weeks` or `months`.
+ */
+@Serializable
+public data class MeterWindow(
+    val count: Int,
+    val unit: String,
+)
+
+/**
+ * A feature in the catalogue.
+ *
+ * @property id The feature's public id.
+ * @property key The feature's key.
+ * @property name The feature's name.
+ * @property type The feature's type.
+ * @property description The feature's description.
+ * @property unit The feature's unit, such as `credits`, or empty.
+ * @property resetEvery How often the meter starts again, or null.
+ * @property archived True when the feature is archived.
+ * @property includes For a group, its direct members' keys.
+ */
+@Serializable
+public data class FeatureListing(
+    val id: String,
+    val key: String,
+    val name: String,
+    val type: FeatureType,
+    val description: String,
+    val unit: String,
+    val resetEvery: MeterWindow? = null,
+    val archived: Boolean,
+    val includes: List<String>,
+)
+
+/**
+ * The catalogue's features, as the release the key's track serves.
+ *
+ * @property features The features.
+ * @property environment The environment.
+ * @property track The track.
+ * @property release The catalogue release the track serves, or null when it follows a change.
+ * @property change The change the track follows, or null.
+ */
+@Serializable
+public data class FeatureList(
+    val features: List<FeatureListing>,
+    val environment: Environment,
+    val track: Track,
+    val release: Long? = null,
+    val change: String? = null,
+)
+
+/**
+ * The scopes a client's credential holds.
+ *
+ * ```kotlin
+ * if (Scope.UsageWrite in client.scopes()) showUsageButton()
+ * ```
+ *
+ * @property granted The scopes this SDK knows, in a fixed order.
+ * @property registration For an identity client, whether the sign-in provider lets a new person register; else null.
+ */
+public data class Scopes(
+    val granted: List<Scope>,
+    val registration: Boolean?,
+) {
+    /** Whether the credential holds [scope]. */
+    public operator fun contains(scope: Scope): Boolean = scope in granted
+}
