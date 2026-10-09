@@ -9,7 +9,7 @@ import java.io.File
 import java.io.PrintStream
 import kotlin.system.exitProcess
 
-private const val DEFAULT_OUT = "src/main/kotlin/EntitlerFeatures.kt"
+private const val DEFAULT_OUT = "src/main/kotlin/Features.kt"
 
 private val usage =
     """
