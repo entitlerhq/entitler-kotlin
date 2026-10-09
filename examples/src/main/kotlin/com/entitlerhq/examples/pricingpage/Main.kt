@@ -2,6 +2,7 @@ package com.entitlerhq.examples.pricingpage
 
 import com.entitlerhq.entitler.EntitlerServer
 import com.entitlerhq.entitler.FeatureValue
+import com.entitlerhq.entitler.PlanKind
 import kotlinx.coroutines.runBlocking
 
 private const val MINOR_UNITS = 100.0
@@ -12,7 +13,7 @@ fun main(): Unit =
         EntitlerServer(System.getenv("ENTITLER_KEY")).use { entitler ->
             val visitor = entitler.newVisitorId()
             val pricing = entitler.pricing(visitor = visitor)
-            for (plan in pricing.plans.filter { it.kind == "plan" }) {
+            for (plan in pricing.plans.filter { it.kind == PlanKind.Plan }) {
                 println(plan.name + if (plan.default) " (where everyone starts)" else "")
                 for (period in plan.periods) {
                     val listing = plan.listings.firstOrNull { it.period == period.label }

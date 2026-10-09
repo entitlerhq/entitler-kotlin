@@ -46,6 +46,28 @@ class DecodingTest {
         }
 
     @Test
+    fun `a field whose JSON type differs from its schema's does not decode`() =
+        runTest {
+            val changes =
+                listOf(
+                    "entitled" to kotlinx.serialization.json.JsonPrimitive("true"),
+                    "release" to kotlinx.serialization.json.JsonPrimitive("2"),
+                    "type" to kotlinx.serialization.json.JsonPrimitive(5),
+                    "asOf" to kotlinx.serialization.json.JsonPrimitive(1_782_898_200),
+                )
+            for ((name, value) in changes) {
+                api.reply(
+                    body =
+                        kotlinx.serialization.json
+                            .JsonObject(fixtureJson("check") + (name to value))
+                            .toString(),
+                )
+                val failure = kotlin.test.assertFailsWith<EntitlerApiException>(name) { customer.check("export_pdf") }
+                assertEquals(ErrorCode.InvalidResponse, failure.code, name)
+            }
+        }
+
+    @Test
     fun `unknown fields are ignored and unknown enum values kept`() =
         runTest {
             val check = fixtureJson("check").toMutableMap()

@@ -38,7 +38,7 @@ public data class RegisteredCustomer(
  * @property plans Their plans in every product.
  * @property defaultPlan The plan they read as before holding one, or null.
  * @property status Their subscription's status.
- * @property kind `recurring`, `one_time`, `changing`, `default` or `none`.
+ * @property kind How they hold their plan.
  * @property metadata Your app's metadata.
  * @property track Their track.
  * @property testCustomer True for a test customer.
@@ -56,7 +56,7 @@ public data class CustomerSummary(
     val plans: List<PlanSummary>,
     val defaultPlan: PlanSummary? = null,
     val status: String,
-    val kind: String,
+    val kind: CustomerKind,
     val metadata: Map<String, String>,
     val track: Track,
     val testCustomer: Boolean,
@@ -333,14 +333,14 @@ public data class IssuedSnapshot(
  *
  * @property customer The customer's external id.
  * @property track Their track now.
- * @property source `server`, `dashboard` or `store_sandbox`, or null for All customers.
+ * @property source Who put them on the track, or null for All customers.
  * @property previousTrackId The track they were on, or null.
  */
 @Serializable
 public data class CustomerTrack(
     val customer: String,
     val track: Track,
-    val source: String? = null,
+    val source: TrackSource? = null,
     val previousTrackId: String? = null,
 )
 

@@ -176,7 +176,7 @@ public data class UsageEventsResult(
  * @property id The usage id.
  * @property feature The feature's key.
  * @property amount For a report, the amount used; for a meter set, how much it moved the meter.
- * @property kind `use` or `adjust`.
+ * @property kind The kind of entry.
  * @property setTo For a meter set, the value the meter was set to; else null.
  * @property source Which kind of credential reported it.
  * @property actor Who made a dashboard change, or null.
@@ -188,7 +188,7 @@ public data class UsageEvent(
     val id: String,
     val feature: String,
     val amount: Long,
-    val kind: String,
+    val kind: UsageEventKind,
     val setTo: Long? = null,
     val source: UsageSource,
     val actor: String? = null,

@@ -196,7 +196,7 @@ class ConformanceDecodingTest {
             assertNull(actual, "channel")
         } else {
             val channel = assertNotNull(actual, "channel")
-            assertEquals(expected.jsonObject.str("provider"), channel.provider)
+            assertOpen(expected.jsonObject["provider"]!!, channel.provider, "channel.provider")
             assertEquals(expected.jsonObject.str("connectionId"), channel.connectionId)
         }
     }

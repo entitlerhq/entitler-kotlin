@@ -642,3 +642,550 @@ internal object ListingProblemKindSerializer : OpenStringSerializer<ListingProbl
     ::ListingProblemKind,
     ListingProblemKind::value,
 )
+
+/**
+ * A provider that sells through a connection.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = ProviderSerializer::class)
+public data class Provider(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Stripe. */
+        public val Stripe: Provider = Provider("stripe")
+
+        /** The App Store. */
+        public val Apple: Provider = Provider("apple")
+
+        /** Google Play. */
+        public val Google: Provider = Provider("google")
+    }
+}
+
+internal object ProviderSerializer : OpenStringSerializer<Provider>(
+    "Provider",
+    ::Provider,
+    Provider::value,
+)
+
+/**
+ * Whether a connection takes real money or test money.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = ConnectionModeSerializer::class)
+public data class ConnectionMode(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Real money. */
+        public val Live: ConnectionMode = ConnectionMode("live")
+
+        /** Test money. */
+        public val Test: ConnectionMode = ConnectionMode("test")
+    }
+}
+
+internal object ConnectionModeSerializer : OpenStringSerializer<ConnectionMode>(
+    "ConnectionMode",
+    ::ConnectionMode,
+    ConnectionMode::value,
+)
+
+/**
+ * Whether a plan is a base plan or an add-on.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = PlanKindSerializer::class)
+public data class PlanKind(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** A base plan. */
+        public val Plan: PlanKind = PlanKind("plan")
+
+        /** An add-on. */
+        public val AddOn: PlanKind = PlanKind("addon")
+    }
+}
+
+internal object PlanKindSerializer : OpenStringSerializer<PlanKind>(
+    "PlanKind",
+    ::PlanKind,
+    PlanKind::value,
+)
+
+/**
+ * Whether a plan is still sold to new customers.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = PlanStatusSerializer::class)
+public data class PlanStatus(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Sold to new customers. */
+        public val Active: PlanStatus = PlanStatus("active")
+
+        /** Kept for the customers who hold it, sold to no one new. */
+        public val Legacy: PlanStatus = PlanStatus("legacy")
+    }
+}
+
+internal object PlanStatusSerializer : OpenStringSerializer<PlanStatus>(
+    "PlanStatus",
+    ::PlanStatus,
+    PlanStatus::value,
+)
+
+/**
+ * The unit of a billing period.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = PeriodUnitSerializer::class)
+public data class PeriodUnit(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Days. */
+        public val Days: PeriodUnit = PeriodUnit("days")
+
+        /** Weeks. */
+        public val Weeks: PeriodUnit = PeriodUnit("weeks")
+
+        /** Months. */
+        public val Months: PeriodUnit = PeriodUnit("months")
+    }
+}
+
+internal object PeriodUnitSerializer : OpenStringSerializer<PeriodUnit>(
+    "PeriodUnit",
+    ::PeriodUnit,
+    PeriodUnit::value,
+)
+
+/**
+ * The unit of a meter's reset window.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = MeterUnitSerializer::class)
+public data class MeterUnit(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Hours. */
+        public val Hours: MeterUnit = MeterUnit("hours")
+
+        /** Days. */
+        public val Days: MeterUnit = MeterUnit("days")
+
+        /** Weeks. */
+        public val Weeks: MeterUnit = MeterUnit("weeks")
+
+        /** Months. */
+        public val Months: MeterUnit = MeterUnit("months")
+    }
+}
+
+internal object MeterUnitSerializer : OpenStringSerializer<MeterUnit>(
+    "MeterUnit",
+    ::MeterUnit,
+    MeterUnit::value,
+)
+
+/**
+ * The move that would give a customer more of a feature.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = UpgradeMoveSerializer::class)
+public data class UpgradeMove(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Subscribe to the plan. */
+        public val Subscribe: UpgradeMove = UpgradeMove("subscribe")
+
+        /** Move up to the plan. */
+        public val Upgrade: UpgradeMove = UpgradeMove("upgrade")
+
+        /** Switch to the plan. */
+        public val Switch: UpgradeMove = UpgradeMove("switch")
+
+        /** Add the plan as an add-on. */
+        public val Add: UpgradeMove = UpgradeMove("add")
+    }
+}
+
+internal object UpgradeMoveSerializer : OpenStringSerializer<UpgradeMove>(
+    "UpgradeMove",
+    ::UpgradeMove,
+    UpgradeMove::value,
+)
+
+/**
+ * How a move changes a feature for the customer.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = ImpactKindSerializer::class)
+public data class ImpactKind(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The customer gains the feature. */
+        public val Gains: ImpactKind = ImpactKind("Gains")
+
+        /** The customer loses the feature. */
+        public val Loses: ImpactKind = ImpactKind("Loses")
+
+        /** The feature's value changes. */
+        public val Changes: ImpactKind = ImpactKind("Changes")
+
+        /** The feature stays the same. */
+        public val Same: ImpactKind = ImpactKind("Same")
+    }
+}
+
+internal object ImpactKindSerializer : OpenStringSerializer<ImpactKind>(
+    "ImpactKind",
+    ::ImpactKind,
+    ImpactKind::value,
+)
+
+/**
+ * How often a provider price recurs.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = PriceIntervalSerializer::class)
+public data class PriceInterval(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Daily. */
+        public val Day: PriceInterval = PriceInterval("day")
+
+        /** Weekly. */
+        public val Week: PriceInterval = PriceInterval("week")
+
+        /** Monthly. */
+        public val Month: PriceInterval = PriceInterval("month")
+
+        /** Yearly. */
+        public val Year: PriceInterval = PriceInterval("year")
+    }
+}
+
+internal object PriceIntervalSerializer : OpenStringSerializer<PriceInterval>(
+    "PriceInterval",
+    ::PriceInterval,
+    PriceInterval::value,
+)
+
+/**
+ * Whether a provider price includes tax.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = TaxBehaviourSerializer::class)
+public data class TaxBehaviour(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The price includes tax. */
+        public val Inclusive: TaxBehaviour = TaxBehaviour("inclusive")
+
+        /** Tax is added to the price. */
+        public val Exclusive: TaxBehaviour = TaxBehaviour("exclusive")
+
+        /** The provider does not say. */
+        public val Unspecified: TaxBehaviour = TaxBehaviour("unspecified")
+    }
+}
+
+internal object TaxBehaviourSerializer : OpenStringSerializer<TaxBehaviour>(
+    "TaxBehaviour",
+    ::TaxBehaviour,
+    TaxBehaviour::value,
+)
+
+/**
+ * The kind of move to a plan.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = PlanMoveSerializer::class)
+public data class PlanMove(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Subscribe to a first plan. */
+        public val Subscribe: PlanMove = PlanMove("subscribe")
+
+        /** Move from the held plan. */
+        public val Move: PlanMove = PlanMove("move")
+
+        /** Add an add-on. */
+        public val Add: PlanMove = PlanMove("add")
+
+        /** Replace the held plan in another product. */
+        public val Replace: PlanMove = PlanMove("replace")
+    }
+}
+
+internal object PlanMoveSerializer : OpenStringSerializer<PlanMove>(
+    "PlanMove",
+    ::PlanMove,
+    PlanMove::value,
+)
+
+/**
+ * Which way a move goes.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = MoveDirectionSerializer::class)
+public data class MoveDirection(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** An upgrade. */
+        public val Up: MoveDirection = MoveDirection("up")
+
+        /** A downgrade. */
+        public val Down: MoveDirection = MoveDirection("down")
+
+        /** A move across, neither up nor down. */
+        public val Cross: MoveDirection = MoveDirection("cross")
+    }
+}
+
+internal object MoveDirectionSerializer : OpenStringSerializer<MoveDirection>(
+    "MoveDirection",
+    ::MoveDirection,
+    MoveDirection::value,
+)
+
+/**
+ * How a plan is sold.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = SellingSerializer::class)
+public data class Selling(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The customer moves themselves. */
+        public val SelfServe: Selling = Selling("self-serve")
+
+        /** Only the vendor can make the move. */
+        public val SalesLed: Selling = Selling("sales-led")
+    }
+}
+
+internal object SellingSerializer : OpenStringSerializer<Selling>(
+    "Selling",
+    ::Selling,
+    Selling::value,
+)
+
+/**
+ * When a move takes effect.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = MoveTimingSerializer::class)
+public data class MoveTiming(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Now. */
+        public val Now: MoveTiming = MoveTiming("now")
+
+        /** At the end of the current period. */
+        public val End: MoveTiming = MoveTiming("end")
+    }
+}
+
+internal object MoveTimingSerializer : OpenStringSerializer<MoveTiming>(
+    "MoveTiming",
+    ::MoveTiming,
+    MoveTiming::value,
+)
+
+/**
+ * How a customer holds their plan.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = CustomerKindSerializer::class)
+public data class CustomerKind(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** A recurring subscription. */
+        public val Recurring: CustomerKind = CustomerKind("recurring")
+
+        /** A one-time purchase. */
+        public val OneTime: CustomerKind = CustomerKind("one_time")
+
+        /** A plan change is under way. */
+        public val Changing: CustomerKind = CustomerKind("changing")
+
+        /** The default plan, with no purchase. */
+        public val Default: CustomerKind = CustomerKind("default")
+
+        /** No plan. */
+        public val None: CustomerKind = CustomerKind("none")
+    }
+}
+
+internal object CustomerKindSerializer : OpenStringSerializer<CustomerKind>(
+    "CustomerKind",
+    ::CustomerKind,
+    CustomerKind::value,
+)
+
+/**
+ * Who put a customer on their track.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = TrackSourceSerializer::class)
+public data class TrackSource(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Your server. */
+        public val Server: TrackSource = TrackSource("server")
+
+        /** Someone in the dashboard. */
+        public val Dashboard: TrackSource = TrackSource("dashboard")
+
+        /** A store sandbox purchase. */
+        public val StoreSandbox: TrackSource = TrackSource("store_sandbox")
+    }
+}
+
+internal object TrackSourceSerializer : OpenStringSerializer<TrackSource>(
+    "TrackSource",
+    ::TrackSource,
+    TrackSource::value,
+)
+
+/**
+ * The kind of entry in the usage log.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = UsageEventKindSerializer::class)
+public data class UsageEventKind(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Usage reported. */
+        public val Use: UsageEventKind = UsageEventKind("use")
+
+        /** The meter set to a value. */
+        public val Adjust: UsageEventKind = UsageEventKind("adjust")
+    }
+}
+
+internal object UsageEventKindSerializer : OpenStringSerializer<UsageEventKind>(
+    "UsageEventKind",
+    ::UsageEventKind,
+    UsageEventKind::value,
+)

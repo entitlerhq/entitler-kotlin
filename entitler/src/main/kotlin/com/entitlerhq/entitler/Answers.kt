@@ -50,14 +50,14 @@ public data class Experiment(
  *
  * @property plan The plan's key.
  * @property name The plan's name.
- * @property move The move: `subscribe`, `upgrade`, `switch` or `add`.
+ * @property move The move.
  * @property salesLed True when only the vendor can make the move.
  */
 @Serializable
 public data class Upgrade(
     val plan: String,
     val name: String,
-    val move: String,
+    val move: UpgradeMove,
     val salesLed: Boolean,
 )
 
@@ -260,7 +260,7 @@ public data class Entitlements(
  * @property id The plan's public id.
  * @property key The plan's key.
  * @property name The plan's name.
- * @property kind `plan` or `addon`, where the answer says.
+ * @property kind Whether it is a base plan or an add-on, where the answer says.
  * @property version The plan's version, where the answer says.
  * @property product The plan's product key, where the answer says.
  */
@@ -269,7 +269,7 @@ public data class PlanSummary(
     val id: String,
     val key: String,
     val name: String,
-    val kind: String? = null,
+    val kind: PlanKind? = null,
     val version: Long? = null,
     val product: String? = null,
 )
@@ -305,12 +305,12 @@ public data class HeldPlan(
 /**
  * What a move changes for the customer.
  *
- * @property kind `Gains`, `Loses`, `Changes` or `Same`.
+ * @property kind How the move changes the feature.
  * @property text The change in words.
  */
 @Serializable
 public data class Impact(
-    val kind: String,
+    val kind: ImpactKind,
     val text: String,
 )
 
@@ -319,17 +319,17 @@ public data class Impact(
  *
  * @property amount The amount in the currency's smallest unit.
  * @property currency The currency code, such as `aud`.
- * @property interval `day`, `week`, `month` or `year`, or null for a one-time price.
+ * @property interval How often it recurs, or null for a one-time price.
  * @property intervalCount How many intervals each charge covers.
- * @property tax `inclusive`, `exclusive` or `unspecified`.
+ * @property tax Whether the amount includes tax.
  */
 @Serializable
 public data class ProviderPrice(
     val amount: Long,
     val currency: String,
-    val interval: String? = null,
+    val interval: PriceInterval? = null,
     val intervalCount: Long,
-    val tax: String,
+    val tax: TaxBehaviour,
 )
 
 /**
@@ -353,13 +353,13 @@ public data class OfferedSku(
  *
  * @property plan The plan to move to.
  * @property product The plan's product, or null.
- * @property move `subscribe`, `move`, `add` or `replace`.
+ * @property move The kind of move.
  * @property from The plan it moves from, or null.
- * @property direction `up`, `down` or `cross`.
- * @property mode `self-serve` or `sales-led`.
+ * @property direction Which way the move goes.
+ * @property mode [Selling.SelfServe] when the customer may make the move alone, [Selling.SalesLed] when only the vendor may.
  * @property selfServe Whether the customer may make it themselves.
  * @property disabledReason Why the move is not available now, or null.
- * @property timing When it takes effect: `now` or `end` (the API's `when`).
+ * @property timing When it takes effect (the API's `when`).
  * @property impact What it changes.
  * @property skus The SKUs that sell it.
  */
@@ -367,13 +367,13 @@ public data class OfferedSku(
 public data class MoveOption(
     val plan: PlanSummary,
     val product: ProductSummary? = null,
-    val move: String,
+    val move: PlanMove,
     val from: PlanSummary? = null,
-    val direction: String,
-    val mode: String,
+    val direction: MoveDirection,
+    val mode: Selling,
     val selfServe: Boolean,
     val disabledReason: String? = null,
-    @SerialName("when") val timing: String,
+    @SerialName("when") val timing: MoveTiming,
     val impact: List<Impact>,
     val skus: List<OfferedSku>,
 )
@@ -427,24 +427,24 @@ public data class PublishedProduct(
  *
  * @property label The period's label, such as `Monthly`.
  * @property count How many units it lasts.
- * @property unit `days`, `weeks` or `months`.
+ * @property unit The unit.
  */
 @Serializable
 public data class BillingPeriod(
     val label: String,
     val count: Int,
-    val unit: String,
+    val unit: PeriodUnit,
 )
 
 /**
  * A payment provider connection.
  *
- * @property provider `stripe`, `apple` or `google`.
+ * @property provider The connection's provider.
  * @property connectionId The connection's id.
  */
 @Serializable
 public data class Channel(
-    val provider: String,
+    val provider: Provider,
     val connectionId: String,
 )
 
@@ -453,7 +453,7 @@ public data class Channel(
  *
  * @property channel The connection.
  * @property name The connection's name.
- * @property mode `live` or `test`, or null.
+ * @property mode Whether the connection takes real or test money, or null.
  * @property purchasable Whether it can be bought there now.
  * @property ids The provider's ids, or null.
  * @property price The provider's price, or null.
@@ -462,7 +462,7 @@ public data class Channel(
 public data class ListingChannel(
     val channel: Channel,
     val name: String,
-    val mode: String? = null,
+    val mode: ConnectionMode? = null,
     val purchasable: Boolean,
     val ids: Map<String, String>? = null,
     val price: ProviderPrice? = null,
@@ -487,10 +487,10 @@ public data class PeriodListing(
  * @property key The plan's key.
  * @property name The plan's name.
  * @property description The plan's description.
- * @property kind `plan` or `addon`.
+ * @property kind Whether it is a base plan or an add-on.
  * @property product The plan's product key, or null.
  * @property salesLed True when only the vendor sells it.
- * @property status `active` or `legacy`.
+ * @property status Whether it is still sold to new customers.
  * @property version The plan's version, or null.
  * @property default True for the plan a new customer reads as.
  * @property periods The periods it is sold for.
@@ -504,10 +504,10 @@ public data class PricingPlan(
     val key: String,
     val name: String,
     val description: String,
-    val kind: String,
+    val kind: PlanKind,
     val product: String? = null,
     val salesLed: Boolean,
-    val status: String,
+    val status: PlanStatus,
     val version: Long? = null,
     val default: Boolean,
     val periods: List<BillingPeriod>,
@@ -550,12 +550,12 @@ public data class Pricing(
  * How often a metered feature's meter starts again.
  *
  * @property count How many units.
- * @property unit `hours`, `days`, `weeks` or `months`.
+ * @property unit The unit.
  */
 @Serializable
 public data class MeterWindow(
     val count: Int,
-    val unit: String,
+    val unit: MeterUnit,
 )
 
 /**
