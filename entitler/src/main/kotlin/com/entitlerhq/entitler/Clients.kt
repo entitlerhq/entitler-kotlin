@@ -160,8 +160,8 @@ public interface EntitlerServer : Closeable {
         environment: String,
         issuer: String = SNAPSHOT_ISSUER,
         now: Instant = Instant.now(),
-        clockSkew: Duration = 60.seconds,
-    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkew)
+        clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
+    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkewSeconds)
 
     /** Verifies a snapshot against the key set from [snapshotKeys], with no request. */
     public fun verifySnapshot(
@@ -171,8 +171,8 @@ public interface EntitlerServer : Closeable {
         environment: String,
         issuer: String = SNAPSHOT_ISSUER,
         now: Instant = Instant.now(),
-        clockSkew: Duration = 60.seconds,
-    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkew)
+        clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
+    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkewSeconds)
 
     /** A new visitor id for your app to keep, for example in a first-party cookie. */
     public fun newVisitorId(): String = com.entitlerhq.entitler.newVisitorId()
@@ -210,8 +210,8 @@ public interface EntitlerClient : Closeable {
         environment: String,
         issuer: String = SNAPSHOT_ISSUER,
         now: Instant = Instant.now(),
-        clockSkew: Duration = 60.seconds,
-    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkew)
+        clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
+    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkewSeconds)
 
     /** Verifies a snapshot against the key set from [snapshotKeys], with no request. */
     public fun verifySnapshot(
@@ -221,8 +221,8 @@ public interface EntitlerClient : Closeable {
         environment: String,
         issuer: String = SNAPSHOT_ISSUER,
         now: Instant = Instant.now(),
-        clockSkew: Duration = 60.seconds,
-    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkew)
+        clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
+    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkewSeconds)
 }
 
 /**
@@ -287,14 +287,14 @@ private fun batchError(error: EntitlerException): UsageEventError =
     }
 
 private fun requireKey(key: String): String =
-    key.trim().also {
+    trimCredential(key).also {
         require(it.isNotEmpty()) { "Provide an Entitler API key from the dashboard." }
     }
 
 private fun requireToken(
     token: String,
     message: String,
-): String = token.trim().also { require(it.isNotEmpty()) { message } }
+): String = trimCredential(token).also { require(it.isNotEmpty()) { message } }
 
 private val knownScopes =
     listOf(

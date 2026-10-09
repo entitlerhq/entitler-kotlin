@@ -76,7 +76,7 @@ private const val UNLIMITED = "unlimited"
 private fun decodeLimit(element: kotlinx.serialization.json.JsonElement): Limit {
     if (element is JsonPrimitive) {
         if (element.isString && element.content == UNLIMITED) return FeatureValue.Unlimited
-        if (!element.isString) element.longOrNull?.let { return FeatureValue.Amount(it) }
+        if (!element.isString) element.longOrNull?.takeIf { it in 0..MAX_AMOUNT }?.let { return FeatureValue.Amount(it) }
     }
     throw SerializationException("Expected true, a whole number or \"unlimited\".")
 }

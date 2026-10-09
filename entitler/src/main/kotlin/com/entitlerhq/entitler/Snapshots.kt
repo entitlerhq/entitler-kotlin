@@ -19,8 +19,6 @@ import java.security.spec.ECPoint
 import java.security.spec.ECPublicKeySpec
 import java.security.spec.EllipticCurve
 import java.time.Instant
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * A public key that verifies snapshots, as a JSON Web Key.
@@ -93,7 +91,7 @@ public data class VerifiedSnapshot(
 private const val SNAPSHOT_TYPE = "entitlements+jwt"
 private const val NOT_A_SNAPSHOT = "That is not an entitlements snapshot. Pass the token snapshot() returned."
 private const val SIGNATURE_BYTES = 64
-private const val MAX_SKEW_SECONDS = 300L
+private const val MAX_SKEW_SECONDS = 300
 private const val MILLIS = 1000L
 
 /**
@@ -106,7 +104,7 @@ private const val MILLIS = 1000L
  *
  * @param customer The customer the app expects.
  * @param environment The id of the environment the app expects.
- * @param clockSkew How far the snapshot's signing instant may be ahead of [now], in whole seconds from 0 to 300.
+ * @param clockSkewSeconds How far the snapshot's signing instant may be ahead of [now], in seconds from 0 to 300.
  * @throws EntitlerSnapshotException when the snapshot is not valid or has expired.
  */
 @JvmOverloads
@@ -117,14 +115,12 @@ public fun verifySnapshot(
     environment: String,
     issuer: String = SNAPSHOT_ISSUER,
     now: Instant = Instant.now(),
-    clockSkew: Duration = 60.seconds,
+    clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
 ): VerifiedSnapshot {
-    require(clockSkew.inWholeMilliseconds % MILLIS == 0L && clockSkew.inWholeSeconds in 0..MAX_SKEW_SECONDS) {
-        "Pass clockSkew as a whole number of seconds from 0 to 300."
-    }
+    require(clockSkewSeconds in 0..MAX_SKEW_SECONDS) { "Pass clockSkewSeconds as a whole number from 0 to 300." }
     require(customer.isNotBlank() && environment.isNotBlank()) { "Provide the customer and environment the snapshot must be for." }
     val parts = token.split('.')
-    val header = parts.takeIf { it.size == 3 && it.none(String::isEmpty) }?.let { decodeJwtPart(it[0]) }
+    val header = parts.takeIf { it.size == 3 && decodeBase64Url(it[1]) != null }?.let { decodeJwtPart(it[0]) }
     val signature = parts.getOrNull(2)?.let(::decodeBase64Url)
     val isSnapshot = header?.string("typ") == SNAPSHOT_TYPE && header.string("alg") == "ES256" && !header.containsKey("crit")
     if (header == null || signature == null || !isSnapshot) invalid(NOT_A_SNAPSHOT)
@@ -135,7 +131,7 @@ public fun verifySnapshot(
         invalid("This snapshot was changed after Entitler signed it.")
     }
     val claims = decodeJwtPart(parts[1])?.let(::snapshotClaimsOf) ?: invalid(NOT_A_SNAPSHOT)
-    checkClaims(claims, issuer, customer, environment, now, clockSkew)
+    checkClaims(claims, issuer, customer, environment, now, clockSkewSeconds)
     val expiresAt = Instant.ofEpochSecond(claims.exp)
     return VerifiedSnapshot(
         customer = claims.sub,
@@ -167,8 +163,8 @@ public fun verifySnapshot(
     environment: String,
     issuer: String = SNAPSHOT_ISSUER,
     now: Instant = Instant.now(),
-    clockSkew: Duration = 60.seconds,
-): VerifiedSnapshot = verifySnapshot(token, keys.keys, customer, environment, issuer, now, clockSkew)
+    clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
+): VerifiedSnapshot = verifySnapshot(token, keys.keys, customer, environment, issuer, now, clockSkewSeconds)
 
 private fun checkClaims(
     claims: Claims,
@@ -176,10 +172,10 @@ private fun checkClaims(
     customer: String,
     environment: String,
     now: Instant,
-    clockSkew: Duration,
+    clockSkewSeconds: Int,
 ) {
     if (claims.iss != issuer) invalid("This snapshot was not issued by $issuer.")
-    if (claims.iat * MILLIS > now.toEpochMilli() + clockSkew.inWholeMilliseconds) {
+    if (claims.iat * MILLIS > now.toEpochMilli() + clockSkewSeconds * MILLIS) {
         val signedFor = formatInstant(Instant.ofEpochSecond(claims.iat))
         invalid("This snapshot was signed for $signedFor, which is still to come. Fetch a new one while online.")
     }
@@ -218,8 +214,10 @@ private class Claims(
 )
 
 private fun snapshotClaimsOf(claims: JsonObject): Claims? =
-    runCatching { strictJson.decodeFromJsonElement(Claims.serializer(), claims) }
-        .getOrNull()
+    runCatching {
+        checkShape(Claims.serializer().descriptor, claims)
+        strictJson.decodeFromJsonElement(Claims.serializer(), claims)
+    }.getOrNull()
         ?.takeIf { instantOf(it.iat) != null && instantOf(it.exp) != null }
 
 private fun instantOf(seconds: Long): Instant? = runCatching { Instant.ofEpochSecond(seconds) }.getOrNull()?.takeIf(::isInRange)

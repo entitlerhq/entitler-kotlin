@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows
   Entitler is unreachable, and refreshing token providers.
 - Offline snapshot verification with `verifySnapshot`.
 - The `entitler generate` command and `renderFeatures`, in `com.entitlerhq:entitler-generator`.
+- The specification's conformance suite, run with the unit tests.
 
 [Unreleased]: https://github.com/entitlerhq/entitler-kotlin/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/entitlerhq/entitler-kotlin/releases/tag/v0.1.0

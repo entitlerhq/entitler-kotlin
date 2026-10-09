@@ -14,6 +14,12 @@
 - No other comments. If code needs one, rename, extract or restructure it. Tool directives (lint
   suppressions) are the only exception, each with a reason the tool accepts.
 
+## Conformance suite
+
+- `entitler/src/test/resources/conformance/` holds the specification's conformance suite, copied
+  unchanged with its manifest, and the tests check every file's SHA-256 before running a case.
+- Never edit a case. A case the SDK cannot pass is a question about the specification.
+
 ## Before pushing
 
 Run, and fix everything they report:

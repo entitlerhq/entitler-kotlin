@@ -4,9 +4,14 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.StructureKind
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.security.MessageDigest
@@ -21,6 +26,46 @@ internal val json =
         ignoreUnknownKeys = true
         explicitNulls = false
     }
+
+private val typedPrimitives = setOf("kotlin.Boolean", "kotlin.Int", "kotlin.Long", "kotlin.Double")
+
+/**
+ * Refuses a quoted boolean or number where the document has a JSON boolean or number, which tree
+ * decoding would otherwise read from the string's content.
+ */
+internal fun checkShape(
+    descriptor: SerialDescriptor,
+    element: JsonElement,
+) {
+    if (element is JsonNull) return
+    val name = descriptor.serialName.removeSuffix("?")
+    if (name in typedPrimitives && (element !is JsonPrimitive || element.isString)) {
+        throw SerializationException("Expected a JSON ${name.removePrefix("kotlin.")}.")
+    }
+    val children =
+        when (descriptor.kind) {
+            StructureKind.CLASS -> {
+                (element as? JsonObject)?.let { fields ->
+                    (0 until descriptor.elementsCount).mapNotNull { index ->
+                        fields[descriptor.getElementName(index)]?.let { descriptor.getElementDescriptor(index) to it }
+                    }
+                }
+            }
+
+            StructureKind.LIST -> {
+                (element as? JsonArray)?.map { descriptor.getElementDescriptor(0) to it }
+            }
+
+            StructureKind.MAP -> {
+                (element as? JsonObject)?.values?.map { descriptor.getElementDescriptor(1) to it }
+            }
+
+            else -> {
+                null
+            }
+        }
+    children?.forEach { (child, value) -> checkShape(child, value) }
+}
 
 private val rfc3339 = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 

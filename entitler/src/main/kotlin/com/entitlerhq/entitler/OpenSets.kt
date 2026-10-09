@@ -483,6 +483,35 @@ internal object EnvironmentKindSerializer : OpenStringSerializer<EnvironmentKind
 )
 
 /**
+ * The arm of an experiment a customer or visitor is in.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = ExperimentArmSerializer::class)
+public data class ExperimentArm(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Sees the track's release. */
+        public val Control: ExperimentArm = ExperimentArm("control")
+
+        /** Sees the track's release with the experiment's change. */
+        public val Variant: ExperimentArm = ExperimentArm("variant")
+    }
+}
+
+internal object ExperimentArmSerializer : OpenStringSerializer<ExperimentArm>(
+    "ExperimentArm",
+    ::ExperimentArm,
+    ExperimentArm::value,
+)
+
+/**
  * Which kind of credential reported usage.
  *
  * An open set: a value this SDK does not know keeps its raw [value].
@@ -552,3 +581,64 @@ internal abstract class OpenStringSerializer<T : Any>(
 
     override fun serialize(encoder: Encoder, value: T) = encoder.encodeString(raw(value))
 }
+
+/**
+ * Why a plan and period would be left without a listing.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = ListingGapKindSerializer::class)
+public data class ListingGapKind(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The track sells it on the channel today and the new catalogue leaves it blank there. */
+        public val StopsSelling: ListingGapKind = ListingGapKind("stops_selling")
+
+        /** A self-serve plan and period with no ids on any of the connections. */
+        public val Unlisted: ListingGapKind = ListingGapKind("unlisted")
+    }
+}
+
+internal object ListingGapKindSerializer : OpenStringSerializer<ListingGapKind>(
+    "ListingGapKind",
+    ::ListingGapKind,
+    ListingGapKind::value,
+)
+
+/**
+ * What is wrong with a listing's provider price.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = ListingProblemKindSerializer::class)
+public data class ListingProblemKind(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The connection has no such price. */
+        public val PriceNotFound: ListingProblemKind = ListingProblemKind("price_not_found")
+
+        /** The price is archived. */
+        public val PriceInactive: ListingProblemKind = ListingProblemKind("price_inactive")
+
+        /** The price bills on another interval than the billing period, or recurs for a one-time plan. */
+        public val IntervalMismatch: ListingProblemKind = ListingProblemKind("interval_mismatch")
+    }
+}
+
+internal object ListingProblemKindSerializer : OpenStringSerializer<ListingProblemKind>(
+    "ListingProblemKind",
+    ::ListingProblemKind,
+    ListingProblemKind::value,
+)

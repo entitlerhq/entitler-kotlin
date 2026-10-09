@@ -640,5 +640,6 @@ internal fun <T> decode(
 ): T {
     val element = json.parseToJsonElement(body)
     val marked = if (stale && element is JsonObject) JsonObject(element + ("stale" to JsonPrimitive(true))) else element
+    checkShape(deserializer.descriptor, marked)
     return json.decodeFromJsonElement(deserializer, marked)
 }

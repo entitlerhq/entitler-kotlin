@@ -943,13 +943,13 @@ public final class com/entitlerhq/entitler/Entitler {
 	public static final fun verifySnapshot (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 	public static final fun verifySnapshot (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 	public static final fun verifySnapshot (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static final fun verifySnapshot (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 	public static final fun verifySnapshot (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 	public static final fun verifySnapshot (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 	public static final fun verifySnapshot (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static final fun verifySnapshot-B8UsjHI (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static final fun verifySnapshot-B8UsjHI (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static final fun verifySnapshot (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 }
 
 public final class com/entitlerhq/entitler/EntitlerApiException : com/entitlerhq/entitler/EntitlerException {
@@ -972,19 +972,19 @@ public abstract interface class com/entitlerhq/entitler/EntitlerClient : java/io
 	public static synthetic fun scopes-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerClient;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun snapshotKeys-dnQKTGw (Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun snapshotKeys-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerClient;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public fun verifySnapshot-B8UsjHI (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public fun verifySnapshot-B8UsjHI (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public fun verifySnapshot (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public fun verifySnapshot (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 }
 
 public final class com/entitlerhq/entitler/EntitlerClient$DefaultImpls {
 	public static synthetic fun scopes-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerClient;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun snapshotKeys-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerClient;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static fun verifySnapshot-B8UsjHI (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static fun verifySnapshot-B8UsjHI (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static fun verifySnapshot (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static fun verifySnapshot (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Lcom/entitlerhq/entitler/EntitlerClient;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 }
 
 public final class com/entitlerhq/entitler/EntitlerClientConfig : com/entitlerhq/entitler/EntitlerConfig {
@@ -1033,8 +1033,8 @@ public abstract interface class com/entitlerhq/entitler/EntitlerIdentityClient :
 
 public final class com/entitlerhq/entitler/EntitlerIdentityClient$DefaultImpls {
 	public static synthetic fun register-Kx4hsE0$default (Lcom/entitlerhq/entitler/EntitlerIdentityClient;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static fun verifySnapshot-B8UsjHI (Lcom/entitlerhq/entitler/EntitlerIdentityClient;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static fun verifySnapshot-B8UsjHI (Lcom/entitlerhq/entitler/EntitlerIdentityClient;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static fun verifySnapshot (Lcom/entitlerhq/entitler/EntitlerIdentityClient;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static fun verifySnapshot (Lcom/entitlerhq/entitler/EntitlerIdentityClient;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 }
 
 public abstract interface class com/entitlerhq/entitler/EntitlerServer : java/io/Closeable {
@@ -1051,10 +1051,10 @@ public abstract interface class com/entitlerhq/entitler/EntitlerServer : java/io
 	public static synthetic fun scopes-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerServer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun snapshotKeys-dnQKTGw (Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun snapshotKeys-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerServer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public fun verifySnapshot-B8UsjHI (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public fun verifySnapshot-B8UsjHI (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public fun verifySnapshot (Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public fun verifySnapshot (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 }
 
 public final class com/entitlerhq/entitler/EntitlerServer$DefaultImpls {
@@ -1064,10 +1064,10 @@ public final class com/entitlerhq/entitler/EntitlerServer$DefaultImpls {
 	public static synthetic fun recordUsageBatch-51bEbmg$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/util/List;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun scopes-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerServer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun snapshotKeys-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerServer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static fun verifySnapshot-B8UsjHI (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static fun verifySnapshot-B8UsjHI (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
-	public static synthetic fun verifySnapshot-B8UsjHI$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static fun verifySnapshot (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static fun verifySnapshot (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;I)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
+	public static synthetic fun verifySnapshot$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;IILjava/lang/Object;)Lcom/entitlerhq/entitler/VerifiedSnapshot;
 }
 
 public final class com/entitlerhq/entitler/EntitlerSnapshotException : com/entitlerhq/entitler/EntitlerException {
@@ -1230,13 +1230,13 @@ public final class com/entitlerhq/entitler/ErrorCode$Companion {
 
 public final class com/entitlerhq/entitler/Experiment {
 	public static final field Companion Lcom/entitlerhq/entitler/Experiment$Companion;
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Lcom/entitlerhq/entitler/ExperimentArm;)V
 	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lcom/entitlerhq/entitler/Experiment;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Experiment;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Experiment;
+	public final fun component2 ()Lcom/entitlerhq/entitler/ExperimentArm;
+	public final fun copy (Ljava/lang/String;Lcom/entitlerhq/entitler/ExperimentArm;)Lcom/entitlerhq/entitler/Experiment;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Experiment;Ljava/lang/String;Lcom/entitlerhq/entitler/ExperimentArm;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Experiment;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getArm ()Ljava/lang/String;
+	public final fun getArm ()Lcom/entitlerhq/entitler/ExperimentArm;
 	public final fun getId ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -1254,6 +1254,24 @@ public final synthetic class com/entitlerhq/entitler/Experiment$$serializer : ko
 }
 
 public final class com/entitlerhq/entitler/Experiment$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/entitlerhq/entitler/ExperimentArm {
+	public static final field Companion Lcom/entitlerhq/entitler/ExperimentArm$Companion;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/ExperimentArm;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ExperimentArm;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ExperimentArm;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/entitlerhq/entitler/ExperimentArm$Companion {
+	public final fun getControl ()Lcom/entitlerhq/entitler/ExperimentArm;
+	public final fun getVariant ()Lcom/entitlerhq/entitler/ExperimentArm;
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
@@ -1782,19 +1800,19 @@ public final class com/entitlerhq/entitler/ListingChannel$Companion {
 
 public final class com/entitlerhq/entitler/ListingGap {
 	public static final field Companion Lcom/entitlerhq/entitler/ListingGap$Companion;
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
+	public fun <init> (Lcom/entitlerhq/entitler/ListingGapKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;)V
+	public synthetic fun <init> (Lcom/entitlerhq/entitler/ListingGapKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/entitlerhq/entitler/ListingGapKind;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/lang/String;
 	public final fun component5 ()Lcom/entitlerhq/entitler/Channel;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;)Lcom/entitlerhq/entitler/ListingGap;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ListingGap;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ListingGap;
+	public final fun copy (Lcom/entitlerhq/entitler/ListingGapKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;)Lcom/entitlerhq/entitler/ListingGap;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ListingGap;Lcom/entitlerhq/entitler/ListingGapKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ListingGap;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChannel ()Lcom/entitlerhq/entitler/Channel;
 	public final fun getKey ()Ljava/lang/String;
-	public final fun getKind ()Ljava/lang/String;
+	public final fun getKind ()Lcom/entitlerhq/entitler/ListingGapKind;
 	public final fun getPeriod ()Ljava/lang/String;
 	public final fun getPlan ()Ljava/lang/String;
 	public fun hashCode ()I
@@ -1816,22 +1834,40 @@ public final class com/entitlerhq/entitler/ListingGap$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class com/entitlerhq/entitler/ListingGapKind {
+	public static final field Companion Lcom/entitlerhq/entitler/ListingGapKind$Companion;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/ListingGapKind;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ListingGapKind;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ListingGapKind;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/entitlerhq/entitler/ListingGapKind$Companion {
+	public final fun getStopsSelling ()Lcom/entitlerhq/entitler/ListingGapKind;
+	public final fun getUnlisted ()Lcom/entitlerhq/entitler/ListingGapKind;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
 public final class com/entitlerhq/entitler/ListingProblem {
 	public static final field Companion Lcom/entitlerhq/entitler/ListingProblem$Companion;
-	public fun <init> (Lcom/entitlerhq/entitler/Channel;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;)V
+	public fun <init> (Lcom/entitlerhq/entitler/Channel;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Lcom/entitlerhq/entitler/ListingProblemKind;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/Channel;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/util/Map;
-	public final fun component5 ()Ljava/lang/String;
-	public final fun copy (Lcom/entitlerhq/entitler/Channel;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;)Lcom/entitlerhq/entitler/ListingProblem;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ListingProblem;Lcom/entitlerhq/entitler/Channel;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ListingProblem;
+	public final fun component5 ()Lcom/entitlerhq/entitler/ListingProblemKind;
+	public final fun copy (Lcom/entitlerhq/entitler/Channel;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Lcom/entitlerhq/entitler/ListingProblemKind;)Lcom/entitlerhq/entitler/ListingProblem;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ListingProblem;Lcom/entitlerhq/entitler/Channel;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Lcom/entitlerhq/entitler/ListingProblemKind;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ListingProblem;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChannel ()Lcom/entitlerhq/entitler/Channel;
 	public final fun getIds ()Ljava/util/Map;
 	public final fun getPeriod ()Ljava/lang/String;
 	public final fun getPlan ()Ljava/lang/String;
-	public final fun getProblem ()Ljava/lang/String;
+	public final fun getProblem ()Lcom/entitlerhq/entitler/ListingProblemKind;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -1848,6 +1884,25 @@ public final synthetic class com/entitlerhq/entitler/ListingProblem$$serializer 
 }
 
 public final class com/entitlerhq/entitler/ListingProblem$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/entitlerhq/entitler/ListingProblemKind {
+	public static final field Companion Lcom/entitlerhq/entitler/ListingProblemKind$Companion;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/ListingProblemKind;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ListingProblemKind;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ListingProblemKind;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/entitlerhq/entitler/ListingProblemKind$Companion {
+	public final fun getIntervalMismatch ()Lcom/entitlerhq/entitler/ListingProblemKind;
+	public final fun getPriceInactive ()Lcom/entitlerhq/entitler/ListingProblemKind;
+	public final fun getPriceNotFound ()Lcom/entitlerhq/entitler/ListingProblemKind;
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 

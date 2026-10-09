@@ -37,12 +37,12 @@ public data class Track(
  * The experiment arm a customer or visitor is in.
  *
  * @property id The experiment's id.
- * @property arm The arm: `control` or `variant`.
+ * @property arm The arm, [ExperimentArm.Control] or [ExperimentArm.Variant].
  */
 @Serializable
 public data class Experiment(
     val id: String,
-    val arm: String,
+    val arm: ExperimentArm,
 )
 
 /**

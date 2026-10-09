@@ -128,7 +128,7 @@ public data class Payment(
 /**
  * A gap a rollout or experiment would leave in the listings.
  *
- * @property kind `stops_selling` or `unlisted`.
+ * @property kind [ListingGapKind.StopsSelling] or [ListingGapKind.Unlisted].
  * @property plan The plan's id.
  * @property key The plan's key.
  * @property period The period.
@@ -136,7 +136,7 @@ public data class Payment(
  */
 @Serializable
 public data class ListingGap(
-    val kind: String,
+    val kind: ListingGapKind,
     val plan: String,
     val key: String,
     val period: String,
@@ -150,7 +150,7 @@ public data class ListingGap(
  * @property plan The plan's id.
  * @property period The period.
  * @property ids The provider's ids.
- * @property problem `price_not_found`, `price_inactive` or `interval_mismatch`.
+ * @property problem What is wrong with the price.
  */
 @Serializable
 public data class ListingProblem(
@@ -158,5 +158,5 @@ public data class ListingProblem(
     val plan: String,
     val period: String,
     val ids: Map<String, String>,
-    val problem: String,
+    val problem: ListingProblemKind,
 )

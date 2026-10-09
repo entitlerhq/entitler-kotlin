@@ -20,7 +20,7 @@ try {
 ```
 
 Verification checks, in order: the token's form, the signing key, the signature, the claims' shape,
-the issuer, that it was not signed in the future (beyond `clockSkew`, 60 seconds by default, at most
+the issuer, that it was not signed in the future (beyond `clockSkewSeconds`, 60 seconds by default, at most
 300), that it has not expired, the customer and the environment. Each failure is an
 `EntitlerSnapshotException` with code `snapshot_invalid` or `snapshot_expired`.
 

@@ -12,8 +12,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 class SnapshotTest {
     private val now = Instant.parse("2026-10-09T01:00:00Z")
@@ -101,8 +99,8 @@ class SnapshotTest {
         keys: List<SnapshotKey> = listOf(key),
         customer: String = "user_1",
         environment: String = "e_1",
-        clockSkew: kotlin.time.Duration = 60.seconds,
-    ) = verifySnapshot(token, keys, customer, environment, now = now, clockSkew = clockSkew)
+        clockSkewSeconds: Int = 60,
+    ) = verifySnapshot(token, keys, customer, environment, now = now, clockSkewSeconds = clockSkewSeconds)
 
     private fun failure(
         code: ErrorCode,
@@ -215,17 +213,17 @@ class SnapshotTest {
     }
 
     @Test
-    fun `clock skew must be whole seconds from 0 to 300`() {
-        verify(sign(claims(iat = now.epochSecond + 300)), clockSkew = 300.seconds)
+    fun `clock skew must be from 0 to 300 seconds`() {
+        verify(sign(claims(iat = now.epochSecond + 300)), clockSkewSeconds = 300)
         failure(
             ErrorCode.SnapshotInvalid,
             "This snapshot was signed for 2026-10-09T01:00:01.000Z, which is still to come. Fetch a new one while online.",
         ) {
-            verify(sign(claims(iat = now.epochSecond + 1)), clockSkew = 0.seconds)
+            verify(sign(claims(iat = now.epochSecond + 1)), clockSkewSeconds = 0)
         }
-        for (skew in listOf((-1).seconds, 301.seconds, 1500.milliseconds)) {
-            val error = assertFailsWith<IllegalArgumentException> { verify(sign(claims()), clockSkew = skew) }
-            assertEquals("Pass clockSkew as a whole number of seconds from 0 to 300.", error.message)
+        for (skew in listOf(-1, 301)) {
+            val error = assertFailsWith<IllegalArgumentException> { verify(sign(claims()), clockSkewSeconds = skew) }
+            assertEquals("Pass clockSkewSeconds as a whole number from 0 to 300.", error.message)
         }
     }
 

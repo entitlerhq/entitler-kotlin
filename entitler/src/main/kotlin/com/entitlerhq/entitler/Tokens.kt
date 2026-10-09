@@ -7,7 +7,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 
-private const val REFRESH_MARGIN_SECONDS = 60L
+private const val REFRESH_MARGIN_MILLIS = 60_000L
 private const val MILLIS_PER_SECOND = 1000L
 
 internal class HeldToken(
@@ -19,10 +19,11 @@ internal class HeldToken(
     private val iat = claims?.long("iat")
 
     fun expiresSoon(now: Long): Boolean {
-        val exp = exp ?: return false
-        val start = iat ?: (receivedAt / MILLIS_PER_SECOND)
-        val margin = minOf(REFRESH_MARGIN_SECONDS, (exp - start) / 2)
-        return now >= (exp - margin) * MILLIS_PER_SECOND
+        val expMillis = (exp ?: return false) * MILLIS_PER_SECOND
+        val start = iat?.let { it * MILLIS_PER_SECOND } ?: receivedAt
+        val withinMinute = now >= expMillis - REFRESH_MARGIN_MILLIS
+        val pastHalfLife = 2 * (now - start) >= expMillis - start
+        return withinMinute && pastHalfLife
     }
 }
 
@@ -75,7 +76,7 @@ internal class TokenSource(
                     if (it is CancellationException) throw it
                     tokenError("The token provider failed: ${it.javaClass.simpleName}.", it)
                 } ?: tokenError("The token provider did not answer within the client's timeout.")
-            val token = answer.trim()
+            val token = trimCredential(answer)
             if (token.isEmpty()) tokenError("The token provider answered a blank token.")
             if (!isReadableToken(token)) tokenError("The token provider answered a token that cannot be read.")
             synchronized(lock) { current = HeldToken(token, clock()) }
@@ -85,6 +86,9 @@ internal class TokenSource(
         }
     }
 }
+
+/** Trims spaces, tabs, carriage returns and line feeds, and nothing else, as section 4.3 asks. */
+internal fun trimCredential(value: String): String = value.trim { it == ' ' || it == '\t' || it == '\r' || it == '\n' }
 
 private fun tokenError(
     message: String,

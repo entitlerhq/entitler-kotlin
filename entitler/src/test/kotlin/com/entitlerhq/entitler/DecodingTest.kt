@@ -184,7 +184,7 @@ class DecodingTest {
             )
             val gaps = kotlin.test.assertFailsWith<EntitlerApiException> { customer.subscribe("pro") }
             assertEquals("pro", gaps.listingGaps.single().key)
-            assertEquals("price_inactive", gaps.listingProblems.single().problem)
+            assertEquals(ListingProblemKind.PriceInactive, gaps.listingProblems.single().problem)
             assertEquals(7.seconds, gaps.retryAfter)
 
             api.reply(409, """{"error":{"code":"brand_new_code","message":"New."}}""")
