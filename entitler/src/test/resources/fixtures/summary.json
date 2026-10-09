@@ -1,0 +1,33 @@
+{
+  "id": "c034cZCGNGv3SumpZ3nPjaw",
+  "externalId": "test_1001",
+  "name": "Alice Ng",
+  "email": "alice@example.com",
+  "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+  "sample": true,
+  "createdAt": "2026-09-18T21:30:19.974Z",
+  "plan": {
+    "id": "n034cZCEdkcfitBL3jmQ6jy",
+    "key": "pro",
+    "name": "Pro",
+    "version": 1
+  },
+  "plans": [
+    {
+      "id": "n034cZCEdkcfitBL3jmQ6jy",
+      "key": "pro",
+      "name": "Pro",
+      "version": 1,
+      "product": "main"
+    }
+  ],
+  "defaultPlan": null,
+  "status": "Active, renews 18 Oct 2026",
+  "kind": "recurring",
+  "metadata": {},
+  "track": {
+    "id": "j034cZCFcZyk42tVBYDCN4t",
+    "name": "All customers"
+  },
+  "testCustomer": true
+}

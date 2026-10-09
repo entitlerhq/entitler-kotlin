@@ -49,6 +49,10 @@ kotlin.sourceSets.main {
     kotlin.srcDir(generateVersion)
 }
 
+kotlin.sourceSets.test {
+    languageSettings.optIn("kotlinx.coroutines.ExperimentalCoroutinesApi")
+}
+
 animalsniffer {
     sourceSets = listOf(project.sourceSets.main.get())
 }
@@ -70,7 +74,6 @@ val integrationTest by tasks.registering(Test::class) {
     useJUnitPlatform {
         includeTags("integration")
     }
-    environment("ENTITLER_TEST_KEY", providers.environmentVariable("ENTITLER_TEST_KEY").orElse("").get())
     outputs.upToDateWhen { false }
 }
 
@@ -78,7 +81,7 @@ kover {
     reports {
         filters {
             excludes {
-                classes("com.entitlerhq.entitler.VersionKt")
+                classes("com.entitlerhq.entitler.VersionKt", "*\$\$serializer")
             }
         }
         verify {

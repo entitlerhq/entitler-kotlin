@@ -1,0 +1,33 @@
+{
+  "provider": "stripe",
+  "status": "active",
+  "sku": {
+    "period": "Monthly",
+    "connector": "stripe",
+    "ids": {
+      "price": "price_1"
+    },
+    "price": {
+      "amount": 2900,
+      "currency": "aud",
+      "interval": "month",
+      "intervalCount": 1,
+      "tax": "inclusive"
+    }
+  },
+  "items": 1,
+  "drift": {
+    "billedPlan": "team",
+    "heldPlan": "pro",
+    "observedAt": "2026-10-08T00:00:00.000Z"
+  },
+  "products": [
+    {
+      "product": "main",
+      "status": "active",
+      "sku": null,
+      "items": 1,
+      "drift": null
+    }
+  ]
+}

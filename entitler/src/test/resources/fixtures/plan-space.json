@@ -1,0 +1,179 @@
+{
+    "customer": "test_1001",
+    "environment": {
+        "id": "e034cZCD3ad9sb8UQMo0qHm",
+        "name": "development",
+        "kind": "test"
+    },
+    "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+    },
+    "release": 2,
+    "change": null,
+    "testers": true,
+    "experiment": null,
+    "asOf": "2026-10-09T02:12:32.917Z",
+    "held": [
+        {
+            "plan": {
+                "id": "n034cZCEdkcfitBL3jmQ6jy",
+                "key": "pro",
+                "name": "Pro",
+                "kind": "plan"
+            },
+            "product": {
+                "key": "main",
+                "name": "Main"
+            },
+            "version": 1,
+            "byDefault": false
+        },
+        {
+            "plan": {
+                "id": "n034cZCEdkcfitBLzDmlgqo",
+                "key": "sso_addon",
+                "name": "SSO",
+                "kind": "addon"
+            },
+            "product": {
+                "key": "main",
+                "name": "Main"
+            },
+            "version": 1,
+            "byDefault": false
+        }
+    ],
+    "options": [
+        {
+            "plan": {
+                "id": "n034cZCEdkcfitBJnglELre",
+                "key": "pro_basic",
+                "name": "Pro basic",
+                "kind": "plan"
+            },
+            "product": {
+                "key": "main",
+                "name": "Main"
+            },
+            "move": "move",
+            "from": {
+                "id": "n034cZCEdkcfitBL3jmQ6jy",
+                "key": "pro",
+                "name": "Pro"
+            },
+            "direction": "down",
+            "mode": "self-serve",
+            "selfServe": true,
+            "disabledReason": null,
+            "when": "end",
+            "impact": [
+                {
+                    "kind": "Loses",
+                    "text": "Priority support"
+                },
+                {
+                    "kind": "Changes",
+                    "text": "Support SLA from 24 to 48 hours"
+                },
+                {
+                    "kind": "Changes",
+                    "text": "AI credits from 300 to 200 credits"
+                },
+                {
+                    "kind": "Loses",
+                    "text": "Single sign-on"
+                }
+            ],
+            "skus": []
+        },
+        {
+            "plan": {
+                "id": "n034cZCEdkcfitBIKXtknBq",
+                "key": "starter",
+                "name": "Starter",
+                "kind": "plan"
+            },
+            "product": {
+                "key": "main",
+                "name": "Main"
+            },
+            "move": "move",
+            "from": {
+                "id": "n034cZCEdkcfitBL3jmQ6jy",
+                "key": "pro",
+                "name": "Pro"
+            },
+            "direction": "down",
+            "mode": "self-serve",
+            "selfServe": false,
+            "disabledReason": "Starter is no longer sold",
+            "when": "end",
+            "impact": [
+                {
+                    "kind": "Loses",
+                    "text": "Priority support"
+                },
+                {
+                    "kind": "Loses",
+                    "text": "Support SLA"
+                },
+                {
+                    "kind": "Loses",
+                    "text": "AI credits"
+                },
+                {
+                    "kind": "Loses",
+                    "text": "Single sign-on"
+                }
+            ],
+            "skus": []
+        },
+        {
+            "plan": {
+                "id": "n034cZCEdkcfitBG6SqHAJH",
+                "key": "free",
+                "name": "Free",
+                "kind": "plan"
+            },
+            "product": {
+                "key": "main",
+                "name": "Main"
+            },
+            "move": "move",
+            "from": {
+                "id": "n034cZCEdkcfitBL3jmQ6jy",
+                "key": "pro",
+                "name": "Pro"
+            },
+            "direction": "down",
+            "mode": "self-serve",
+            "selfServe": true,
+            "disabledReason": null,
+            "when": "end",
+            "impact": [
+                {
+                    "kind": "Loses",
+                    "text": "Export to PDF"
+                },
+                {
+                    "kind": "Loses",
+                    "text": "Priority support"
+                },
+                {
+                    "kind": "Loses",
+                    "text": "Support SLA"
+                },
+                {
+                    "kind": "Changes",
+                    "text": "AI credits from 300 to 20 credits"
+                },
+                {
+                    "kind": "Loses",
+                    "text": "Single sign-on"
+                }
+            ],
+            "skus": []
+        }
+    ]
+}

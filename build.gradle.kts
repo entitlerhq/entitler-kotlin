@@ -50,6 +50,9 @@ subprojects {
             targetCompatibility = JavaVersion.VERSION_11
         }
         tasks.withType<JavaCompile>().configureEach { options.release = 11 }
-        tasks.withType<Test>().configureEach { useJUnitPlatform() }
+        tasks.withType<Test>().configureEach {
+            useJUnitPlatform()
+            systemProperty("junit.jupiter.execution.timeout.default", "60s")
+        }
     }
 }

@@ -68,7 +68,10 @@ public open class EntitlerConfig internal constructor() {
         require(maxRetries >= 0) { "Pass maxRetries as 0 or more." }
         require(timeout.isPositive()) { "Pass timeout as a positive duration." }
         require(!maxRetryDelay.isNegative()) { "Pass maxRetryDelay as 0 or more." }
-        asOf?.let { require(it.atOffset(java.time.ZoneOffset.UTC).year in MIN_YEAR..MAX_YEAR) { "Pass asOf as a valid date." } }
+        asOf?.let {
+            val year = runCatching { it.atOffset(java.time.ZoneOffset.UTC).year }.getOrNull()
+            require(year != null && year in MIN_YEAR..MAX_YEAR) { "Pass asOf as a valid date." }
+        }
     }
 
     private companion object {

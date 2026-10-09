@@ -1,0 +1,9 @@
+{
+  "customer": "test_1001",
+  "track": {
+    "id": "j_beta",
+    "name": "Beta"
+  },
+  "source": "server",
+  "previousTrackId": null
+}

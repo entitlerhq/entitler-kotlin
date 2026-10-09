@@ -1,0 +1,125 @@
+{
+  "customer": "test_1001",
+  "environment": {
+    "id": "e034cZCD3ad9sb8UQMo0qHm",
+    "name": "development",
+    "kind": "test"
+  },
+  "track": {
+    "id": "j034cZCFcZyk42tVBYDCN4t",
+    "name": "All customers"
+  },
+  "release": 2,
+  "change": null,
+  "testers": true,
+  "experiment": null,
+  "asOf": "2026-10-09T02:12:31.523Z",
+  "entitlements": [
+    {
+      "key": "export_pdf",
+      "type": "boolean",
+      "value": true,
+      "sources": [
+        {
+          "type": "plan",
+          "plan": "pro",
+          "name": "Pro",
+          "version": 1,
+          "byDefault": false,
+          "value": true
+        }
+      ],
+      "entitled": true
+    },
+    {
+      "key": "priority_support",
+      "type": "boolean",
+      "value": true,
+      "sources": [
+        {
+          "type": "plan",
+          "plan": "pro",
+          "name": "Pro",
+          "version": 1,
+          "byDefault": false,
+          "value": true
+        }
+      ],
+      "entitled": true
+    },
+    {
+      "key": "support_sla_hours",
+      "type": "config",
+      "value": 24,
+      "sources": [
+        {
+          "type": "plan",
+          "plan": "pro",
+          "name": "Pro",
+          "version": 1,
+          "byDefault": false,
+          "value": 24
+        }
+      ],
+      "entitled": true
+    },
+    {
+      "key": "ai_credits",
+      "type": "metered",
+      "value": 300,
+      "sources": [
+        {
+          "type": "plan",
+          "plan": "pro",
+          "name": "Pro",
+          "version": 1,
+          "byDefault": false,
+          "value": 300
+        }
+      ],
+      "used": 0,
+      "remaining": 300,
+      "resetsAt": "2026-10-18T21:30:19.974Z",
+      "entitled": true,
+      "held": 0
+    },
+    {
+      "key": "sso",
+      "type": "boolean",
+      "value": true,
+      "sources": [
+        {
+          "type": "addon",
+          "plan": "sso_addon",
+          "name": "SSO",
+          "version": 1,
+          "quantity": 1,
+          "value": true
+        }
+      ],
+      "entitled": true
+    },
+    {
+      "key": "collaboration",
+      "type": "group",
+      "value": true,
+      "entitled": true,
+      "sources": [
+        {
+          "type": "group",
+          "features": [
+            "team_seats",
+            "shared_folders"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "support_extras",
+      "type": "group",
+      "value": 0,
+      "entitled": false,
+      "sources": []
+    }
+  ]
+}

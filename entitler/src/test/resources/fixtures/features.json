@@ -1,0 +1,145 @@
+{
+  "environment": {
+    "id": "e034cZCD3ad9sb8UQMo0qHm",
+    "name": "development",
+    "kind": "test"
+  },
+  "features": [
+    {
+      "id": "ai_credits",
+      "key": "ai_credits",
+      "name": "AI credits",
+      "type": "metered",
+      "description": "Spent on AI actions each month.",
+      "unit": "credits",
+      "resetEvery": null,
+      "archived": false,
+      "includes": []
+    },
+    {
+      "id": "collaboration",
+      "key": "collaboration",
+      "name": "Collaboration",
+      "type": "group",
+      "description": "Working with other people.",
+      "unit": "",
+      "resetEvery": null,
+      "archived": false,
+      "includes": [
+        "team_seats",
+        "shared_folders"
+      ]
+    },
+    {
+      "id": "export_pdf",
+      "key": "export_pdf",
+      "name": "Export to PDF",
+      "type": "boolean",
+      "description": "Download any document as a PDF.",
+      "unit": "",
+      "resetEvery": null,
+      "archived": false,
+      "includes": []
+    },
+    {
+      "id": "priority_support",
+      "key": "priority_support",
+      "name": "Priority support",
+      "type": "boolean",
+      "description": "Jump the support queue.",
+      "unit": "",
+      "resetEvery": null,
+      "archived": false,
+      "includes": []
+    },
+    {
+      "id": "shared_folders",
+      "key": "shared_folders",
+      "name": "Shared folders",
+      "type": "boolean",
+      "description": "Folders the whole workspace can see.",
+      "unit": "",
+      "resetEvery": null,
+      "archived": false,
+      "includes": []
+    },
+    {
+      "id": "sso",
+      "key": "sso",
+      "name": "Single sign-on",
+      "type": "boolean",
+      "description": "Log in through the customer's identity provider.",
+      "unit": "",
+      "resetEvery": null,
+      "archived": false,
+      "includes": []
+    },
+    {
+      "id": "support_contacts",
+      "key": "support_contacts",
+      "name": "Support contacts",
+      "type": "config",
+      "description": "People who can open tickets.",
+      "unit": "contacts",
+      "resetEvery": null,
+      "archived": false,
+      "includes": []
+    },
+    {
+      "id": "support_extras",
+      "key": "support_extras",
+      "name": "Support extras",
+      "type": "group",
+      "description": "Priority queue plus a reply-time promise.",
+      "unit": "",
+      "resetEvery": null,
+      "archived": false,
+      "includes": [
+        "priority_support",
+        "support_sla_hours"
+      ]
+    },
+    {
+      "id": "support_sla_hours",
+      "key": "support_sla_hours",
+      "name": "Support SLA",
+      "type": "config",
+      "description": "Hours until the first reply.",
+      "unit": "hours",
+      "resetEvery": null,
+      "archived": false,
+      "includes": []
+    },
+    {
+      "id": "team_essentials",
+      "key": "team_essentials",
+      "name": "Team essentials",
+      "type": "group",
+      "description": "Everything a team needs, as one unit.",
+      "unit": "",
+      "resetEvery": null,
+      "archived": false,
+      "includes": [
+        "collaboration",
+        "support_extras"
+      ]
+    },
+    {
+      "id": "team_seats",
+      "key": "team_seats",
+      "name": "Team seats",
+      "type": "config",
+      "description": "People who can join a workspace.",
+      "unit": "seats",
+      "resetEvery": null,
+      "archived": false,
+      "includes": []
+    }
+  ],
+  "track": {
+    "id": "j034cZCFcZyk42tVBYDCN4t",
+    "name": "All customers"
+  },
+  "release": 2,
+  "change": null
+}

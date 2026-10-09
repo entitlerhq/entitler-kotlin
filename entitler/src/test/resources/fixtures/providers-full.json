@@ -1,0 +1,37 @@
+{
+  "connections": [
+    {
+      "connection": {"id": "cn_1", "name": "Stripe", "provider": "stripe"},
+      "readAt": "2026-10-09T00:00:00Z",
+      "state": {
+        "subscriptions": [
+          {
+            "id": "sub_1", "status": "active", "billing": true,
+            "period": {"startsAt": "2026-10-01T00:00:00Z", "endsAt": "2026-11-01T00:00:00Z"},
+            "trialEndsAt": null, "cancelsAt": null,
+            "items": [
+              {"id": "si_1", "ids": {"price": "price_1"}, "quantity": 1,
+               "sale": {"plan": "pro", "version": 1, "period": "Monthly", "kind": "plan", "product": "main"}}
+            ]
+          }
+        ],
+        "payments": [
+          {"id": "pay_1", "ids": {}, "quantity": 1, "amount": {"value": 1500, "currency": "aud"}, "status": "paid",
+           "paidAt": "2026-10-01T00:00:00+10:00", "sale": null}
+        ]
+      }
+    }
+  ],
+  "alerts": [
+    {
+      "id": "al_1", "rule": "several_items", "title": "Several items", "message": "Check it.",
+      "facts": {"customer": "test_1001", "connection": "cn_1", "provider": "stripe", "product": "main", "plans": ["pro"],
+                "plan": "pro", "held": null, "planId": "n_1", "heldId": null, "ids": "price_1", "count": 2,
+                "boughtThrough": "web", "refusal": "sandbox_builds_turned_off", "reason": "Test.", "providerCustomer": "cus_1"},
+      "customer": {"externalId": "test_1001", "name": "Alice"},
+      "connection": {"id": "cn_1", "name": "Stripe", "provider": "stripe"},
+      "openedAt": "2026-10-09T00:00:00Z", "seenAt": "2026-10-09T00:00:00Z", "resolvedAt": null, "resolvedBy": null
+    }
+  ],
+  "linked": ["cn_1"]
+}

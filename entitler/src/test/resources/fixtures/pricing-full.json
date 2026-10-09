@@ -1,0 +1,231 @@
+{
+  "environment": {
+    "id": "e034cZCD3ad9sb8UQMo0qHm",
+    "name": "development",
+    "kind": "test"
+  },
+  "track": {
+    "id": "j034cZCFcZyk42tVBYDCN4t",
+    "name": "All customers"
+  },
+  "release": 2,
+  "change": null,
+  "testers": true,
+  "experiment": {
+    "id": "x_1",
+    "arm": "control"
+  },
+  "customer": null,
+  "defaultPlan": "free",
+  "products": [
+    {
+      "key": "main",
+      "name": "Main",
+      "defaultPlan": "free"
+    }
+  ],
+  "plans": [
+    {
+      "id": "n034cZCEdkcfitBG6SqHAJH",
+      "key": "free",
+      "name": "Free",
+      "description": "The plan everyone starts on.",
+      "kind": "plan",
+      "product": "main",
+      "salesLed": false,
+      "status": "active",
+      "version": 1,
+      "default": true,
+      "periods": [
+        {
+          "label": "Monthly",
+          "count": 1,
+          "unit": "months"
+        }
+      ],
+      "attachesTo": [],
+      "features": {
+        "ai_credits": 20
+      },
+      "listings": [
+        {
+          "period": "Monthly",
+          "channels": []
+        }
+      ]
+    },
+    {
+      "id": "n034cZCEdkcfitBJnglELre",
+      "key": "pro_basic",
+      "name": "Pro basic",
+      "description": "Pro without the support extras.",
+      "kind": "plan",
+      "product": "main",
+      "salesLed": false,
+      "status": "active",
+      "version": 1,
+      "default": false,
+      "periods": [
+        {
+          "label": "Monthly",
+          "count": 1,
+          "unit": "months"
+        }
+      ],
+      "attachesTo": [],
+      "features": {
+        "export_pdf": true,
+        "support_sla_hours": 48,
+        "ai_credits": "unlimited"
+      },
+      "listings": [
+        {
+          "period": "Monthly",
+          "channels": [
+            {
+              "channel": {
+                "provider": "stripe",
+                "connectionId": "cn_1"
+              },
+              "name": "Stripe",
+              "mode": "test",
+              "purchasable": true,
+              "ids": {
+                "price": "price_1"
+              },
+              "price": {
+                "amount": 2900,
+                "currency": "aud",
+                "interval": "month",
+                "intervalCount": 1,
+                "tax": "inclusive"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n034cZCEdkcfitBL3jmQ6jy",
+      "key": "pro",
+      "name": "Pro",
+      "description": "Everything for one person.",
+      "kind": "plan",
+      "product": "main",
+      "salesLed": false,
+      "status": "active",
+      "version": 2,
+      "default": false,
+      "periods": [
+        {
+          "label": "Monthly",
+          "count": 1,
+          "unit": "months"
+        },
+        {
+          "label": "Yearly",
+          "count": 12,
+          "unit": "months"
+        }
+      ],
+      "attachesTo": [],
+      "features": {
+        "export_pdf": true,
+        "priority_support": true,
+        "support_sla_hours": 24,
+        "ai_credits": 500
+      },
+      "listings": [
+        {
+          "period": "Monthly",
+          "channels": []
+        },
+        {
+          "period": "Yearly",
+          "channels": []
+        }
+      ]
+    },
+    {
+      "id": "n034cZCEdkcfitBLzDmlgqo",
+      "key": "sso_addon",
+      "name": "SSO",
+      "description": "Single sign-on, bought on top of Pro.",
+      "kind": "addon",
+      "product": "main",
+      "salesLed": false,
+      "status": "active",
+      "version": 1,
+      "default": false,
+      "periods": [
+        {
+          "label": "Monthly",
+          "count": 1,
+          "unit": "months"
+        },
+        {
+          "label": "Yearly",
+          "count": 12,
+          "unit": "months"
+        }
+      ],
+      "attachesTo": [
+        "pro"
+      ],
+      "features": {
+        "sso": true
+      },
+      "listings": [
+        {
+          "period": "Monthly",
+          "channels": []
+        },
+        {
+          "period": "Yearly",
+          "channels": []
+        }
+      ]
+    },
+    {
+      "id": "n034cZCEdkcfitBO6kXsLjm",
+      "key": "support_standard",
+      "name": "Standard support",
+      "description": "Priority support for two people, bought on top of Pro basic.",
+      "kind": "addon",
+      "product": "main",
+      "salesLed": false,
+      "status": "active",
+      "version": 1,
+      "default": false,
+      "periods": [
+        {
+          "label": "Monthly",
+          "count": 1,
+          "unit": "months"
+        },
+        {
+          "label": "Yearly",
+          "count": 12,
+          "unit": "months"
+        }
+      ],
+      "attachesTo": [
+        "pro_basic"
+      ],
+      "features": {
+        "priority_support": true,
+        "support_contacts": 2
+      },
+      "listings": [
+        {
+          "period": "Monthly",
+          "channels": []
+        },
+        {
+          "period": "Yearly",
+          "channels": []
+        }
+      ]
+    }
+  ]
+}
