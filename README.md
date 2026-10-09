@@ -63,7 +63,7 @@ written once.
 ## API at a glance
 
 - `Customer`: `check(feature)` (a `MeteredCheck` for `Feature.Metered`), `isEntitled(feature, default)`,
-  `entitlements()` with `has` and `get`, `planSpace()`, `pricing(visitor)`, `usage()` and `usageLog()`,
+  `entitlements()` with `has` and `get`, `plans()`, `pricing(visitor)`, `usage()` and `usageLog()`,
   `recordUsage`, `holdUsage`, `settleUsage`, `releaseUsage`, `hold`, `withHold`, `snapshot()`.
 - `ServerCustomer` adds `register`, `details`, `update`, `delete`, `token`, `setTrack`, self-serve
   billing (`subscribe`, `checkout`, `cancel`, `undoPendingChange`, `addAddOn`, `setAddOnQuantity`,
@@ -92,7 +92,7 @@ features by hand.
 - [Checking access](docs/checking-access.md)
 - [Recording usage](docs/recording-usage.md)
 - [Pricing pages and visitors](docs/pricing-and-visitors.md)
-- [Plan space and upgrades](docs/plan-space.md)
+- [Changing plans](docs/changing-plans.md)
 - [Billing](docs/billing.md)
 - [The in-app client](docs/in-app-client.md)
 - [Android](docs/android.md)
@@ -117,7 +117,7 @@ Each runs with `ENTITLER_KEY` set, for example `ENTITLER_KEY=... ./gradlew :exam
 - [in-app](examples/src/main/kotlin/com/entitlerhq/examples/inapp/Main.kt): mint a customer token and use it from an in-app client (`:examples:inApp`).
 - [metered-work](examples/src/main/kotlin/com/entitlerhq/examples/meteredwork/Main.kt): `withHold` and an observe-mode report (`:examples:meteredWork`).
 - [offline](examples/src/main/kotlin/com/entitlerhq/examples/offline/Main.kt): verify a snapshot offline (`:examples:offline`).
-- [billing](examples/src/main/kotlin/com/entitlerhq/examples/billing/Main.kt): subscribe, plan space, checkout and a grant (`:examples:billing`).
+- [billing](examples/src/main/kotlin/com/entitlerhq/examples/billing/Main.kt): subscribe, the plans they can move to, checkout and a grant (`:examples:billing`).
 - [generated-features](examples/src/main/kotlin/com/entitlerhq/examples/generatedfeatures/Main.kt): generated constants in use (`:examples:generatedFeatures`).
 - [ktor](examples/src/main/kotlin/com/entitlerhq/examples/ktor/Main.kt): a Ktor route plugin that gates a feature (`:examples:ktor`).
 

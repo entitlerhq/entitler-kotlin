@@ -22,7 +22,7 @@ random time up to `min(8, 0.5 × 2^n)` seconds before retry `n`. A `Retry-After`
 
 ## The answer cache
 
-Checks, entitlement lists, plan space and customer pricing, and on the server `pricing()` and
+Checks, entitlement lists, customer plans and customer pricing, and on the server `pricing()` and
 `features()`, go through an answer cache: an in-memory store of 1,000 answers by default. An answer
 younger than its `max-age` answers without a request, unless this client wrote to that customer since;
 otherwise the SDK revalidates it with its `ETag`, and a `304` answers the kept copy. Answers marked
@@ -65,6 +65,7 @@ class MapCacheStore : CacheStore {
     override suspend fun set(
         key: String,
         entry: CacheEntry,
+        ttl: Duration,
     ) {
         entries[key] = entry
     }

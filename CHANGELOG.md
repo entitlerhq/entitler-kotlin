@@ -11,7 +11,7 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - `EntitlerServer`, `EntitlerClient` and `EntitlerIdentityClient`, sharing one `Customer` interface.
-- Checks, `isEntitled`, entitlement lists, plan space, pricing and the usage log.
+- Checks, `isEntitled`, entitlement lists, customer plans, pricing and the usage log.
 - Usage in gate and observe modes, holds, `withHold` and batches, each with an idempotency key.
 - Customer registration, details, tokens and tracks; self-serve billing and vendor actions.
 - Timeouts, retries with backoff, an answer cache honouring `max-age` and `ETag`, stale answers when

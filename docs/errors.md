@@ -34,7 +34,7 @@ try {
             println("Sign in again.")
         }
 
-        is EntitlerSnapshotException, is EntitlerUsageRefusedException -> {
+        is EntitlerSnapshotException, is EntitlerUsageRefusedException, is EntitlerUsageSettlementException -> {
             throw error
         }
     }

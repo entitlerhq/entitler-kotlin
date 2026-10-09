@@ -60,7 +60,7 @@ public object Features {
      *
      * Counted in contacts.
      */
-    public val supportContacts: Feature.Setting = Feature.Setting("support_contacts")
+    public val supportContacts: Feature.Config = Feature.Config("support_contacts")
 
     /**
      * Support extras
@@ -78,7 +78,7 @@ public object Features {
      *
      * Counted in hours.
      */
-    public val supportSlaHours: Feature.Setting = Feature.Setting("support_sla_hours")
+    public val supportSlaHours: Feature.Config = Feature.Config("support_sla_hours")
 
     /**
      * Team essentials
@@ -97,5 +97,5 @@ public object Features {
      *
      * Counted in seats.
      */
-    public val teamSeats: Feature.Setting = Feature.Setting("team_seats")
+    public val teamSeats: Feature.Config = Feature.Config("team_seats")
 }

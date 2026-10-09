@@ -69,31 +69,43 @@ reads a hold back.
 
 ## `withHold`
 
-`withHold` does the above for you: it holds the amount, runs your block, and settles the amount the
-block answers.
+`withHold` does the above for you: it holds the amount, runs your block with the hold, and settles the
+amount the block reports in `hold.used` (the held amount when it never sets it). It answers the block's
+own result.
 
 ```kotlin
 try {
-    customer.withHold(Features.aiCredits, 100, idempotencyKey = "summary-$jobId") {
-        val summary = summarise("…")
-        summary.creditsUsed
-    }
+    val summary =
+        customer.withHold(Features.aiCredits, 100, idempotencyKey = "summary-$jobId") { hold ->
+            summarise("…").also { hold.used = it.creditsUsed }
+        }
+    println(summary.text)
 } catch (refused: EntitlerUsageRefusedException) {
     println("Refused: ${refused.result.refusal}")
 }
 ```
 
-- A refused hold never runs the block; the call throws `EntitlerUsageRefusedException` with the answer.
-- When the block answers more than was held, the excess is recorded in observe mode with the hold's
-  key plus `:excess`, and `withHold` answers that report.
+- A refused hold, or a key that replays a hold already settled, released or expired, never runs the
+  block; the call throws `EntitlerUsageRefusedException` with the answer.
+- When the block reports more than was held, the excess is recorded in observe mode with the hold's
+  key plus `:excess`. When the hold expired while the block ran, the whole amount is recorded that way.
 - When the block throws or is cancelled, the hold is released (a failed release goes to `onError`) and
   the error propagates.
-- A failed settlement propagates with `holdId` set, so you can settle again.
+- When settling or recording the excess fails, the call throws `EntitlerUsageSettlementException`,
+  carrying the hold id, the amount, the excess still to record and the block's result, so you keep the
+  output and can call `settleUsage` before the hold expires.
+- `withHold`'s key is at most 193 characters, leaving room for `:excess`.
+- The accounting happens exactly once, but the block does not: two callers sharing a key at the same
+  time may both run it. Coordinate the work yourself when it must run once.
 
 ## Batches
 
 On the server, `recordUsageBatch` records events of many customers in observe mode, in requests of at
-most 500 events sent in order, and answers one result per event in input order:
+most 500 events sent in order, and answers one result per event in input order, each with its
+idempotency key. A request that fails after its retries answers its events with outcome `error` (with
+`connection_failed` or `timed_out` when no answer arrived) and the next request still goes; resend the
+events answered `error` with the same keys. Keys derived from your own unit of work make any resend
+safe. An empty list sends nothing.
 
 ```kotlin
 val events = rows.map { UsageBatchEvent(it.customerId, Features.aiCredits, it.amount, it.at, idempotencyKey = it.rowId) }

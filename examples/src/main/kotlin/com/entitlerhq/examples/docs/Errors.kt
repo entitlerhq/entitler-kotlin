@@ -7,6 +7,7 @@ import com.entitlerhq.entitler.EntitlerSnapshotException
 import com.entitlerhq.entitler.EntitlerTimeoutException
 import com.entitlerhq.entitler.EntitlerTokenException
 import com.entitlerhq.entitler.EntitlerUsageRefusedException
+import com.entitlerhq.entitler.EntitlerUsageSettlementException
 import com.entitlerhq.entitler.ErrorCode
 import com.entitlerhq.entitler.ServerCustomer
 import com.entitlerhq.examples.generatedfeatures.Features
@@ -33,7 +34,7 @@ suspend fun handleErrors(customer: ServerCustomer) {
                 println("Sign in again.")
             }
 
-            is EntitlerSnapshotException, is EntitlerUsageRefusedException -> {
+            is EntitlerSnapshotException, is EntitlerUsageRefusedException, is EntitlerUsageSettlementException -> {
                 throw error
             }
         }

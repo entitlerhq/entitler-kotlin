@@ -63,10 +63,11 @@ suspend fun withHoldExample(
     jobId: String,
 ) {
     try {
-        customer.withHold(Features.aiCredits, 100, idempotencyKey = "summary-$jobId") {
-            val summary = summarise("…")
-            summary.creditsUsed
-        }
+        val summary =
+            customer.withHold(Features.aiCredits, 100, idempotencyKey = "summary-$jobId") { hold ->
+                summarise("…").also { hold.used = it.creditsUsed }
+            }
+        println(summary.text)
     } catch (refused: EntitlerUsageRefusedException) {
         println("Refused: ${refused.result.refusal}")
     }

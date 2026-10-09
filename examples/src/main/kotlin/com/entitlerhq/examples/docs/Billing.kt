@@ -8,10 +8,10 @@ import com.entitlerhq.entitler.ServerCustomer
 import com.entitlerhq.entitler.Sku
 import com.entitlerhq.examples.generatedfeatures.Features
 
-/** Plan space: showing the moves. */
+/** Changing plans: showing the plans the customer can move to. */
 suspend fun upgradeOptions(customer: ServerCustomer) {
-    val space = customer.planSpace()
-    for (option in space.options) {
+    val plans = customer.plans()
+    for (option in plans.options) {
         val label = if (option.selfServe) "Switch to ${option.plan.name}" else "Talk to us about ${option.plan.name}"
         println("$label (${option.direction}, ${option.timing}): ${option.impact.joinToString { it.text }}")
     }

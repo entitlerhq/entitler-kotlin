@@ -6,7 +6,7 @@ import com.entitlerhq.entitler.ErrorCode
 import com.entitlerhq.entitler.Feature
 import kotlinx.coroutines.runBlocking
 
-/** Subscribes self-serve, shows the plan space, starts a checkout and grants a feature. Run it with ENTITLER_KEY set. */
+/** Subscribes self-serve, shows the plans they can move to, starts a checkout and grants a feature. Run it with ENTITLER_KEY set. */
 fun main(): Unit =
     runBlocking {
         EntitlerServer(System.getenv("ENTITLER_KEY")).use { entitler ->
@@ -14,9 +14,9 @@ fun main(): Unit =
             customer.register(name = "Mary Jackson")
 
             customer.subscribe("pro")
-            val space = customer.planSpace()
-            println("Holds: ${space.held.joinToString { it.plan.name }}")
-            println("Could move to: ${space.options.filter { it.selfServe }.joinToString { it.plan.name }}")
+            val plans = customer.plans()
+            println("Holds: ${plans.held.joinToString { it.plan.name }}")
+            println("Could move to: ${plans.options.filter { it.selfServe }.joinToString { it.plan.name }}")
 
             try {
                 val checkout =

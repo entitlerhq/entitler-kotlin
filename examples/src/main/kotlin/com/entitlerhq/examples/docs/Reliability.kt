@@ -7,6 +7,7 @@ import com.entitlerhq.entitler.EntitlerServer
 import com.entitlerhq.entitler.MemoryCacheStore
 import com.entitlerhq.examples.generatedfeatures.Features
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 
@@ -39,6 +40,7 @@ class MapCacheStore : CacheStore {
     override suspend fun set(
         key: String,
         entry: CacheEntry,
+        ttl: Duration,
     ) {
         entries[key] = entry
     }

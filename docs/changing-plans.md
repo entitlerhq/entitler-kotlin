@@ -1,12 +1,13 @@
-# Plan space and upgrades
+# Changing plans
 
-`planSpace()` answers the plans a customer holds and the moves open to them: subscribing, moving up,
-down or across, adding an add-on, with what each move changes and whether the customer may make it
-themselves.
+`plans()` answers the plans a customer holds (`held`) and the plans they can move to (`options`):
+subscribing, moving up, down or across, adding an add-on, with what each move changes, its mode
+(self-serve or sales-led) and the SKUs that buy it. On the in-app client it needs the organisation's
+customer portal capability (`409 limit_reached` otherwise).
 
 ```kotlin
-val space = customer.planSpace()
-for (option in space.options) {
+val plans = customer.plans()
+for (option in plans.options) {
     val label = if (option.selfServe) "Switch to ${option.plan.name}" else "Talk to us about ${option.plan.name}"
     println("$label (${option.direction}, ${option.timing}): ${option.impact.joinToString { it.text }}")
 }

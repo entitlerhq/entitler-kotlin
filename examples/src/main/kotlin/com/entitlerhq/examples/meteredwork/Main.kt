@@ -21,13 +21,13 @@ fun main(): Unit =
             val job = UUID.randomUUID().toString()
 
             try {
-                val settled =
-                    customer.withHold(aiCredits, HELD, idempotencyKey = "summary-$job") {
+                val summary =
+                    customer.withHold(aiCredits, HELD, idempotencyKey = "summary-$job") { hold ->
                         val creditsUsed = Random.nextLong(1, HELD)
-                        println("Summarised the report for $creditsUsed credits.")
-                        creditsUsed
+                        hold.used = creditsUsed
+                        "A summary that cost $creditsUsed credits."
                     }
-                println("Settled; ${settled.remaining} credits left.")
+                println(summary)
             } catch (refused: EntitlerUsageRefusedException) {
                 println("Not enough credits: ${refused.result.refusal}.")
             }

@@ -15,7 +15,7 @@ public object Features {
     public val aiCredits: Feature.Metered = Feature.Metered("ai_credits")
 ```
 
-Each constant's type carries the feature's type: `Feature.OnOff`, `Feature.Setting`, `Feature.Metered`
+Each constant's type carries the feature's type: `Feature.OnOff`, `Feature.Config`, `Feature.Metered`
 or `Feature.Group` (with its leaf members). Archived features are marked `@Deprecated("Archived in
 Entitler.")`.
 

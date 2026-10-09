@@ -3,7 +3,7 @@
 ## Self-serve changes
 
 `ServerCustomer`'s billing methods act as the customer choosing for themselves in your interface, so
-they send `selfServe: true`: the change must be on a self-serve path in the customer's plan space, or
+they send `selfServe: true`: the change must be on a self-serve path among the plans the customer can move to, or
 the API answers `403 not_self_serve`.
 
 ```kotlin

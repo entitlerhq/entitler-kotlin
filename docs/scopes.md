@@ -12,7 +12,7 @@ For an identity client, `registration` says whether the sign-in provider lets a 
 
 | Call | Scope |
 | --- | --- |
-| `check`, `isEntitled`, `entitlements`, `planSpace`, `Customer.pricing`, `snapshot` | `entitlements:read` |
+| `check`, `isEntitled`, `entitlements`, `plans`, `Customer.pricing`, `snapshot` | `entitlements:read` |
 | `usage`, `hold` | `usage:read` |
 | `recordUsage`, `holdUsage`, `settleUsage`, `releaseUsage`, `withHold`, `recordUsageBatch` | `usage:write` |
 | `register` | `customers:register`; changing an existing customer's details also needs `customers:write` or `customers:profile` |
