@@ -12,7 +12,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":entitler"))
+    api(project(":entitler"))
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
