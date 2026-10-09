@@ -1,3 +1,6 @@
+@file:JvmName("Entitler")
+@file:JvmMultifileClass
+
 package com.entitlerhq.entitler
 
 import kotlinx.serialization.Serializable
@@ -110,6 +113,7 @@ private const val MILLIS = 1000L
  * @param clockSkew How far the snapshot's signing instant may be ahead of [now], in whole seconds from 0 to 300.
  * @throws EntitlerSnapshotException when the snapshot is not valid or has expired.
  */
+@JvmOverloads
 public fun verifySnapshot(
     token: String,
     keys: List<SnapshotKey>,
@@ -158,6 +162,7 @@ public fun verifySnapshot(
 }
 
 /** Verifies a snapshot against the key set from `snapshotKeys()`; see the overload taking a key list. */
+@JvmOverloads
 public fun verifySnapshot(
     token: String,
     keys: SnapshotKeys,

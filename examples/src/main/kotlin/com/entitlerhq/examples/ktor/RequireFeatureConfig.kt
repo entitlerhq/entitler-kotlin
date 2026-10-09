@@ -22,13 +22,10 @@ val RequireFeature =
         val feature = pluginConfig.feature
         onCall { call ->
             val userId = call.request.headers["X-User-Id"]
-            when {
-                userId == null -> call.respond(HttpStatusCode.Unauthorized)
-
-                !entitler
-                    .customer(
-                        userId,
-                    ).isEntitled(feature) -> call.respond(HttpStatusCode.PaymentRequired, "Upgrade to use ${feature.key}.")
+            if (userId == null) {
+                call.respond(HttpStatusCode.Unauthorized)
+            } else if (!entitler.customer(userId).isEntitled(feature)) {
+                call.respond(HttpStatusCode.PaymentRequired, "Upgrade to use ${feature.key}.")
             }
         }
     }

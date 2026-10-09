@@ -1,3 +1,6 @@
+@file:JvmName("Entitler")
+@file:JvmMultifileClass
+
 package com.entitlerhq.entitler
 
 import okio.ByteString.Companion.toByteString

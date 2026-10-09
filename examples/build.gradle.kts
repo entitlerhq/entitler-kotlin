@@ -6,6 +6,8 @@ dependencies {
     implementation(project(":entitler"))
     implementation(project(":entitler-generator"))
     implementation(libs.ktor.server.netty)
+    implementation(libs.spring.context)
+    implementation(libs.spring.web)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

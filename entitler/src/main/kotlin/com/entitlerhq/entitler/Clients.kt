@@ -1,3 +1,6 @@
+@file:JvmName("Entitler")
+@file:JvmMultifileClass
+
 package com.entitlerhq.entitler
 
 import kotlinx.coroutines.flow.Flow
@@ -223,24 +226,28 @@ public interface EntitlerIdentityClient : EntitlerClient {
 }
 
 /** Builds the server client from a secret project [key]. */
+@JvmOverloads
 public fun EntitlerServer(
     key: String,
     configure: EntitlerConfig.() -> Unit = {},
 ): EntitlerServer = ServerClient(requireKey(key), EntitlerConfig().apply(configure).also { it.validate() })
 
 /** Builds an in-app client from a customer [token] your server minted. A fixed token cannot be refreshed. */
+@JvmOverloads
 public fun EntitlerClient(
     token: String,
     configure: EntitlerClientConfig.() -> Unit = {},
 ): EntitlerClient = AppClient(null, requireToken(token, CUSTOMER_TOKEN_REQUIRED), null, configure)
 
 /** Builds an in-app client from a provider that answers a fresh customer token, asked again before expiry and after a 401. */
+@JvmOverloads
 public fun EntitlerClient(
     token: suspend () -> String,
     configure: EntitlerClientConfig.() -> Unit = {},
 ): EntitlerClient = AppClient(null, null, token, configure)
 
 /** Builds an identity client from a publishable [key] and an [identityToken] from your sign-in provider. */
+@JvmOverloads
 public fun EntitlerIdentityClient(
     key: String,
     identityToken: String,
@@ -248,6 +255,7 @@ public fun EntitlerIdentityClient(
 ): EntitlerIdentityClient = AppClient(requireKey(key), requireToken(identityToken, IDENTITY_TOKEN_REQUIRED), null, configure)
 
 /** Builds an identity client from a publishable [key] and a provider that answers a fresh identity token. */
+@JvmOverloads
 public fun EntitlerIdentityClient(
     key: String,
     identityToken: suspend () -> String,

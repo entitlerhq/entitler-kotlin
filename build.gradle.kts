@@ -24,7 +24,7 @@ subprojects {
 
     extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
         buildUponDefaultConfig = true
-        config.setFrom(rootProject.file("config/detekt.yml"))
+        config.setFrom(listOfNotNull(rootProject.file("config/detekt.yml"), rootProject.file("config/detekt-examples.yml").takeIf { project.name == "examples" }))
     }
 
     configurations.matching { it.name == "detekt" }.configureEach {
