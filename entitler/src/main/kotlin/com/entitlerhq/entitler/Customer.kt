@@ -77,8 +77,11 @@ public interface Customer {
     /** The customer's entitlements, groups included, `GET /customers/{id}/entitlements`, through the cache. */
     public suspend fun entitlements(timeout: Duration? = null): Entitlements
 
-    /** The plans the customer holds and the moves open to them, `GET /customers/{id}/plans`, through the cache. */
-    public suspend fun planSpace(timeout: Duration? = null): PlanSpace
+    /**
+     * The plans the customer holds and the plans they can move to, `GET /customers/{id}/plans`, through the
+     * cache. On the in-app client it needs the organisation's customer portal capability.
+     */
+    public suspend fun plans(timeout: Duration? = null): CustomerPlans
 
     /** Pricing as this customer sees it, `GET /customers/{id}/pricing`, through the cache. */
     public suspend fun pricing(
@@ -154,41 +157,75 @@ public interface Customer {
     ): UsageHold
 
     /**
-     * Holds [amount], runs [work], and settles the amount [work] answers.
+     * Holds [amount], runs [work] with the hold, and settles the amount [work] reports on it.
      *
-     * A refused hold never runs [work] and throws [EntitlerUsageRefusedException]. When [work] answers
-     * more than was held, the excess is recorded in observe mode with the hold's key plus `:excess`. When
-     * [work] throws or is cancelled, the hold is released and the error propagates. A failed settlement
-     * propagates with [EntitlerException.holdId] set, so the app can settle again.
+     * [work] sets [ActiveHold.used] to the total it really used (the held amount is settled when it never
+     * does) and answers whatever the app needs, which `withHold` answers.
+     *
+     * - [work] runs only when the hold answers `held`, or replays one still open. A refused hold, or a key
+     *   that replays a hold already settled, released or expired, throws [EntitlerUsageRefusedException].
+     * - More than was held is recorded in observe mode under the hold's key plus `:excess`; when the hold
+     *   expired while [work] ran, the whole amount is recorded that way.
+     * - When [work] throws or is cancelled, the hold is released (a failed release goes to `onError`) and the
+     *   error propagates.
+     * - When settling or recording the excess fails, the call throws [EntitlerUsageSettlementException] with
+     *   [work]'s result, so the app keeps its output and can settle again.
+     *
+     * The accounting happens exactly once, but [work] does not: two callers sharing a key at the same time
+     * may both run it. Apps that need [work] itself to run once coordinate it themselves.
      *
      * ```kotlin
-     * customer.withHold(Features.aiCredits, 100) {
-     *     val reply = model.generate(prompt)
-     *     reply.creditsUsed
-     * }
+     * val summary =
+     *     customer.withHold(Features.aiCredits, 100) { hold ->
+     *         model.summarise(text).also { hold.used = it.creditsUsed }
+     *     }
      * ```
      *
-     * @return The settlement's answer, or the excess report's when [work] used more than was held.
+     * @param idempotencyKey The hold's key, 1 to 193 printable ASCII characters.
      */
-    public suspend fun withHold(
+    public suspend fun <T> withHold(
         feature: Feature.Metered,
         amount: Long,
         ttl: Duration? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
-        work: suspend () -> Long,
-    ): UsageResult
+        work: suspend (hold: ActiveHold) -> T,
+    ): T
 
     /**
      * Signs the customer's entitlements for offline use, `POST /customers/{id}/snapshots`.
      * Verify it with [verifySnapshot].
      *
-     * @param ttl How long it lasts, in whole seconds; by default, and at most, the project's offline days.
+     * @param ttl How long it lasts, in whole seconds (rounded up); by default, and at most, the project's offline days.
      */
     public suspend fun snapshot(
         ttl: Duration? = null,
+        idempotencyKey: String? = null,
         timeout: Duration? = null,
     ): IssuedSnapshot
+}
+
+/**
+ * The hold `withHold` passes its work.
+ *
+ * @property holdId The hold's id.
+ * @property amount The amount held.
+ * @property expiresAt When the hold expires, or null when the answer did not say.
+ */
+public class ActiveHold internal constructor(
+    public val holdId: String,
+    public val amount: Long,
+    public val expiresAt: Instant?,
+) {
+    /** The total the work really used, from 0; the held amount is settled when it is never set. */
+    public var used: Long? = null
+        set(value) {
+            require(value == null || value in 0..MAX_AMOUNT) { "Pass the amount used as a whole number of 0 or more." }
+            field = value
+        }
+
+    /** A string form naming the hold. */
+    override fun toString(): String = "ActiveHold(holdId=$holdId, amount=$amount, used=$used)"
 }
 
 /** When a subscription change takes effect. */
@@ -202,7 +239,9 @@ public enum class ChangeTiming(
     End("end"),
 }
 
+internal const val MAX_AMOUNT = 9_007_199_254_740_991L
 internal const val PLAN_REQUIRED = "Name the plan by its id or its key."
+private const val MAX_HOLD_KEY_LENGTH = 193
 
 internal fun checkPlan(plan: String): String = plan.also { require(it.isNotBlank()) { PLAN_REQUIRED } }
 
@@ -210,6 +249,21 @@ internal fun checkId(
     id: String,
     message: String,
 ): String = id.also { require(it.isNotBlank()) { message } }
+
+internal fun checkCustomerId(id: String): String =
+    id
+        .also {
+            require(it.isNotBlank()) { "Provide the id your app uses for the customer." }
+        }.also(::pathSegment)
+
+internal fun checkAmount(amount: Long): Long =
+    amount.also {
+        require(it in 1..MAX_AMOUNT) { "Pass amount as a whole number from 1 to $MAX_AMOUNT." }
+    }
+
+internal fun seconds(ttl: Duration): Long = (ttl.inWholeMilliseconds + MILLIS - 1).floorDiv(MILLIS).coerceAtLeast(1)
+
+private const val MILLIS = 1000L
 
 internal fun checkVisitor(visitor: String?): String? {
     if (visitor !=
@@ -225,7 +279,7 @@ internal open class CustomerImpl(
     protected val pathId: String,
     given: String?,
 ) : Customer {
-    protected val base: String = "/customers/" + encodeComponent(pathId)
+    protected val base: String = "/customers/" + pathSegment(pathId)
 
     @Volatile private var latest: String? = given
 
@@ -259,13 +313,11 @@ internal open class CustomerImpl(
         body: kotlinx.serialization.json.JsonElement? = null,
         query: List<Pair<String, String>> = emptyList(),
         visitor: String? = null,
+        changesAnswers: Boolean = true,
     ): T {
         val request = ApiRequest(method, base + path, query, body, checkIdempotencyKey(idempotencyKey), visitor, timeout)
-        return try {
-            engine.call(request, deserializer).also(::noteCustomer)
-        } finally {
-            engine.wrote(pathId)
-        }
+        if (changesAnswers) engine.bump(pathId)
+        return engine.call(request, deserializer).also(::noteCustomer)
     }
 
     private fun noteCustomer(answer: Any?) {
@@ -274,7 +326,7 @@ internal open class CustomerImpl(
                 is Check -> answer.customer
                 is MeteredCheck -> answer.customer
                 is Entitlements -> answer.customer
-                is PlanSpace -> answer.customer
+                is CustomerPlans -> answer.customer
                 is Pricing -> answer.customer
                 is CustomerUsage -> answer.customer
                 is UsageResult -> answer.customer
@@ -284,7 +336,7 @@ internal open class CustomerImpl(
         customer?.let(::named)
     }
 
-    private fun featurePath(key: String) = "/entitlements/" + encodeComponent(key)
+    private fun featurePath(key: String) = "/entitlements/" + pathSegment(key)
 
     override suspend fun check(
         feature: Feature.Metered,
@@ -311,6 +363,7 @@ internal open class CustomerImpl(
         default: Boolean,
     ): Boolean {
         checkId(key, FEATURE_REQUIRED)
+        pathSegment(key)
         return try {
             check(key).entitled
         } catch (error: CancellationException) {
@@ -323,7 +376,7 @@ internal open class CustomerImpl(
 
     override suspend fun entitlements(timeout: Duration?): Entitlements = cachedRead("/entitlements", Entitlements.serializer(), timeout)
 
-    override suspend fun planSpace(timeout: Duration?): PlanSpace = cachedRead("/plans", PlanSpace.serializer(), timeout)
+    override suspend fun plans(timeout: Duration?): CustomerPlans = cachedRead("/plans", CustomerPlans.serializer(), timeout)
 
     override suspend fun pricing(
         visitor: String?,
@@ -354,6 +407,7 @@ internal open class CustomerImpl(
         idempotencyKey: String?,
         timeout: Duration?,
     ): UsageResult {
+        checkAmount(amount)
         val body =
             buildJsonObject {
                 put("feature", feature.key)
@@ -372,31 +426,36 @@ internal open class CustomerImpl(
         idempotencyKey: String?,
         timeout: Duration?,
     ): UsageResult {
+        checkAmount(amount)
         val body =
             buildJsonObject {
                 put("feature", feature.key)
                 put("amount", amount)
-                ttl?.let { put("ttlSeconds", it.inWholeSeconds) }
+                ttl?.let { put("ttlSeconds", seconds(it)) }
             }
         return write("POST", "/usage/holds", UsageResult.serializer(), idempotencyKey, timeout, body)
     }
 
-    private fun holdPath(holdId: String) = "/usage/holds/" + encodeComponent(checkId(holdId, "Provide the id of the hold."))
+    private fun holdPath(holdId: String) = "/usage/holds/" + pathSegment(checkId(holdId, "Provide the id of the hold."))
 
     override suspend fun settleUsage(
         holdId: String,
         amount: Long,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): UsageResult =
-        write(
+    ): UsageResult {
+        require(amount in 0..MAX_AMOUNT) { "Pass amount as a whole number from 0 to the held amount." }
+        return write(
             "POST",
             holdPath(holdId) + "/settle",
             UsageResult.serializer(),
             idempotencyKey,
             timeout,
-            buildJsonObject { put("amount", amount) },
+            buildJsonObject {
+                put("amount", amount)
+            },
         )
+    }
 
     override suspend fun releaseUsage(
         holdId: String,
@@ -409,45 +468,68 @@ internal open class CustomerImpl(
         timeout: Duration?,
     ): UsageHold = read(holdPath(holdId), UsageHold.serializer(), timeout)
 
-    override suspend fun withHold(
+    override suspend fun <T> withHold(
         feature: Feature.Metered,
         amount: Long,
         ttl: Duration?,
         idempotencyKey: String?,
         timeout: Duration?,
-        work: suspend () -> Long,
-    ): UsageResult {
-        val key = checkIdempotencyKey(idempotencyKey) ?: newIdempotencyKey()
-        checkIdempotencyKey("$key$EXCESS")
-        val hold = holdUsage(feature, amount, ttl, key, timeout)
-        val holdId = hold.holdId
-        if (hold.outcome == UsageOutcome.Refused || holdId == null) throw EntitlerUsageRefusedException(hold)
-        var used = -1L
+        work: suspend (hold: ActiveHold) -> T,
+    ): T {
+        val key = checkIdempotencyKey(idempotencyKey, MAX_HOLD_KEY_LENGTH) ?: newIdempotencyKey()
+        checkAmount(amount)
+        val held = holdUsage(feature, amount, ttl, key, timeout)
+        val holdId = held.holdId
+        if (holdId == null || !isOpen(held, holdId, timeout)) throw EntitlerUsageRefusedException(held)
+        val active = ActiveHold(holdId, held.amount, held.expiresAt)
         var finished = false
-        try {
-            used = work()
-            require(used >= 0) { "Return the amount used from the work, 0 or more." }
-            finished = true
-        } finally {
-            if (!finished) withContext(NonCancellable) { releaseQuietly(holdId, timeout) }
-        }
-        val settled =
+        val result =
             try {
-                settleUsage(holdId, minOf(used, hold.amount), timeout = timeout)
-            } catch (error: EntitlerException) {
-                error.holdId = holdId
-                throw error
+                work(active).also { finished = true }
+            } finally {
+                if (!finished) withContext(NonCancellable) { releaseQuietly(holdId) }
             }
-        if (used <= hold.amount) return settled
-        return recordUsage(feature, used - hold.amount, UsageMode.Observe, idempotencyKey = "$key$EXCESS", timeout = timeout)
+        settle(feature, active, key, timeout, result)
+        return result
     }
 
-    private suspend fun releaseQuietly(
+    private suspend fun isOpen(
+        held: UsageResult,
         holdId: String,
         timeout: Duration?,
+    ): Boolean =
+        when (held.outcome) {
+            UsageOutcome.Held -> true
+            UsageOutcome.Duplicate -> hold(holdId, timeout).state == HoldState.Open
+            else -> false
+        }
+
+    private suspend fun settle(
+        feature: Feature.Metered,
+        hold: ActiveHold,
+        key: String,
+        timeout: Duration?,
+        result: Any?,
     ) {
+        val used = hold.used ?: hold.amount
+        val settled = minOf(used, hold.amount)
+        var excess = (used - hold.amount).takeIf { it > 0 }
         try {
-            releaseUsage(holdId, timeout = timeout)
+            try {
+                settleUsage(hold.holdId, settled, timeout = timeout)
+            } catch (error: EntitlerApiException) {
+                if (error.code != ErrorCode.HoldExpired) throw error
+                excess = used.takeIf { it > 0 }
+            }
+            excess?.let { recordUsage(feature, it, UsageMode.Observe, idempotencyKey = key + EXCESS, timeout = timeout) }
+        } catch (error: EntitlerException) {
+            throw EntitlerUsageSettlementException(hold.holdId, settled, excess, result, error)
+        }
+    }
+
+    private suspend fun releaseQuietly(holdId: String) {
+        try {
+            releaseUsage(holdId, timeout = engine.timeout)
         } catch (error: EntitlerException) {
             engine.report(error)
         }
@@ -455,10 +537,11 @@ internal open class CustomerImpl(
 
     override suspend fun snapshot(
         ttl: Duration?,
+        idempotencyKey: String?,
         timeout: Duration?,
     ): IssuedSnapshot {
-        val body = buildJsonObject { ttl?.let { put("ttlSeconds", it.inWholeSeconds) } }
-        return engine.call(ApiRequest("POST", "$base/snapshots", body = body, timeout = timeout), IssuedSnapshot.serializer())
+        val body = buildJsonObject { ttl?.let { put("ttlSeconds", seconds(it)) } }
+        return write("POST", "/snapshots", IssuedSnapshot.serializer(), idempotencyKey, timeout, body, changesAnswers = false)
     }
 
     override fun toString(): String = "Customer(id=$id)"

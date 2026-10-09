@@ -228,7 +228,7 @@ class CommandTest {
         )
         val result = run("generate", "--key", "ent_test_other", "--base-url", base, "--out", File(directory, "F.kt").path)
         assertEquals(1, result.code)
-        assertEquals("Entitler request failed: Needs plans:read. (scope_required)", result.err)
+        assertEquals("Entitler request failed: Needs plans:read (scope_required).", result.err)
         assertEquals("Bearer ent_test_other", api.takeRequest().headers["Authorization"])
     }
 

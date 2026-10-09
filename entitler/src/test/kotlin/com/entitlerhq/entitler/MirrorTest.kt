@@ -127,7 +127,7 @@ class MirrorTest {
         mirrors("check-metered", MeteredCheck.serializer())
         mirrors("check-beta", Check.serializer())
         mirrors("entitlements", Entitlements.serializer())
-        mirrors("plan-space", PlanSpace.serializer())
+        mirrors("plan-space", CustomerPlans.serializer())
         mirrors("pricing-full", Pricing.serializer())
         mirrors("customer-pricing", Pricing.serializer())
         mirrors("features", FeatureList.serializer())

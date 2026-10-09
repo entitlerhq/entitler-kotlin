@@ -645,6 +645,26 @@ public data class CustomerProviders(
 )
 
 /**
+ * What a billing call subscribes to or adds: a plan by its key or id, or a SKU the customer bought,
+ * which names its own period. Billing methods also take a plan key as a plain `String`.
+ */
+public sealed interface PlanChoice
+
+/**
+ * A plan, named by its key or public id.
+ *
+ * @property plan The plan's key or public id.
+ */
+public data class Plan(
+    val plan: String,
+) : PlanChoice {
+    init {
+        checkPlan(plan)
+        pathSegment(plan)
+    }
+}
+
+/**
  * A SKU the customer bought at a payment provider, which names its own period.
  *
  * ```kotlin
@@ -657,4 +677,4 @@ public data class CustomerProviders(
 public data class Sku(
     val connector: String,
     val ids: Map<String, String>,
-)
+) : PlanChoice

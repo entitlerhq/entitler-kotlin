@@ -17,14 +17,11 @@ import kotlin.time.Duration
 public sealed class EntitlerException(
     message: String,
     cause: Throwable? = null,
-) : RuntimeException(message, cause) {
-    /** For a failed settlement in `withHold`, the hold to settle again; else null. */
-    public var holdId: String? = null
-        internal set
-}
+) : RuntimeException(message, cause)
 
 /**
- * The API answered with a status that is not 2xx.
+ * The API answered with a status that is not 2xx, or with a 2xx answer this SDK cannot read
+ * ([ErrorCode.InvalidResponse], with the decoding failure as its cause).
  *
  * @property status The HTTP status.
  * @property code The error code, or [ErrorCode.HttpError] when the answer had none.
@@ -45,7 +42,8 @@ public class EntitlerApiException(
     public val payment: Payment? = null,
     public val listingGaps: List<ListingGap> = emptyList(),
     public val listingProblems: List<ListingProblem> = emptyList(),
-) : EntitlerException(message)
+    cause: Throwable? = null,
+) : EntitlerException(message, cause)
 
 /**
  * No answer arrived: DNS, TLS, or a connection refused or reset.
@@ -69,7 +67,10 @@ public class EntitlerTimeoutException(
     public val idempotencyKey: String? = null,
 ) : EntitlerException(message, cause)
 
-/** A token provider failed, or answered a blank or unreadable token. The message never holds the token. */
+/**
+ * A token provider failed, or answered a blank or unreadable token. The message never holds the token;
+ * a provider's own error is kept as the cause, and its contents are outside the SDK's control.
+ */
 public class EntitlerTokenException(
     message: String,
     cause: Throwable? = null,
@@ -86,13 +87,31 @@ public class EntitlerSnapshotException(
 ) : EntitlerException(message)
 
 /**
- * `withHold` could not hold the amount, so the work never ran.
+ * `withHold` could not hold the amount, or its key replays a hold already settled, released or
+ * expired, so the work never ran.
  *
- * @property result The refused hold's answer, with its refusal and meter.
+ * @property result The hold's answer, with its outcome, refusal and meter.
  */
 public class EntitlerUsageRefusedException(
     public val result: UsageResult,
-) : EntitlerException("Entitler refused to hold ${result.amount} of ${result.feature}: ${result.refusal ?: result.outcome}.")
+) : EntitlerException("Entitler did not hold ${result.amount} of ${result.feature}: ${result.refusal ?: result.outcome}.")
+
+/**
+ * `withHold`'s work succeeded, but settling the hold or recording the excess failed after its
+ * retries. Keep the work's output and call `settleUsage(holdId, amount)` before the hold expires.
+ *
+ * @property holdId The hold to settle.
+ * @property amount The amount to settle.
+ * @property excess The amount still to record in observe mode, or null when there is none.
+ * @property result The work's result.
+ */
+public class EntitlerUsageSettlementException(
+    public val holdId: String,
+    public val amount: Long,
+    public val excess: Long?,
+    public val result: Any?,
+    cause: Throwable,
+) : EntitlerException("Entitler could not settle hold $holdId after the work succeeded: ${cause.message}", cause)
 
 /**
  * The payment a plan change waits on.

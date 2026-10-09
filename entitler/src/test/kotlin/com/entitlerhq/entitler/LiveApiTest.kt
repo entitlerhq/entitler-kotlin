@@ -22,6 +22,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 
+/**
+ * The live API suite. The SDK test projects have no sign-in provider, so the identity client is covered by
+ * the unit tests only.
+ */
 @Tag("integration")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LiveApiTest {
@@ -128,6 +132,9 @@ class LiveApiTest {
             val before = statuses.size
             customer.check(Feature.OnOff("export_pdf"))
             assertEquals(304, statuses.drop(before).single())
+            val beforeList = statuses.size
+            customer.entitlements()
+            assertEquals(304, statuses.drop(beforeList).single())
             assertFalse(customer.isEntitled(Feature.OnOff("export_pdf")))
         }
 
@@ -171,8 +178,7 @@ class LiveApiTest {
             assertEquals(HoldState.Settled, customer.hold(holdId).state)
             val second = customer.holdUsage(credits, 3)
             assertEquals(UsageOutcome.Released, customer.releaseUsage(second.holdId!!).outcome)
-            val settled = customer.withHold(credits, 5) { 2 }
-            assertEquals(UsageOutcome.Settled, settled.outcome)
+            assertEquals("done", customer.withHold(credits, 5) { hold -> "done".also { hold.used = 2 } })
             assertFailsWith<IllegalStateException> { customer.withHold(credits, 5) { error("work failed") } }
             assertEquals(6, customer.check(credits).used)
             assertEquals(0, customer.check(credits).held)
@@ -195,10 +201,10 @@ class LiveApiTest {
         }
 
     @Test
-    fun `plan space and customer pricing`() =
+    fun `customer plans and customer pricing`() =
         runBlocking<Unit> {
             val customer = registered()
-            val space = customer.planSpace()
+            val space = customer.plans()
             assertTrue(space.held.any { it.plan.key == "free" })
             assertTrue(space.options.any { it.plan.key == "pro" })
             assertEquals(customer.id, customer.pricing().customer)
@@ -208,16 +214,18 @@ class LiveApiTest {
     fun `an in-app client with a customer token provider`() =
         runBlocking<Unit> {
             val customer = registered()
-            EntitlerClient({ customer.token(ttl = 5.minutes).token }).use { client ->
+            EntitlerClient(
+                { customer.token(scopes = listOf(Scope.EntitlementsRead, Scope.UsageRead, Scope.UsageWrite), ttl = 5.minutes).token },
+            ).use { client ->
                 val scopes = client.scopes()
                 assertEquals(listOf(Scope.EntitlementsRead, Scope.UsageRead, Scope.UsageWrite), scopes.granted)
                 assertFalse(client.me.check(Feature.OnOff("export_pdf")).entitled)
                 assertEquals(customer.id, client.me.id)
                 assertEquals(UsageOutcome.Recorded, client.me.recordUsage(credits, 1).outcome)
             }
-            EntitlerClient(customer.token(scopes = listOf(Scope.EntitlementsRead)).token).use { client ->
-                val failure = assertFailsWith<EntitlerApiException> { client.me.recordUsage(credits, 1) }
-                assertTrue(failure.code == ErrorCode.ScopeRequired || failure.code == ErrorCode.CredentialNotAllowed)
+            EntitlerClient(customer.token(scopes = listOf(Scope.EntitlementsRead, Scope.UsageWrite)).token).use { client ->
+                val failure = assertFailsWith<EntitlerApiException> { client.me.usage() }
+                assertEquals(ErrorCode.ScopeRequired, failure.code)
                 assertEquals(403, failure.status)
             }
         }
@@ -264,18 +272,11 @@ class LiveApiTest {
             assertEquals(
                 "pro",
                 customer
-                    .subscribe("pro")
+                    .subscribe("pro", period = "Monthly")
                     .customer.plan
                     ?.key,
             )
-            assertEquals(
-                "sso_addon",
-                customer
-                    .addAddOn("sso_addon")
-                    .addOns
-                    .single()
-                    .plan.key,
-            )
+            assertTrue(customer.addAddOn("sso_addon").addOns.any { it.plan.key == "sso_addon" })
             assertTrue(customer.removeAddOn("sso_addon").addOns.none { it.plan.key == "sso_addon" && it.movingTo == null })
             assertEquals(
                 "free",
@@ -284,10 +285,11 @@ class LiveApiTest {
                     .customer.plan
                     ?.key,
             )
+            val proBasic = server.pricing().plans.first { it.key == "pro_basic" }
             assertEquals(
-                "team",
+                "pro_basic",
                 customer.vendor
-                    .subscribe("team")
+                    .subscribe("pro_basic", period = proBasic.periods.first().label)
                     .customer.plan
                     ?.key,
             )

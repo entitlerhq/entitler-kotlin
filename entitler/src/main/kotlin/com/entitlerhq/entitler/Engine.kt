@@ -1,31 +1,41 @@
 package com.entitlerhq.entitler
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.decodeFromJsonElement
+import okhttp3.CacheControl
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Headers
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import okio.ByteString.Companion.encodeUtf8
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
+import java.time.format.DateTimeParseException
+import java.time.temporal.ChronoField
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.min
@@ -43,35 +53,119 @@ internal class ApiRequest(
     val idempotencyKey: String? = null,
     val visitor: String? = null,
     val timeout: Duration? = null,
-    val credentialed: Boolean = true,
+    val anonymous: Boolean = false,
 )
 
 internal class Answer(
     val status: Int,
     val headers: Headers,
     val body: String,
+    val idempotencyKey: String?,
+    val credential: Credential?,
 )
 
 private val jsonType = "application/json".toMediaType()
 private val retriedStatuses = setOf(408, 429, 500, 502, 503, 504)
 private const val MAX_BACKOFF_SECONDS = 8.0
-private const val IDEMPOTENCY_KEY_MESSAGE = "Pass idempotencyKey as 1 to 200 printable ASCII characters."
 private const val MAX_KEY_LENGTH = 200
+private const val OUTAGE_WINDOW_MILLIS = 30_000L
+private const val MILLIS_PER_SECOND = 1000L
+private const val CANNOT_READ = "Entitler sent an answer this SDK cannot read."
 
-internal fun checkIdempotencyKey(key: String?): String? {
-    if (key != null) require(key.length in 1..MAX_KEY_LENGTH && key.all { it in ' '..'~' }) { IDEMPOTENCY_KEY_MESSAGE }
+internal fun checkIdempotencyKey(
+    key: String?,
+    maxLength: Int = MAX_KEY_LENGTH,
+): String? {
+    if (key != null) {
+        val valid = key.length in 1..maxLength && key.all { it in ' '..'~' } && !key.startsWith(' ') && !key.endsWith(' ')
+        require(valid) { "Pass idempotencyKey as 1 to $maxLength printable ASCII characters." }
+    }
     return key
 }
 
 internal fun newIdempotencyKey(): String = UUID.randomUUID().toString()
 
+private val imfDate = DateTimeFormatter.RFC_1123_DATE_TIME
+private const val TWO_DIGIT_YEAR_WINDOW = 50L
+
+private fun rfc850Date(now: Long): DateTimeFormatter =
+    DateTimeFormatterBuilder()
+        .appendPattern("EEEE, dd-MMM-")
+        .appendValueReduced(
+            ChronoField.YEAR,
+            2,
+            2,
+            Instant
+                .ofEpochMilli(now)
+                .atOffset(ZoneOffset.UTC)
+                .toLocalDate()
+                .minusYears(TWO_DIGIT_YEAR_WINDOW),
+        ).appendPattern(" HH:mm:ss 'GMT'")
+        .toFormatter(Locale.US)
+
+private val asctimeDate = DateTimeFormatter.ofPattern("EEE MMM ppd HH:mm:ss yyyy", Locale.US)
+
+internal fun retryAfterOf(
+    value: String,
+    now: Long,
+): Duration? {
+    val text = value.trim()
+    if (text.isNotEmpty() && text.all { it in '0'..'9' }) {
+        return text
+            .toBigInteger()
+            .min(Long.MAX_VALUE.toBigInteger())
+            .toLong()
+            .seconds
+    }
+    val instant =
+        listOf(
+            { ZonedDateTime.parse(text, imfDate).toInstant() },
+            { LocalDateTime.parse(text, rfc850Date(now)).toInstant(ZoneOffset.UTC) },
+            { LocalDateTime.parse(text, asctimeDate).toInstant(ZoneOffset.UTC) },
+        ).firstNotNullOfOrNull { parse ->
+            try {
+                parse()
+            } catch (error: DateTimeParseException) {
+                null
+            }
+        } ?: return null
+    return (instant.toEpochMilli() - now).coerceAtLeast(0).milliseconds
+}
+
+private class Directives(
+    val maxAge: Long?,
+    val noStore: Boolean,
+    val noCache: Boolean,
+)
+
+private fun directives(cacheControl: String?): Directives {
+    val parts = cacheControl.orEmpty().split(',').map { it.trim().lowercase() }
+    val maxAge =
+        parts.firstNotNullOfOrNull { part ->
+            part
+                .takeIf { it.startsWith("max-age=") }
+                ?.removePrefix("max-age=")
+                ?.trim('"')
+                ?.toLongOrNull()
+        }
+    return Directives(maxAge, "no-store" in parts, "no-cache" in parts)
+}
+
+private val USER_AGENT: String =
+    "entitler-kotlin/$SDK_VERSION " +
+        (
+            runCatching { "android/" + Class.forName("android.os.Build\$VERSION").getField("SDK_INT").getInt(null) }.getOrNull()
+                ?: "jvm/${System.getProperty("java.version") ?: "unknown"}"
+        )
+
 internal class Engine(
     config: EntitlerConfig,
     private val credentials: Credentials,
     val visitor: String?,
+    private val scope: CoroutineScope? = null,
 ) {
     val baseUrl: String = config.baseUrl.trim().trimEnd('/')
-    private val timeout = config.timeout
+    val timeout = config.timeout
     private val maxRetries = config.maxRetries
     private val maxRetryDelay = config.maxRetryDelay
     private val cache = config.cache
@@ -79,22 +173,38 @@ internal class Engine(
     private val onError = config.onError
     private val asOf = config.asOf?.let(::formatInstant)
     private val ownsHttp = config.httpClient == null
-    private val http = config.httpClient ?: defaultHttpClient()
+    private val http =
+        (config.httpClient ?: OkHttpClient())
+            .newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .apply {
+                if (ownsHttp) {
+                    connectTimeout(0, TimeUnit.MILLISECONDS)
+                    readTimeout(0, TimeUnit.MILLISECONDS)
+                    writeTimeout(0, TimeUnit.MILLISECONDS)
+                }
+            }.build()
     val clock = config.clock
     private val random = config.random
-    private val writes = ConcurrentHashMap<String, Long>()
+    private val generations = ConcurrentHashMap<String, Long>()
+    private val bumpedAt = ConcurrentHashMap<String, Long>()
+
+    @Volatile private var outageUntil = 0L
 
     val kind: String get() = credentials.kind
 
-    fun report(error: EntitlerException) {
+    fun report(error: Throwable) {
         runCatching { onError?.invoke(error) }
     }
 
-    fun wrote(customer: String) {
-        writes[customer] = clock()
+    fun bump(customer: String) {
+        generations.merge(customer, 1L, Long::plus)
+        bumpedAt[customer] = clock()
     }
 
     fun close() {
+        scope?.cancel()
         if (ownsHttp) {
             http.dispatcher.executorService.shutdown()
             http.connectionPool.evictAll()
@@ -104,7 +214,10 @@ internal class Engine(
     suspend fun <T> call(
         request: ApiRequest,
         deserializer: DeserializationStrategy<T>,
-    ): T = decode(send(request).body, deserializer)
+    ): T {
+        val answer = send(request)
+        return decodeAnswer(answer, answer.body, deserializer)
+    }
 
     suspend fun <T> cached(
         request: ApiRequest,
@@ -112,44 +225,185 @@ internal class Engine(
         deserializer: DeserializationStrategy<T>,
     ): T {
         val store = cache ?: return call(request, deserializer)
-        val key = cacheKey(request)
-        val kept = store.get(key)
-        val now = clock()
-        if (kept != null && isFresh(kept, now, customer)) return decode(kept.body, deserializer)
-        val answer =
+        val credential =
             try {
-                send(request, kept?.etag)
-            } catch (error: EntitlerException) {
-                return decode(standIn(kept, error, now).body, deserializer, stale = true)
+                if (request.anonymous) null else credentials.current()
+            } catch (error: EntitlerTokenException) {
+                return staleFromPrevious(store, request, deserializer, error)
             }
-        val revalidated = if (answer.status == HTTP_NOT_MODIFIED) kept else null
-        val body = revalidated?.body ?: answer.body
-        if (!cacheControl(answer.headers).noStore) {
-            entryOf(answer, body, revalidated?.etag).takeIf { it.etag != null || it.maxAge != null }?.let { store.set(key, it) }
-        }
-        return decode(body, deserializer)
+        val kept = storeGet(store, cacheKey(request, credential))
+        val now = clock()
+        val keptStale = kept != null && now < outageUntil && isYoung(kept, now)
+        if (kept != null && (keptStale || isFresh(kept, now, customer))) return decodeKept(kept, deserializer, keptStale)
+        return fetchThrough(store, request, customer, credential, kept, deserializer)
     }
 
-    private fun standIn(
+    private suspend fun <T> fetchThrough(
+        store: CacheStore,
+        request: ApiRequest,
+        customer: String?,
+        credential: Credential?,
+        kept: CacheEntry?,
+        deserializer: DeserializationStrategy<T>,
+    ): T {
+        val startedAt = clock()
+        val generation = customer?.let { generations[it] }
+        val (answer, result) =
+            try {
+                val answer = send(request, kept?.etag, credential)
+                val revalidated = if (answer.status == HTTP_NOT_MODIFIED) kept else null
+                answer to entryOf(answer, revalidated, startedAt).let { it to decodeAnswer(answer, it.body, deserializer) }
+            } catch (error: EntitlerException) {
+                return standIn(kept, error, deserializer)
+            }
+        val moved = customer != null && generations[customer] != generation
+        val entry = if (moved) result.first else result.first.copy(receivedAt = Instant.ofEpochMilli(clock()))
+        val directives = directives(entry.cacheControl)
+        if (!directives.noStore && (entry.etag != null || directives.maxAge != null)) {
+            storeSet(store, cacheKey(request, answer.credential), entry, staleFor + (directives.maxAge ?: 0).seconds)
+        }
+        return result.second
+    }
+
+    private suspend fun <T> staleFromPrevious(
+        store: CacheStore,
+        request: ApiRequest,
+        deserializer: DeserializationStrategy<T>,
+        error: EntitlerTokenException,
+    ): T {
+        val previous = credentials.held() ?: throw error
+        val kept = storeGet(store, cacheKey(request, previous))
+        if (kept == null || !isYoung(kept, clock())) throw error
+        report(error)
+        return decodeKept(kept, deserializer, stale = true)
+    }
+
+    private fun <T> standIn(
         kept: CacheEntry?,
         error: EntitlerException,
-        now: Long,
-    ): CacheEntry {
-        val young = kept != null && now - kept.receivedAt.toEpochMilli() < staleFor.inWholeMilliseconds
-        if (!young || !isUnreachable(error)) throw error
+        deserializer: DeserializationStrategy<T>,
+    ): T {
+        if (!isUnreachable(error)) throw error
+        val now = clock()
+        val retryAfter = ((error as? EntitlerApiException)?.retryAfter?.inWholeMilliseconds ?: 0).coerceAtLeast(OUTAGE_WINDOW_MILLIS)
+        outageUntil = now + retryAfter
+        if (kept == null || !isYoung(kept, now)) throw error
         report(error)
-        return kept
+        return decodeKept(kept, deserializer, stale = true)
     }
+
+    private fun isYoung(
+        entry: CacheEntry,
+        now: Long,
+    ): Boolean = now - entry.receivedAt.toEpochMilli() < staleFor.inWholeMilliseconds
+
+    private fun isFresh(
+        entry: CacheEntry,
+        now: Long,
+        customer: String?,
+    ): Boolean {
+        val directives = directives(entry.cacheControl)
+        val maxAge = directives.maxAge ?: return false
+        val received = entry.receivedAt.toEpochMilli()
+        val writtenSince = customer != null && (bumpedAt[customer] ?: Long.MIN_VALUE) >= received
+        val age = now - received + (entry.age ?: 0) * MILLIS_PER_SECOND
+        return !directives.noCache && !writtenSince && age < maxAge * MILLIS_PER_SECOND
+    }
+
+    private fun entryOf(
+        answer: Answer,
+        kept: CacheEntry?,
+        receivedAt: Long,
+    ): CacheEntry {
+        val headers = answer.headers
+        return CacheEntry(
+            body = kept?.body ?: answer.body,
+            etag = headers["ETag"] ?: kept?.etag,
+            cacheControl = headers.values("Cache-Control").takeIf { it.isNotEmpty() }?.joinToString(", ") ?: kept?.cacheControl,
+            age = headers["Age"]?.trim()?.toLongOrNull() ?: kept?.age,
+            receivedAt = Instant.ofEpochMilli(receivedAt),
+        )
+    }
+
+    private suspend fun storeGet(
+        store: CacheStore,
+        key: String,
+    ): CacheEntry? =
+        runCatching { store.get(key) }.getOrElse {
+            if (it is CancellationException) throw it
+            report(it)
+            null
+        }
+
+    private suspend fun storeSet(
+        store: CacheStore,
+        key: String,
+        entry: CacheEntry,
+        ttl: Duration,
+    ) {
+        runCatching { store.set(key, entry, ttl) }.onFailure {
+            if (it is CancellationException) throw it
+            report(it)
+        }
+    }
+
+    fun cacheKey(
+        request: ApiRequest,
+        credential: Credential?,
+    ): String {
+        val visitor = if (request.anonymous) null else request.visitor ?: visitor
+        val parts =
+            listOf(
+                "entitler-cache-v1",
+                request.method,
+                urlOf(request),
+                if (credential == null) null else credentials.principalKind,
+                credential?.let(credentials::principal),
+                if (request.anonymous) null else asOf,
+                visitor,
+            )
+        return sha256(JsonArray(parts.map { it?.let(::JsonPrimitive) ?: JsonNull }).toString())
+    }
+
+    private fun <T> decodeKept(
+        entry: CacheEntry,
+        deserializer: DeserializationStrategy<T>,
+        stale: Boolean,
+    ): T =
+        try {
+            decode(entry.body, deserializer, stale)
+        } catch (error: SerializationException) {
+            throw EntitlerApiException(HTTP_OK, ErrorCode.InvalidResponse, CANNOT_READ, cause = error)
+        }
+
+    private fun <T> decodeAnswer(
+        answer: Answer,
+        body: String,
+        deserializer: DeserializationStrategy<T>,
+    ): T =
+        try {
+            decode(body, deserializer)
+        } catch (error: SerializationException) {
+            throw EntitlerApiException(
+                status = answer.status,
+                code = ErrorCode.InvalidResponse,
+                message = CANNOT_READ,
+                requestId = answer.headers["x-request-id"],
+                idempotencyKey = answer.idempotencyKey,
+                cause = error,
+            )
+        }
 
     suspend fun send(
         request: ApiRequest,
         ifNoneMatch: String? = null,
+        first: Credential? = null,
     ): Answer {
-        val idempotencyKey = if (request.method == "GET") null else request.idempotencyKey ?: newIdempotencyKey()
+        val idempotencyKey = idempotencyKeyOf(request)
         var retries = 0
         var refreshed = false
+        var credential = first ?: credentialOf(request)
         while (true) {
-            val credential = if (request.credentialed) credentials.current() else null
             val failure =
                 try {
                     val answer = attempt(request, idempotencyKey, credential, ifNoneMatch)
@@ -160,28 +414,42 @@ internal class Engine(
 
                         credential != null && !refreshed && canRefresh(answer) -> {
                             refreshed = true
-                            credentials.refresh(credential)
+                            credential = credentials.refresh(credential)
                             continue
                         }
 
                         else -> {
-                            apiException(answer, idempotencyKey)
+                            apiException(answer)
                         }
                     }
-                } catch (error: EntitlerException) {
+                } catch (error: EntitlerConnectionException) {
+                    error
+                } catch (error: EntitlerTimeoutException) {
                     error
                 }
             delay(waitBefore(failure, retries))
             retries++
+            if (credential != null) credential = credentials.current()
         }
     }
+
+    private fun idempotencyKeyOf(request: ApiRequest): String? =
+        if (request.method ==
+            "GET"
+        ) {
+            null
+        } else {
+            request.idempotencyKey ?: newIdempotencyKey()
+        }
+
+    private suspend fun credentialOf(request: ApiRequest): Credential? = if (request.anonymous) null else credentials.current()
+
+    private fun canRefresh(answer: Answer): Boolean = answer.status == HTTP_UNAUTHORISED && credentials.refreshable
 
     private fun isSuccess(
         answer: Answer,
         ifNoneMatch: String?,
     ): Boolean = answer.status in HTTP_OK_RANGE || (answer.status == HTTP_NOT_MODIFIED && ifNoneMatch != null)
-
-    private fun canRefresh(answer: Answer): Boolean = answer.status == HTTP_UNAUTHORISED && credentials.refreshable
 
     private fun waitBefore(
         failure: EntitlerException,
@@ -223,7 +491,7 @@ internal class Engine(
                     ) {
                         val answer =
                             try {
-                                response.use { Answer(it.code, it.headers, it.body.string()) }
+                                response.use { Answer(it.code, it.headers, it.body.string(), idempotencyKey, credential) }
                             } catch (e: IOException) {
                                 continuation.resumeWithException(transportException(e, idempotencyKey))
                                 return
@@ -245,6 +513,7 @@ internal class Engine(
             Request
                 .Builder()
                 .url(urlOf(request))
+                .cacheControl(CacheControl.FORCE_NETWORK)
                 .header("Accept", "application/json")
                 .header("User-Agent", USER_AGENT)
         val body =
@@ -252,8 +521,7 @@ internal class Engine(
                 request.body != null -> {
                     request.body
                         .toString()
-                        .encodeUtf8()
-                        .toByteArray()
+                        .encodeToByteArray()
                         .toRequestBody(jsonType)
                 }
 
@@ -271,8 +539,10 @@ internal class Engine(
             it.identityToken?.let { token -> builder.header("Entitler-Identity-Token", token) }
         }
         idempotencyKey?.let { builder.header("Idempotency-Key", it) }
-        (request.visitor ?: visitor)?.let { builder.header("Entitler-Visitor", it) }
-        asOf?.let { builder.header("Entitler-As-Of", it) }
+        if (!request.anonymous) {
+            (request.visitor ?: visitor)?.let { builder.header("Entitler-Visitor", it) }
+            asOf?.let { builder.header("Entitler-As-Of", it) }
+        }
         ifNoneMatch?.let { builder.header("If-None-Match", it) }
         return builder.build()
     }
@@ -282,114 +552,75 @@ internal class Engine(
         return baseUrl + request.path + (if (query.isEmpty()) "" else "?$query")
     }
 
-    private suspend fun cacheKey(request: ApiRequest): String {
-        val principal = if (request.credentialed) credentials.principal(credentials.current()) else ""
-        val visitor = request.visitor ?: visitor
-        return listOf(request.method, urlOf(request).toHttpUrl().toString(), asOf.orEmpty(), visitor.orEmpty(), principal)
-            .joinToString("\n")
-            .encodeUtf8()
-            .sha256()
-            .hex()
-    }
-
-    private fun isFresh(
-        entry: CacheEntry,
-        now: Long,
-        customer: String?,
-    ): Boolean {
-        val maxAge = entry.maxAge ?: return false
-        val received = entry.receivedAt.toEpochMilli()
-        val wroteSince = customer != null && (writes[customer] ?: Long.MIN_VALUE) >= received
-        return !wroteSince && now - received < maxAge.inWholeMilliseconds
-    }
-
-    private fun entryOf(
-        answer: Answer,
-        body: String,
-        keptEtag: String?,
-    ): CacheEntry =
-        CacheEntry(
-            body = body,
-            etag = answer.headers["ETag"] ?: keptEtag,
-            maxAge = cacheControl(answer.headers).maxAge,
-            receivedAt = Instant.ofEpochMilli(clock()),
+    private fun apiException(answer: Answer): EntitlerApiException =
+        apiExceptionOf(
+            answer.status,
+            answer.headers,
+            answer.body,
+            answer.idempotencyKey,
+            clock(),
         )
-
-    private fun apiException(
-        answer: Answer,
-        idempotencyKey: String?,
-    ): EntitlerApiException {
-        val error = runCatching { (json.parseToJsonElement(answer.body) as JsonObject)["error"] as JsonObject }.getOrNull()
-        val body = error?.let { runCatching { json.decodeFromJsonElement<ErrorBody>(it) }.getOrNull() }
-        return EntitlerApiException(
-            status = answer.status,
-            code = body?.code?.let(::ErrorCode) ?: ErrorCode.HttpError,
-            message = body?.message ?: "Entitler request failed with HTTP ${answer.status}.",
-            requestId = answer.headers["x-request-id"],
-            retryAfter = answer.headers["Retry-After"]?.let(::retryAfterOf),
-            idempotencyKey = idempotencyKey,
-            payment =
-                error?.get("payment")?.let { runCatching { json.decodeFromJsonElement<Payment>(it) }.getOrNull() }?.takeIf {
-                    it.status in
-                        knownPayments
-                },
-            listingGaps = body?.listingGaps.orEmpty(),
-            listingProblems = body?.listingProblems.orEmpty(),
-        )
-    }
-
-    private fun retryAfterOf(value: String): Duration? {
-        val seconds = value.trim().toLongOrNull()
-        if (seconds != null) return seconds.coerceAtLeast(0).seconds
-        val date = runCatching { ZonedDateTime.parse(value.trim(), DateTimeFormatter.RFC_1123_DATE_TIME) }.getOrNull()
-        return date?.let { (it.toInstant().toEpochMilli() - clock()).coerceAtLeast(0).milliseconds }
-    }
-
-    private fun defaultHttpClient(): OkHttpClient =
-        OkHttpClient
-            .Builder()
-            .connectTimeout(0, TimeUnit.MILLISECONDS)
-            .readTimeout(0, TimeUnit.MILLISECONDS)
-            .writeTimeout(0, TimeUnit.MILLISECONDS)
-            .build()
 
     private companion object {
         val HTTP_OK_RANGE = 200..299
+        const val HTTP_OK = 200
         const val HTTP_NOT_MODIFIED = 304
         const val HTTP_UNAUTHORISED = 401
         const val HTTP_SERVER_ERRORS = 500
         const val HTTP_TOO_MANY = 429
         const val BACKOFF_BASE_SECONDS = 0.5
-        const val MILLIS_PER_SECOND = 1000
-        val knownPayments = setOf(PaymentStatus.Declined, PaymentStatus.RequiresAction, PaymentStatus.Processing, PaymentStatus.Pending)
 
-        fun isRetried(error: EntitlerException): Boolean =
-            error !is EntitlerApiException || error.status in retriedStatuses
+        fun isRetried(error: EntitlerException): Boolean = error !is EntitlerApiException || error.status in retriedStatuses
 
         fun isUnreachable(error: EntitlerException): Boolean =
             error is EntitlerConnectionException ||
                 error is EntitlerTimeoutException ||
-                (error is EntitlerApiException && (error.status == HTTP_TOO_MANY || error.status >= HTTP_SERVER_ERRORS))
+                (
+                    error is EntitlerApiException &&
+                        (error.status == HTTP_TOO_MANY || error.status >= HTTP_SERVER_ERRORS || error.code == ErrorCode.InvalidResponse)
+                )
     }
 }
 
-@kotlinx.serialization.Serializable
-private class ErrorBody(
-    val code: String,
-    val message: String,
-    val listingGaps: List<ListingGap>? = null,
-    val listingProblems: List<ListingProblem>? = null,
-)
+private const val HTTP_PAYMENT_REQUIRED = 402
+private val REDIRECTS = 300..399
+private val knownPayments = setOf(PaymentStatus.Declined, PaymentStatus.RequiresAction, PaymentStatus.Processing, PaymentStatus.Pending)
 
-private class CacheControl(
-    val maxAge: Duration?,
-    val noStore: Boolean,
-)
+internal fun apiExceptionOf(
+    status: Int,
+    headers: Headers,
+    body: String,
+    idempotencyKey: String?,
+    now: Long,
+): EntitlerApiException {
+    val error = (runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject)?.get("error") as? JsonObject
+    val readable = error?.takeIf { status !in REDIRECTS }
+    return EntitlerApiException(
+        status = status,
+        code = readable?.string("code")?.takeIf { it.isNotEmpty() }?.let(::ErrorCode) ?: ErrorCode.HttpError,
+        message = readable?.string("message")?.takeIf { it.isNotEmpty() } ?: "Entitler answered with HTTP $status.",
+        requestId = headers["x-request-id"],
+        retryAfter = headers["Retry-After"]?.let { retryAfterOf(it, now) },
+        idempotencyKey = idempotencyKey,
+        payment = if (status == HTTP_PAYMENT_REQUIRED) readable?.let(::paymentOf) else null,
+        listingGaps = readable?.let { listOf(it, "listingGaps", ListingGap.serializer()) }.orEmpty(),
+        listingProblems = readable?.let { listOf(it, "listingProblems", ListingProblem.serializer()) }.orEmpty(),
+    )
+}
 
-private fun cacheControl(headers: Headers): CacheControl {
-    val directives = headers.values("Cache-Control").flatMap { it.split(',') }.map { it.trim().lowercase() }
-    val maxAge = directives.firstNotNullOfOrNull { it.removePrefix("max-age=").takeIf { v -> v != it }?.toLongOrNull() }
-    return CacheControl(maxAge?.seconds, "no-store" in directives)
+private fun paymentOf(error: JsonObject): Payment? {
+    val payment = error["payment"] as? JsonObject ?: return null
+    val status = payment.string("status")?.let(::PaymentStatus)?.takeIf { it in knownPayments } ?: return null
+    return Payment(status, payment.string("url"))
+}
+
+private fun <T> listOf(
+    error: JsonObject,
+    name: String,
+    serializer: kotlinx.serialization.KSerializer<T>,
+): List<T>? {
+    val items = error[name] as? JsonArray ?: return null
+    return runCatching { json.decodeFromJsonElement(ListSerializer(serializer), items) }.getOrNull()
 }
 
 private fun transportException(
@@ -406,13 +637,8 @@ internal fun <T> decode(
     body: String,
     deserializer: DeserializationStrategy<T>,
     stale: Boolean = false,
-): T =
-    try {
-        val element = json.parseToJsonElement(body)
-        val marked = if (stale && element is JsonObject) JsonObject(element + ("stale" to JsonPrimitive(true))) else element
-        json.decodeFromJsonElement(deserializer, marked)
-    } catch (error: SerializationException) {
-        throw EntitlerConnectionException("Entitler sent an answer this SDK cannot read.", error)
-    }
-
-private val USER_AGENT = "entitler-kotlin/$SDK_VERSION java/${System.getProperty("java.version") ?: "unknown"}"
+): T {
+    val element = json.parseToJsonElement(body)
+    val marked = if (stale && element is JsonObject) JsonObject(element + ("stale" to JsonPrimitive(true))) else element
+    return json.decodeFromJsonElement(deserializer, marked)
+}

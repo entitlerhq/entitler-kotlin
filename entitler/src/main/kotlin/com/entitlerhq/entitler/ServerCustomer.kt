@@ -14,8 +14,9 @@ import kotlin.time.Duration
  * billing, and the vendor's actions under [vendor].
  *
  * Billing methods act as the customer choosing for themselves, so they send `selfServe: true`: the
- * change must be on a self-serve path in the customer's plan space, or the API answers
- * `403 not_self_serve`. Changes you make on the customer's behalf live under [vendor].
+ * change must be on a self-serve path among the plans the customer can move to, or the API answers
+ * `403 not_self_serve`. Changes you make on the customer's behalf live under [vendor]. A period is named
+ * by its label exactly as pricing shows it, such as `Monthly`.
  */
 public interface ServerCustomer : Customer {
     /** The id your app uses for the customer. */
@@ -29,12 +30,13 @@ public interface ServerCustomer : Customer {
      * Call it at sign-up and at sign-in with the latest details. Needs `customers:register`; changing an
      * existing customer's details needs `customers:write` or `customers:profile`.
      *
+     * @param metadata Metadata to merge; a null value removes that key.
      * @param visitor The visitor id from before sign-up, so the customer keeps their experiment arm.
      */
     public suspend fun register(
         name: String? = null,
         email: String? = null,
-        metadata: Map<String, String>? = null,
+        metadata: Map<String, String?>? = null,
         visitor: String? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
@@ -55,7 +57,10 @@ public interface ServerCustomer : Customer {
         timeout: Duration? = null,
     ): CustomerSummary
 
-    /** Deletes the customer, `DELETE /customers/{id}`; [erase] also erases their personal data. */
+    /**
+     * Deletes the customer, `DELETE /customers/{id}`. With [erase], their personal data is erased too, and
+     * the answer's `externalId` reads `erased_<uuid>` rather than the id your app used.
+     */
     public suspend fun delete(
         erase: Boolean = false,
         idempotencyKey: String? = null,
@@ -65,7 +70,7 @@ public interface ServerCustomer : Customer {
     /**
      * Mints a customer token for an in-app client, `POST /customers/{id}/tokens`. Needs `tokens:mint`.
      *
-     * @param ttl How long it lasts, in whole seconds from 60 to 3,600; an hour by default.
+     * @param ttl How long it lasts, in whole seconds (rounded up) from 60 to 3,600; an hour by default.
      */
     public suspend fun token(
         scopes: List<Scope>? = null,
@@ -90,9 +95,10 @@ public interface ServerCustomer : Customer {
         timeout: Duration? = null,
     ): CustomerDetail
 
-    /** Subscribes the customer to the plan a [sku] they bought sells, self-serve. */
+    /** Subscribes the customer to a plan or a SKU they bought (which names its own period), self-serve. */
     public suspend fun subscribe(
-        sku: Sku,
+        choice: PlanChoice,
+        period: String? = null,
         timing: ChangeTiming? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
@@ -109,11 +115,12 @@ public interface ServerCustomer : Customer {
         timeout: Duration? = null,
     ): ProviderPage
 
-    /** Starts a self-serve checkout for a [sku]. */
+    /** Starts a self-serve checkout for a plan or a SKU. */
     public suspend fun checkout(
-        sku: Sku,
+        choice: PlanChoice,
         successUrl: String,
         cancelUrl: String,
+        period: String? = null,
         connection: String? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
@@ -144,9 +151,9 @@ public interface ServerCustomer : Customer {
         timeout: Duration? = null,
     ): CustomerDetail
 
-    /** Adds the add-on a [sku] they bought sells, self-serve. */
+    /** Adds an add-on, or the add-on a SKU they bought sells, self-serve. */
     public suspend fun addAddOn(
-        sku: Sku,
+        choice: PlanChoice,
         quantity: Int? = null,
         replaces: String? = null,
         timing: ChangeTiming? = null,
@@ -204,9 +211,10 @@ public interface VendorActions {
         timeout: Duration? = null,
     ): CustomerDetail
 
-    /** Subscribes the customer to the plan a [sku] sells. */
+    /** Subscribes the customer to a plan or a SKU, anywhere in the catalogue. */
     public suspend fun subscribe(
-        sku: Sku,
+        choice: PlanChoice,
+        period: String? = null,
         timing: ChangeTiming? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
@@ -216,7 +224,6 @@ public interface VendorActions {
     public suspend fun override(
         plan: String,
         period: String? = null,
-        timing: ChangeTiming? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
     ): CustomerDetail
@@ -239,11 +246,12 @@ public interface VendorActions {
         timeout: Duration? = null,
     ): ProviderPage
 
-    /** Starts a checkout for a [sku]. */
+    /** Starts a checkout for a plan or a SKU, anywhere in the catalogue. */
     public suspend fun checkout(
-        sku: Sku,
+        choice: PlanChoice,
         successUrl: String,
         cancelUrl: String,
+        period: String? = null,
         connection: String? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
@@ -259,9 +267,9 @@ public interface VendorActions {
         timeout: Duration? = null,
     ): CustomerDetail
 
-    /** Adds the add-on a [sku] sells. */
+    /** Adds an add-on, or the add-on a SKU sells, anywhere in the catalogue. */
     public suspend fun addAddOn(
-        sku: Sku,
+        choice: PlanChoice,
         quantity: Int? = null,
         replaces: String? = null,
         timing: ChangeTiming? = null,
@@ -284,8 +292,8 @@ public interface VendorActions {
      * customer.vendor.grant(Features.sso, days = 30, reason = "Trial for the pilot")
      * ```
      *
-     * @param value The value to grant: an amount or unlimited; leave it out for an on/off feature.
-     * @param days How long it lasts; leave it out for no end.
+     * @param value The value to grant: an amount from 0 to 999,999,999, or unlimited; leave it out for an on/off feature.
+     * @param days How long it lasts, 0 to 3,650; leave it out, or pass 0, for no end.
      */
     public suspend fun grant(
         feature: Feature,
@@ -339,17 +347,12 @@ internal class ServerCustomerImpl(
     override suspend fun register(
         name: String?,
         email: String?,
-        metadata: Map<String, String>?,
+        metadata: Map<String, String?>?,
         visitor: String?,
         idempotencyKey: String?,
         timeout: Duration?,
     ): RegisteredCustomer {
-        val details =
-            buildJsonObject {
-                name?.let { put("name", it) }
-                email?.let { put("email", it) }
-                metadata?.let { put("metadata", JsonObject(it.mapValues { (_, v) -> JsonPrimitive(v) })) }
-            }
+        val details = detailsJson(name, email, metadata)
         return write(
             "PUT",
             "",
@@ -374,15 +377,7 @@ internal class ServerCustomerImpl(
         metadata: Map<String, String?>?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): CustomerSummary {
-        val body =
-            buildJsonObject {
-                name?.let { put("name", it) }
-                email?.let { put("email", it) }
-                metadata?.let { put("metadata", JsonObject(it.mapValues { (_, v) -> JsonPrimitive(v) })) }
-            }
-        return write("PATCH", "", CustomerSummary.serializer(), idempotencyKey, timeout, body)
-    }
+    ): CustomerSummary = write("PATCH", "", CustomerSummary.serializer(), idempotencyKey, timeout, detailsJson(name, email, metadata))
 
     override suspend fun delete(
         erase: Boolean,
@@ -407,11 +402,9 @@ internal class ServerCustomerImpl(
         val body =
             buildJsonObject {
                 scopes?.let { put("scopes", scopesJson(it)) }
-                ttl?.let { put("ttlSeconds", it.inWholeSeconds) }
+                ttl?.let { put("ttlSeconds", seconds(it)) }
             }
-        val request =
-            ApiRequest("POST", "$base/tokens", body = body, idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout)
-        return engine.call(request, IssuedCustomerToken.serializer())
+        return write("POST", "/tokens", IssuedCustomerToken.serializer(), idempotencyKey, timeout, body, changesAnswers = false)
     }
 
     override suspend fun setTrack(
@@ -429,14 +422,15 @@ internal class ServerCustomerImpl(
         timing: ChangeTiming?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): CustomerDetail = subscription(planJson(plan, period, timing, selfServe = true), idempotencyKey, timeout)
+    ): CustomerDetail = subscribe(Plan(plan), period, timing, idempotencyKey, timeout)
 
     override suspend fun subscribe(
-        sku: Sku,
+        choice: PlanChoice,
+        period: String?,
         timing: ChangeTiming?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): CustomerDetail = subscription(skuJson(sku, timing, selfServe = true), idempotencyKey, timeout)
+    ): CustomerDetail = subscription(choiceJson(choice, period, timing, selfServe = true), idempotencyKey, timeout)
 
     override suspend fun checkout(
         plan: String,
@@ -446,16 +440,25 @@ internal class ServerCustomerImpl(
         connection: String?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): ProviderPage = checkout(planJson(plan, period, null, selfServe = true), successUrl, cancelUrl, connection, idempotencyKey, timeout)
+    ): ProviderPage = checkout(Plan(plan), successUrl, cancelUrl, period, connection, idempotencyKey, timeout)
 
     override suspend fun checkout(
-        sku: Sku,
+        choice: PlanChoice,
         successUrl: String,
         cancelUrl: String,
+        period: String?,
         connection: String?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): ProviderPage = checkout(skuJson(sku, null, selfServe = true), successUrl, cancelUrl, connection, idempotencyKey, timeout)
+    ): ProviderPage =
+        checkout(
+            choiceJson(choice, period, null, selfServe = true),
+            successUrl,
+            cancelUrl,
+            connection,
+            idempotencyKey,
+            timeout,
+        )
 
     override suspend fun cancel(
         timing: ChangeTiming?,
@@ -477,7 +480,14 @@ internal class ServerCustomerImpl(
         idempotencyKey: String?,
         timeout: Duration?,
     ): CustomerDetail =
-        write("DELETE", "/subscription/pending", CustomerDetail.serializer(), idempotencyKey, timeout, query = productQuery(product))
+        write(
+            "DELETE",
+            "/subscription/pending",
+            CustomerDetail.serializer(),
+            idempotencyKey,
+            timeout,
+            query = productQuery(product),
+        )
 
     override suspend fun addAddOn(
         plan: String,
@@ -486,16 +496,16 @@ internal class ServerCustomerImpl(
         timing: ChangeTiming?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): CustomerDetail = addOn(planJson(plan, null, timing, selfServe = true), quantity, replaces, idempotencyKey, timeout)
+    ): CustomerDetail = addAddOn(Plan(plan), quantity, replaces, timing, idempotencyKey, timeout)
 
     override suspend fun addAddOn(
-        sku: Sku,
+        choice: PlanChoice,
         quantity: Int?,
         replaces: String?,
         timing: ChangeTiming?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): CustomerDetail = addOn(skuJson(sku, timing, selfServe = true), quantity, replaces, idempotencyKey, timeout)
+    ): CustomerDetail = addOn(choiceJson(choice, null, timing, selfServe = true), quantity, replaces, idempotencyKey, timeout)
 
     override suspend fun setAddOnQuantity(
         plan: String,
@@ -522,17 +532,16 @@ internal class ServerCustomerImpl(
         returnUrl: String,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): ProviderPage {
-        val request =
-            ApiRequest(
-                "POST",
-                "$base/billing-portal",
-                body = buildJsonObject { put("returnUrl", returnUrl) },
-                idempotencyKey = checkIdempotencyKey(idempotencyKey),
-                timeout = timeout,
-            )
-        return engine.call(request, ProviderPage.serializer())
-    }
+    ): ProviderPage =
+        write(
+            "POST",
+            "/billing-portal",
+            ProviderPage.serializer(),
+            idempotencyKey,
+            timeout,
+            buildJsonObject { put("returnUrl", returnUrl) },
+            changesAnswers = false,
+        )
 
     override suspend fun providers(timeout: Duration?): CustomerProviders = read("/providers", CustomerProviders.serializer(), timeout)
 
@@ -561,7 +570,7 @@ internal class ServerCustomerImpl(
                         connection?.let { put("connection", it) }
                     },
             )
-        return write("POST", "/checkout", ProviderPage.serializer(), idempotencyKey, timeout, body)
+        return write("POST", "/checkout", ProviderPage.serializer(), idempotencyKey, timeout, body, changesAnswers = false)
     }
 
     private suspend fun addOn(
@@ -594,7 +603,7 @@ internal class ServerCustomerImpl(
         return write("PATCH", addOnPath(plan), CustomerDetail.serializer(), idempotencyKey, timeout, body)
     }
 
-    private fun addOnPath(plan: String) = "/subscription/add-ons/" + encodeComponent(checkPlan(plan))
+    private fun addOnPath(plan: String) = "/subscription/add-ons/" + pathSegment(checkPlan(plan))
 
     private fun productQuery(product: String?) = listOfNotNull(product?.let { "product" to it })
 
@@ -605,23 +614,23 @@ internal class ServerCustomerImpl(
             timing: ChangeTiming?,
             idempotencyKey: String?,
             timeout: Duration?,
-        ): CustomerDetail = subscription(planJson(plan, period, timing, selfServe = false), idempotencyKey, timeout)
+        ): CustomerDetail = subscribe(Plan(plan), period, timing, idempotencyKey, timeout)
 
         override suspend fun subscribe(
-            sku: Sku,
-            timing: ChangeTiming?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail = subscription(skuJson(sku, timing, selfServe = false), idempotencyKey, timeout)
-
-        override suspend fun override(
-            plan: String,
+            choice: PlanChoice,
             period: String?,
             timing: ChangeTiming?,
             idempotencyKey: String?,
             timeout: Duration?,
+        ): CustomerDetail = subscription(choiceJson(choice, period, timing, selfServe = false), idempotencyKey, timeout)
+
+        override suspend fun override(
+            plan: String,
+            period: String?,
+            idempotencyKey: String?,
+            timeout: Duration?,
         ): CustomerDetail {
-            val body = JsonObject(planJson(plan, period, timing, selfServe = false) + ("override" to JsonPrimitive(true)))
+            val body = JsonObject(choiceJson(Plan(plan), period, null, selfServe = false) + ("override" to JsonPrimitive(true)))
             return subscription(body, idempotencyKey, timeout)
         }
 
@@ -640,24 +649,25 @@ internal class ServerCustomerImpl(
             connection: String?,
             idempotencyKey: String?,
             timeout: Duration?,
+        ): ProviderPage = checkout(Plan(plan), successUrl, cancelUrl, period, connection, idempotencyKey, timeout)
+
+        override suspend fun checkout(
+            choice: PlanChoice,
+            successUrl: String,
+            cancelUrl: String,
+            period: String?,
+            connection: String?,
+            idempotencyKey: String?,
+            timeout: Duration?,
         ): ProviderPage =
             checkout(
-                planJson(plan, period, null, selfServe = false),
+                choiceJson(choice, period, null, selfServe = false),
                 successUrl,
                 cancelUrl,
                 connection,
                 idempotencyKey,
                 timeout,
             )
-
-        override suspend fun checkout(
-            sku: Sku,
-            successUrl: String,
-            cancelUrl: String,
-            connection: String?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): ProviderPage = checkout(skuJson(sku, null, selfServe = false), successUrl, cancelUrl, connection, idempotencyKey, timeout)
 
         override suspend fun addAddOn(
             plan: String,
@@ -666,16 +676,16 @@ internal class ServerCustomerImpl(
             timing: ChangeTiming?,
             idempotencyKey: String?,
             timeout: Duration?,
-        ): CustomerDetail = addOn(planJson(plan, null, timing, selfServe = false), quantity, replaces, idempotencyKey, timeout)
+        ): CustomerDetail = addAddOn(Plan(plan), quantity, replaces, timing, idempotencyKey, timeout)
 
         override suspend fun addAddOn(
-            sku: Sku,
+            choice: PlanChoice,
             quantity: Int?,
             replaces: String?,
             timing: ChangeTiming?,
             idempotencyKey: String?,
             timeout: Duration?,
-        ): CustomerDetail = addOn(skuJson(sku, timing, selfServe = false), quantity, replaces, idempotencyKey, timeout)
+        ): CustomerDetail = addOn(choiceJson(choice, null, timing, selfServe = false), quantity, replaces, idempotencyKey, timeout)
 
         override suspend fun setAddOnQuantity(
             plan: String,
@@ -718,7 +728,7 @@ internal class ServerCustomerImpl(
         ): CustomerDetail =
             write(
                 "DELETE",
-                "/grants/" + encodeComponent(checkId(grantId, "Provide the id of the grant.")),
+                "/grants/" + pathSegment(checkId(grantId, "Provide the id of the grant.")),
                 CustomerDetail.serializer(),
                 idempotencyKey,
                 timeout,
@@ -732,11 +742,13 @@ internal class ServerCustomerImpl(
         ): UsageResult =
             write(
                 "PUT",
-                "/meters/" + encodeComponent(feature.key),
+                "/meters/" + pathSegment(feature.key),
                 UsageResult.serializer(),
                 idempotencyKey,
                 timeout,
-                buildJsonObject { put("used", used) },
+                buildJsonObject {
+                    put("used", used)
+                },
             )
 
         override suspend fun cancelUsage(
@@ -746,13 +758,24 @@ internal class ServerCustomerImpl(
         ): UsageResult =
             write(
                 "DELETE",
-                "/usage/" + encodeComponent(checkId(usageId, "Provide the id of the usage report.")),
+                "/usage/" + pathSegment(checkId(usageId, "Provide the id of the usage report.")),
                 UsageResult.serializer(),
                 idempotencyKey,
                 timeout,
             )
     }
 }
+
+private fun detailsJson(
+    name: String?,
+    email: String?,
+    metadata: Map<String, String?>?,
+): JsonObject =
+    buildJsonObject {
+        name?.let { put("name", it) }
+        email?.let { put("email", it) }
+        metadata?.let { put("metadata", JsonObject(it.mapValues { (_, value) -> value?.let(::JsonPrimitive) ?: JsonNull })) }
+    }
 
 private fun grantValue(value: FeatureValue?): String? =
     when (value) {
@@ -761,7 +784,7 @@ private fun grantValue(value: FeatureValue?): String? =
         FeatureValue.Unlimited -> "unlimited"
     }
 
-private fun JsonObjectBuilder.choice(
+private fun JsonObjectBuilder.timingAndSelfServe(
     timing: ChangeTiming?,
     selfServe: Boolean,
 ) {
@@ -769,30 +792,29 @@ private fun JsonObjectBuilder.choice(
     put("selfServe", selfServe)
 }
 
-private fun planJson(
-    plan: String,
+private fun choiceJson(
+    choice: PlanChoice,
     period: String?,
     timing: ChangeTiming?,
     selfServe: Boolean,
 ): JsonObject =
     buildJsonObject {
-        put("plan", checkPlan(plan))
-        period?.let { put("period", it) }
-        choice(timing, selfServe)
-    }
+        when (choice) {
+            is Plan -> {
+                put("plan", choice.plan)
+                period?.let { put("period", it) }
+            }
 
-private fun skuJson(
-    sku: Sku,
-    timing: ChangeTiming?,
-    selfServe: Boolean,
-): JsonObject =
-    buildJsonObject {
-        put(
-            "sku",
-            buildJsonObject {
-                put("connector", sku.connector)
-                put("ids", JsonObject(sku.ids.mapValues { (_, v) -> JsonPrimitive(v) as JsonElement }))
-            },
-        )
-        choice(timing, selfServe)
+            is Sku -> {
+                require(period == null) { "A SKU names its own period; leave period out." }
+                put(
+                    "sku",
+                    buildJsonObject {
+                        put("connector", choice.connector)
+                        put("ids", JsonObject(choice.ids.mapValues { (_, v) -> JsonPrimitive(v) as JsonElement }))
+                    },
+                )
+            }
+        }
+        timingAndSelfServe(timing, selfServe)
     }

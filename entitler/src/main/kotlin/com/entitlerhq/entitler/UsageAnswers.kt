@@ -142,6 +142,7 @@ public data class UsageEventError(
  * @property id The report recorded, or the one a duplicate repeats.
  * @property late True when the event's period or window had closed.
  * @property error Why it was not recorded, or null.
+ * @property idempotencyKey The event's key, the caller's or the one the SDK generated.
  */
 @Serializable
 public data class UsageEventResult(
@@ -150,6 +151,7 @@ public data class UsageEventResult(
     val id: String? = null,
     val late: Boolean,
     val error: UsageEventError? = null,
+    val idempotencyKey: String? = null,
 )
 
 /**

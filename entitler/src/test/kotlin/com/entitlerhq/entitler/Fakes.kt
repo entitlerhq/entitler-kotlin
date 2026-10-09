@@ -18,7 +18,7 @@ const val PUBLISHABLE_KEY = "ent_test_publishable_key"
 class FakeApi : AutoCloseable {
     val server = MockWebServer().apply { start() }
     var now: Long = Instant.parse("2026-10-09T01:00:00Z").toEpochMilli()
-    val errors = mutableListOf<EntitlerException>()
+    val errors = mutableListOf<Throwable>()
     val baseUrl: String get() = server.url("/").toString()
 
     fun setUp(config: EntitlerConfig) {

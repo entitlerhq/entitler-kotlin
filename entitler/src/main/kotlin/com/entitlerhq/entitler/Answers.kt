@@ -287,7 +287,7 @@ public data class ProductSummary(
 )
 
 /**
- * A plan the customer holds, in their plan space.
+ * A plan the customer holds.
  *
  * @property plan The plan.
  * @property product The plan's product, or null.
@@ -349,7 +349,7 @@ public data class OfferedSku(
 )
 
 /**
- * A move the customer could make from their plan space.
+ * A plan the customer can move to.
  *
  * @property plan The plan to move to.
  * @property product The plan's product, or null.
@@ -379,11 +379,11 @@ public data class MoveOption(
 )
 
 /**
- * A customer's plan space: the plans they hold and the moves open to them.
+ * The customer's plans: the plans they hold and the plans they can move to.
  *
  * @property customer The customer's external id.
  * @property held The plans they hold.
- * @property options The moves open to them.
+ * @property options The plans they can move to, each with its direction, mode, impact and SKUs.
  * @property asOf The instant the answer is for.
  * @property environment The environment.
  * @property track The customer's track.
@@ -394,7 +394,7 @@ public data class MoveOption(
  * @property stale True only when the SDK answered from a kept copy because Entitler was unreachable.
  */
 @Serializable
-public data class PlanSpace(
+public data class CustomerPlans(
     val customer: String,
     val held: List<HeldPlan>,
     val options: List<MoveOption>,
@@ -592,6 +592,7 @@ public data class FeatureListing(
  * @property track The track.
  * @property release The catalogue release the track serves, or null when it follows a change.
  * @property change The change the track follows, or null.
+ * @property stale True only when the SDK answered from a kept copy because Entitler was unreachable.
  */
 @Serializable
 public data class FeatureList(
@@ -600,6 +601,7 @@ public data class FeatureList(
     val track: Track,
     val release: Long? = null,
     val change: String? = null,
+    val stale: Boolean = false,
 )
 
 /**

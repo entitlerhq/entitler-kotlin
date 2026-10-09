@@ -3,11 +3,7 @@
 
 package com.entitlerhq.entitler
 
-import okio.ByteString.Companion.toByteString
 import java.security.SecureRandom
-
-/** The pattern a visitor id matches: 16 to 64 letters, numbers, hyphens or underscores. */
-public const val VISITOR_ID_PATTERN: String = "^[A-Za-z0-9_-]{16,64}$"
 
 internal val VISITOR_ID_REGEX = Regex(VISITOR_ID_PATTERN)
 
@@ -24,5 +20,5 @@ private val secureRandom by lazy { SecureRandom() }
 public fun newVisitorId(): String {
     val bytes = ByteArray(VISITOR_BYTES)
     secureRandom.nextBytes(bytes)
-    return bytes.toByteString().base64Url().trimEnd('=')
+    return encodeBase64Url(bytes)
 }

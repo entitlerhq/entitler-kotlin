@@ -8,7 +8,8 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
 /**
- * An error code from the API, or one of the SDK's own (`http_error`, `snapshot_invalid`, `snapshot_expired`).
+ * An error code from the API, or one of the SDK's own (`http_error`, `invalid_response`, `connection_failed`,
+ * `timed_out`, `snapshot_invalid`, `snapshot_expired`).
  *
  * An open set: a value this SDK does not know keeps its raw [value].
  */
@@ -61,6 +62,9 @@ public data class ErrorCode(
         /** The call needs a payment provider connection. */
         public val ConnectionRequired: ErrorCode = ErrorCode("connection_required")
 
+        /** No answer arrived for a batch request; the SDK's own code, only on batch event results. */
+        public val ConnectionFailed: ErrorCode = ErrorCode("connection_failed")
+
         /** The payment provider connection's key cannot be read. */
         public val ConnectionUnreadable: ErrorCode = ErrorCode("connection_unreadable")
 
@@ -105,6 +109,9 @@ public data class ErrorCode(
 
         /** The amount is not valid. */
         public val InvalidAmount: ErrorCode = ErrorCode("invalid_amount")
+
+        /** The API sent a 2xx answer this SDK cannot read; the SDK's own code. */
+        public val InvalidResponse: ErrorCode = ErrorCode("invalid_response")
 
         /** The request body is not valid. */
         public val InvalidBody: ErrorCode = ErrorCode("invalid_body")
@@ -193,6 +200,9 @@ public data class ErrorCode(
         /** The switch is off. */
         public val SwitchOff: ErrorCode = ErrorCode("switch_off")
 
+        /** A batch request took longer than its timeout; the SDK's own code, only on batch event results. */
+        public val TimedOut: ErrorCode = ErrorCode("timed_out")
+
         /** There are too many customers. */
         public val TooManyCustomers: ErrorCode = ErrorCode("too_many_customers")
 
@@ -227,7 +237,7 @@ public data class Scope(
         /** Reads pricing and the feature list. */
         public val PlansRead: Scope = Scope("plans:read")
 
-        /** Reads checks, entitlement lists, plan space, customer pricing and snapshots. */
+        /** Reads checks, entitlement lists, customer plans, customer pricing and snapshots. */
         public val EntitlementsRead: Scope = Scope("entitlements:read")
 
         /** Reads usage and holds. */

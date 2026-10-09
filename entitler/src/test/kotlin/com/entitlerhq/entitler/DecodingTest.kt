@@ -77,10 +77,10 @@ class DecodingTest {
         }
 
     @Test
-    fun `plan space, pricing, usage and features decode`() =
+    fun `customer plans, pricing, usage and features decode`() =
         runTest {
             api.replyFixture("plan-space")
-            val space = customer.planSpace()
+            val space = customer.plans()
             assertTrue(space.held.isNotEmpty())
             api.replyFixture("customer-pricing")
             val pricing = customer.pricing()

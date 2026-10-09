@@ -107,7 +107,7 @@ internal fun camelCase(key: String): String {
 private fun typeName(type: FeatureType): String? =
     when (type) {
         FeatureType.Boolean -> "OnOff"
-        FeatureType.Config -> "Setting"
+        FeatureType.Config -> "Config"
         FeatureType.Metered -> "Metered"
         FeatureType.Group -> "Group"
         else -> null

@@ -113,7 +113,7 @@ public sealed class Feature {
     }
 
     /** A setting with an amount, such as seats or hours. */
-    public data class Setting(
+    public data class Config(
         override val key: String,
     ) : Feature() {
         init {

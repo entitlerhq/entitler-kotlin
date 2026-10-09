@@ -3,6 +3,9 @@
 
 package com.entitlerhq.entitler
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.JsonArray
@@ -48,8 +51,11 @@ public open class EntitlerConfig internal constructor() {
     /** How long a kept answer may stand in when Entitler is unreachable. */
     public var staleFor: Duration = 24.hours
 
-    /** Called with each error a fallback absorbed: a stale answer, `isEntitled`'s default, or a failed release. */
-    public var onError: ((EntitlerException) -> Unit)? = null
+    /**
+     * Called with each error a fallback absorbed: a stale answer, `isEntitled`'s default, a failed release,
+     * or a custom cache store's own failure. An `onError` that throws is ignored.
+     */
+    public var onError: ((Throwable) -> Unit)? = null
 
     /**
      * Read the API at another instant. Needs the organisation's `as_of` capability (`409 limit_reached`
@@ -117,11 +123,17 @@ public interface EntitlerServer : Closeable {
      * Records usage events of any customers in observe mode, `POST /usage/events`, in requests of at most
      * 500 events sent in order. Needs `usage:write`.
      *
+     * It answers one result per event, in input order. A request that fails after its retries answers its
+     * events with [UsageOutcome.Error] and carries on with the next; only argument errors and cancellation
+     * escape. Resend the events answered `error` with the same keys.
+     *
      * @param register Register customers who are not registered yet.
+     * @param idempotencyKey The batch's key, 1 to 190 characters; request `n` sends it plus `:n`.
      */
     public suspend fun recordUsageBatch(
         events: List<UsageBatchEvent>,
         register: Boolean = false,
+        idempotencyKey: String? = null,
         timeout: Duration? = null,
     ): UsageEventsResult
 
@@ -265,6 +277,14 @@ public fun EntitlerIdentityClient(
 private const val CUSTOMER_TOKEN_REQUIRED = "Provide a customer token minted by your server."
 private const val IDENTITY_TOKEN_REQUIRED = "Provide the identity token your sign-in provider issued."
 private const val BATCH_SIZE = 500
+private const val MAX_BATCH_KEY_LENGTH = 190
+
+private fun batchError(error: EntitlerException): UsageEventError =
+    when (error) {
+        is EntitlerApiException -> UsageEventError(error.code, error.message.orEmpty())
+        is EntitlerTimeoutException -> UsageEventError(ErrorCode.TimedOut, error.message.orEmpty())
+        else -> UsageEventError(ErrorCode.ConnectionFailed, error.message.orEmpty())
+    }
 
 private fun requireKey(key: String): String =
     key.trim().also {
@@ -318,7 +338,7 @@ private suspend fun snapshotKeysOf(
     timeout: Duration?,
 ): SnapshotKeys =
     engine.call(
-        ApiRequest("GET", "/customers/snapshot-keys", timeout = timeout, credentialed = false),
+        ApiRequest("GET", "/customers/snapshot-keys", timeout = timeout, anonymous = true),
         SnapshotKeys.serializer(),
     )
 
@@ -330,33 +350,55 @@ internal class ServerClient(
 
     override val customers: ServerCustomers = Customers(engine)
 
-    override fun customer(id: String): ServerCustomer =
-        ServerCustomerImpl(engine, id.trim().also { require(it.isNotEmpty()) { "Provide the id your app uses for the customer." } })
+    override fun customer(id: String): ServerCustomer = ServerCustomerImpl(engine, checkCustomerId(id))
 
     override suspend fun recordUsageBatch(
         events: List<UsageBatchEvent>,
         register: Boolean,
+        idempotencyKey: String?,
         timeout: Duration?,
     ): UsageEventsResult {
-        val keyed = events.map { it to (checkIdempotencyKey(it.idempotencyKey) ?: newIdempotencyKey()) }
+        checkIdempotencyKey(idempotencyKey, MAX_BATCH_KEY_LENGTH)
+        val keyed =
+            events.map { event ->
+                checkAmount(event.amount)
+                checkCustomerId(event.customer)
+                event to (checkIdempotencyKey(event.idempotencyKey) ?: newIdempotencyKey())
+            }
         val results = mutableListOf<UsageEventResult>()
-        var recorded = 0
-        var duplicates = 0
-        var errors = 0
         keyed.chunked(BATCH_SIZE).forEachIndexed { chunk, slice ->
             val body =
                 buildJsonObject {
                     if (register) put("register", true)
                     put("events", JsonArray(slice.map { (event, key) -> eventJson(event, key) }))
                 }
-            val answer = engine.call(ApiRequest("POST", "/usage/events", body = body, timeout = timeout), UsageEventsResult.serializer())
-            results += answer.results.map { it.copy(index = it.index + chunk * BATCH_SIZE) }
-            recorded += answer.recorded
-            duplicates += answer.duplicates
-            errors += answer.errors
-            slice.map { it.first.customer }.distinct().forEach(engine::wrote)
+            val requestKey = idempotencyKey?.let { "$it:$chunk" }
+            slice.map { it.first.customer }.distinct().forEach(engine::bump)
+            val answered =
+                try {
+                    engine
+                        .call(
+                            ApiRequest("POST", "/usage/events", body = body, idempotencyKey = requestKey, timeout = timeout),
+                            UsageEventsResult.serializer(),
+                        ).results
+                        .map { it.copy(index = it.index + chunk * BATCH_SIZE, idempotencyKey = slice.getOrNull(it.index)?.second) }
+                } catch (error: EntitlerException) {
+                    val failure = batchError(error)
+                    slice.mapIndexed {
+                        index,
+                        (_, key),
+                        ->
+                        UsageEventResult(chunk * BATCH_SIZE + index, UsageOutcome.Error, null, false, failure, key)
+                    }
+                }
+            results += answered
         }
-        return UsageEventsResult(results, recorded, duplicates, errors)
+        return UsageEventsResult(
+            results,
+            results.count { it.outcome == UsageOutcome.Recorded },
+            results.count { it.outcome == UsageOutcome.Duplicate },
+            results.count { it.outcome == UsageOutcome.Error },
+        )
     }
 
     override suspend fun pricing(
@@ -401,7 +443,9 @@ internal class AppClient(
 ) : EntitlerIdentityClient {
     private val config = EntitlerClientConfig().apply(configure).also { it.validate() }
     override val visitor: String = checkVisitor(config.visitor) ?: newVisitorId()
-    private val engine = Engine(config, Credentials(key, TokenSource(token, provider, config.clock)), visitor)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val engine =
+        Engine(config, Credentials(key, TokenSource(token, provider, config.clock, config.timeout, scope)), visitor, scope)
 
     override val me: Customer = CustomerImpl(engine, "me", null)
 
@@ -414,7 +458,7 @@ internal class AppClient(
                 ApiRequest("PUT", "/customers/me", idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout),
                 RegisteredCustomer.serializer(),
             ).also {
-                engine.wrote("me")
+                engine.bump("me")
                 (me as CustomerImpl).named(it.externalId)
             }
 
@@ -523,7 +567,7 @@ internal class Customers(
         idempotencyKey: String?,
         timeout: Duration?,
     ): CustomerDetail {
-        val externalId = id.trim().also { require(it.isNotEmpty()) { "Provide the id your app uses for the customer." } }
+        val externalId = checkCustomerId(id)
         val body =
             buildJsonObject {
                 put("externalId", externalId)
@@ -533,11 +577,12 @@ internal class Customers(
                 period?.let { put("period", it) }
                 metadata?.let { put("metadata", JsonObject(it.mapValues { (_, v) -> JsonPrimitive(v) })) }
             }
+        engine.bump(externalId)
         return engine
             .call(
                 ApiRequest("POST", "/customers", body = body, idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout),
                 CustomerDetail.serializer(),
-            ).also { engine.wrote(externalId) }
+            )
     }
 }
 

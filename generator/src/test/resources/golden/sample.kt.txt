@@ -62,5 +62,5 @@ public object Features {
      *
      * Counted in seats.
      */
-    public val teamSeats: Feature.Setting = Feature.Setting("team_seats")
+    public val teamSeats: Feature.Config = Feature.Config("team_seats")
 }

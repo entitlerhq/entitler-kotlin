@@ -1,3 +1,12 @@
+public final class com/entitlerhq/entitler/ActiveHold {
+	public final fun getAmount ()J
+	public final fun getExpiresAt ()Ljava/time/Instant;
+	public final fun getHoldId ()Ljava/lang/String;
+	public final fun getUsed ()Ljava/lang/Long;
+	public final fun setUsed (Ljava/lang/Long;)V
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/entitlerhq/entitler/Activity {
 	public static final field Companion Lcom/entitlerhq/entitler/Activity$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/time/Instant;)V
@@ -224,25 +233,46 @@ public final class com/entitlerhq/entitler/BillingPeriod$Companion {
 }
 
 public final class com/entitlerhq/entitler/CacheEntry {
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/time/Instant;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
+	public static final field Companion Lcom/entitlerhq/entitler/CacheEntry$Companion;
+	public fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/time/Instant;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/time/Instant;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
 	public final fun component2 ()Ljava/lang/String;
-	public final fun component3-FghU774 ()Lkotlin/time/Duration;
-	public final fun component4 ()Ljava/time/Instant;
-	public final fun copy-5_5nbZA (Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/time/Instant;)Lcom/entitlerhq/entitler/CacheEntry;
-	public static synthetic fun copy-5_5nbZA$default (Lcom/entitlerhq/entitler/CacheEntry;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/CacheEntry;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/Long;
+	public final fun component6 ()Ljava/time/Instant;
+	public final fun copy (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/time/Instant;)Lcom/entitlerhq/entitler/CacheEntry;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/CacheEntry;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/CacheEntry;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAge ()Ljava/lang/Long;
 	public final fun getBody ()Ljava/lang/String;
+	public final fun getCacheControl ()Ljava/lang/String;
 	public final fun getEtag ()Ljava/lang/String;
-	public final fun getMaxAge-FghU774 ()Lkotlin/time/Duration;
 	public final fun getReceivedAt ()Ljava/time/Instant;
+	public final fun getV ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
+public final synthetic class com/entitlerhq/entitler/CacheEntry$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lcom/entitlerhq/entitler/CacheEntry$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/entitlerhq/entitler/CacheEntry;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/entitlerhq/entitler/CacheEntry;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/entitlerhq/entitler/CacheEntry$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
 public abstract interface class com/entitlerhq/entitler/CacheStore {
 	public abstract fun get (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public abstract fun set (Ljava/lang/String;Lcom/entitlerhq/entitler/CacheEntry;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun set-exY8QGI (Ljava/lang/String;Lcom/entitlerhq/entitler/CacheEntry;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/entitlerhq/entitler/ChangeTiming : java/lang/Enum {
@@ -346,6 +376,11 @@ public final class com/entitlerhq/entitler/Check$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class com/entitlerhq/entitler/ConstantsKt {
+	public static final field SNAPSHOT_ISSUER Ljava/lang/String;
+	public static final field VISITOR_ID_PATTERN Ljava/lang/String;
+}
+
 public abstract interface class com/entitlerhq/entitler/Customer {
 	public abstract fun check-Kx4hsE0 (Lcom/entitlerhq/entitler/Feature$Metered;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun check-Kx4hsE0 (Lcom/entitlerhq/entitler/Feature;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -364,8 +399,8 @@ public abstract interface class com/entitlerhq/entitler/Customer {
 	public abstract fun isEntitled (Ljava/lang/String;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun isEntitled$default (Lcom/entitlerhq/entitler/Customer;Lcom/entitlerhq/entitler/Feature;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun isEntitled$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public abstract fun planSpace-dnQKTGw (Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun planSpace-dnQKTGw$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun plans-dnQKTGw (Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun plans-dnQKTGw$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun pricing-Kx4hsE0 (Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun pricing-Kx4hsE0$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun recordUsage-rl3MWlM (Lcom/entitlerhq/entitler/Feature$Metered;JLcom/entitlerhq/entitler/UsageMode;Ljava/time/Instant;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -374,14 +409,14 @@ public abstract interface class com/entitlerhq/entitler/Customer {
 	public static synthetic fun releaseUsage-5_5nbZA$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun settleUsage-51bEbmg (Ljava/lang/String;JLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun settleUsage-51bEbmg$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;JLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public abstract fun snapshot-Oq1He-8 (Lkotlin/time/Duration;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun snapshot-Oq1He-8$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun snapshot-d2Xe4Fc (Lkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun snapshot-d2Xe4Fc$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun usage-Kx4hsE0 (Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun usage-Kx4hsE0$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun usageLog-BwNAW2A (Lkotlin/time/Duration;)Lkotlinx/coroutines/flow/Flow;
 	public static synthetic fun usageLog-BwNAW2A$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;ILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
-	public abstract fun withHold-pQyb5r8 (Lcom/entitlerhq/entitler/Feature$Metered;JLkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun withHold-pQyb5r8$default (Lcom/entitlerhq/entitler/Customer;Lcom/entitlerhq/entitler/Feature$Metered;JLkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun withHold-pQyb5r8 (Lcom/entitlerhq/entitler/Feature$Metered;JLkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun withHold-pQyb5r8$default (Lcom/entitlerhq/entitler/Customer;Lcom/entitlerhq/entitler/Feature$Metered;JLkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class com/entitlerhq/entitler/Customer$DefaultImpls {
@@ -393,15 +428,15 @@ public final class com/entitlerhq/entitler/Customer$DefaultImpls {
 	public static synthetic fun holdUsage-D-iRwXU$default (Lcom/entitlerhq/entitler/Customer;Lcom/entitlerhq/entitler/Feature$Metered;JLkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun isEntitled$default (Lcom/entitlerhq/entitler/Customer;Lcom/entitlerhq/entitler/Feature;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun isEntitled$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;ZLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun planSpace-dnQKTGw$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun plans-dnQKTGw$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun pricing-Kx4hsE0$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun recordUsage-rl3MWlM$default (Lcom/entitlerhq/entitler/Customer;Lcom/entitlerhq/entitler/Feature$Metered;JLcom/entitlerhq/entitler/UsageMode;Ljava/time/Instant;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun releaseUsage-5_5nbZA$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun settleUsage-51bEbmg$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;JLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun snapshot-Oq1He-8$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun snapshot-d2Xe4Fc$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun usage-Kx4hsE0$default (Lcom/entitlerhq/entitler/Customer;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun usageLog-BwNAW2A$default (Lcom/entitlerhq/entitler/Customer;Lkotlin/time/Duration;ILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
-	public static synthetic fun withHold-pQyb5r8$default (Lcom/entitlerhq/entitler/Customer;Lcom/entitlerhq/entitler/Feature$Metered;JLkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun withHold-pQyb5r8$default (Lcom/entitlerhq/entitler/Customer;Lcom/entitlerhq/entitler/Feature$Metered;JLkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class com/entitlerhq/entitler/CustomerBilling {
@@ -527,6 +562,54 @@ public final synthetic class com/entitlerhq/entitler/CustomerPage$$serializer : 
 }
 
 public final class com/entitlerhq/entitler/CustomerPage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/entitlerhq/entitler/CustomerPlans {
+	public static final field Companion Lcom/entitlerhq/entitler/CustomerPlans$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;Z)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Lcom/entitlerhq/entitler/Experiment;
+	public final fun component11 ()Z
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/time/Instant;
+	public final fun component5 ()Lcom/entitlerhq/entitler/Environment;
+	public final fun component6 ()Lcom/entitlerhq/entitler/Track;
+	public final fun component7 ()Ljava/lang/Long;
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;Z)Lcom/entitlerhq/entitler/CustomerPlans;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/CustomerPlans;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;ZILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerPlans;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAsOf ()Ljava/time/Instant;
+	public final fun getChange ()Ljava/lang/String;
+	public final fun getCustomer ()Ljava/lang/String;
+	public final fun getEnvironment ()Lcom/entitlerhq/entitler/Environment;
+	public final fun getExperiment ()Lcom/entitlerhq/entitler/Experiment;
+	public final fun getHeld ()Ljava/util/List;
+	public final fun getOptions ()Ljava/util/List;
+	public final fun getRelease ()Ljava/lang/Long;
+	public final fun getStale ()Z
+	public final fun getTesters ()Z
+	public final fun getTrack ()Lcom/entitlerhq/entitler/Track;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class com/entitlerhq/entitler/CustomerPlans$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lcom/entitlerhq/entitler/CustomerPlans$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/entitlerhq/entitler/CustomerPlans;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/entitlerhq/entitler/CustomerPlans;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/entitlerhq/entitler/CustomerPlans$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
@@ -841,8 +924,6 @@ public final class com/entitlerhq/entitler/Entitlements$Companion {
 }
 
 public final class com/entitlerhq/entitler/Entitler {
-	public static final field SNAPSHOT_ISSUER Ljava/lang/String;
-	public static final field VISITOR_ID_PATTERN Ljava/lang/String;
 	public static final fun EntitlerClient (Ljava/lang/String;)Lcom/entitlerhq/entitler/EntitlerClient;
 	public static final fun EntitlerClient (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lcom/entitlerhq/entitler/EntitlerClient;
 	public static final fun EntitlerClient (Lkotlin/jvm/functions/Function1;)Lcom/entitlerhq/entitler/EntitlerClient;
@@ -872,8 +953,8 @@ public final class com/entitlerhq/entitler/Entitler {
 }
 
 public final class com/entitlerhq/entitler/EntitlerApiException : com/entitlerhq/entitler/EntitlerException {
-	public synthetic fun <init> (ILcom/entitlerhq/entitler/ErrorCode;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/lang/String;Lcom/entitlerhq/entitler/Payment;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (ILcom/entitlerhq/entitler/ErrorCode;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/lang/String;Lcom/entitlerhq/entitler/Payment;Ljava/util/List;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILcom/entitlerhq/entitler/ErrorCode;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/lang/String;Lcom/entitlerhq/entitler/Payment;Ljava/util/List;Ljava/util/List;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILcom/entitlerhq/entitler/ErrorCode;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Ljava/lang/String;Lcom/entitlerhq/entitler/Payment;Ljava/util/List;Ljava/util/List;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getCode ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getIdempotencyKey ()Ljava/lang/String;
 	public final fun getListingGaps ()Ljava/util/List;
@@ -943,7 +1024,6 @@ public final class com/entitlerhq/entitler/EntitlerConnectionException : com/ent
 public abstract class com/entitlerhq/entitler/EntitlerException : java/lang/RuntimeException {
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun getHoldId ()Ljava/lang/String;
 }
 
 public abstract interface class com/entitlerhq/entitler/EntitlerIdentityClient : com/entitlerhq/entitler/EntitlerClient {
@@ -965,8 +1045,8 @@ public abstract interface class com/entitlerhq/entitler/EntitlerServer : java/io
 	public fun newVisitorId ()Ljava/lang/String;
 	public abstract fun pricing-Kx4hsE0 (Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun pricing-Kx4hsE0$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public abstract fun recordUsageBatch-5_5nbZA (Ljava/util/List;ZLkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun recordUsageBatch-5_5nbZA$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/util/List;ZLkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun recordUsageBatch-51bEbmg (Ljava/util/List;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun recordUsageBatch-51bEbmg$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/util/List;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun scopes-dnQKTGw (Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun scopes-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerServer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun snapshotKeys-dnQKTGw (Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -981,7 +1061,7 @@ public final class com/entitlerhq/entitler/EntitlerServer$DefaultImpls {
 	public static synthetic fun features-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerServer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static fun newVisitorId (Lcom/entitlerhq/entitler/EntitlerServer;)Ljava/lang/String;
 	public static synthetic fun pricing-Kx4hsE0$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun recordUsageBatch-5_5nbZA$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/util/List;ZLkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun recordUsageBatch-51bEbmg$default (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/util/List;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun scopes-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerServer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun snapshotKeys-dnQKTGw$default (Lcom/entitlerhq/entitler/EntitlerServer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static fun verifySnapshot-B8UsjHI (Lcom/entitlerhq/entitler/EntitlerServer;Ljava/lang/String;Lcom/entitlerhq/entitler/SnapshotKeys;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;J)Lcom/entitlerhq/entitler/VerifiedSnapshot;
@@ -1009,6 +1089,14 @@ public final class com/entitlerhq/entitler/EntitlerTokenException : com/entitler
 public final class com/entitlerhq/entitler/EntitlerUsageRefusedException : com/entitlerhq/entitler/EntitlerException {
 	public fun <init> (Lcom/entitlerhq/entitler/UsageResult;)V
 	public final fun getResult ()Lcom/entitlerhq/entitler/UsageResult;
+}
+
+public final class com/entitlerhq/entitler/EntitlerUsageSettlementException : com/entitlerhq/entitler/EntitlerException {
+	public fun <init> (Ljava/lang/String;JLjava/lang/Long;Ljava/lang/Object;Ljava/lang/Throwable;)V
+	public final fun getAmount ()J
+	public final fun getExcess ()Ljava/lang/Long;
+	public final fun getHoldId ()Ljava/lang/String;
+	public final fun getResult ()Ljava/lang/Object;
 }
 
 public final class com/entitlerhq/entitler/Environment {
@@ -1083,6 +1171,7 @@ public final class com/entitlerhq/entitler/ErrorCode$Companion {
 	public final fun getCatalogueNotEmpty ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getChangeLocked ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getChangeRequired ()Lcom/entitlerhq/entitler/ErrorCode;
+	public final fun getConnectionFailed ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getConnectionInUse ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getConnectionMode ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getConnectionRequired ()Lcom/entitlerhq/entitler/ErrorCode;
@@ -1105,6 +1194,7 @@ public final class com/entitlerhq/entitler/ErrorCode$Companion {
 	public final fun getInvalidIdempotencyKey ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getInvalidOccurredAt ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getInvalidPath ()Lcom/entitlerhq/entitler/ErrorCode;
+	public final fun getInvalidResponse ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getLastEnvironment ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getLimitReached ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getListingGaps ()Lcom/entitlerhq/entitler/ErrorCode;
@@ -1130,6 +1220,7 @@ public final class com/entitlerhq/entitler/ErrorCode$Companion {
 	public final fun getSwitchInUse ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getSwitchNeeded ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getSwitchOff ()Lcom/entitlerhq/entitler/ErrorCode;
+	public final fun getTimedOut ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getTooManyCustomers ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getTrackClosed ()Lcom/entitlerhq/entitler/ErrorCode;
 	public final fun getUnauthorised ()Lcom/entitlerhq/entitler/ErrorCode;
@@ -1171,6 +1262,18 @@ public abstract class com/entitlerhq/entitler/Feature {
 	public abstract fun getType ()Lcom/entitlerhq/entitler/FeatureType;
 }
 
+public final class com/entitlerhq/entitler/Feature$Config : com/entitlerhq/entitler/Feature {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/Feature$Config;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Feature$Config;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Feature$Config;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getKey ()Ljava/lang/String;
+	public fun getType ()Lcom/entitlerhq/entitler/FeatureType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/entitlerhq/entitler/Feature$Group : com/entitlerhq/entitler/Feature {
 	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -1210,18 +1313,6 @@ public final class com/entitlerhq/entitler/Feature$OnOff : com/entitlerhq/entitl
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class com/entitlerhq/entitler/Feature$Setting : com/entitlerhq/entitler/Feature {
-	public fun <init> (Ljava/lang/String;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/Feature$Setting;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Feature$Setting;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Feature$Setting;
-	public fun equals (Ljava/lang/Object;)Z
-	public fun getKey ()Ljava/lang/String;
-	public fun getType ()Lcom/entitlerhq/entitler/FeatureType;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
 public final class com/entitlerhq/entitler/Feature$Unknown : com/entitlerhq/entitler/Feature {
 	public fun <init> (Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureType;)V
 	public final fun component1 ()Ljava/lang/String;
@@ -1237,20 +1328,22 @@ public final class com/entitlerhq/entitler/Feature$Unknown : com/entitlerhq/enti
 
 public final class com/entitlerhq/entitler/FeatureList {
 	public static final field Companion Lcom/entitlerhq/entitler/FeatureList$Companion;
-	public fun <init> (Ljava/util/List;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/util/List;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/List;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;Z)V
+	public synthetic fun <init> (Ljava/util/List;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Lcom/entitlerhq/entitler/Environment;
 	public final fun component3 ()Lcom/entitlerhq/entitler/Track;
 	public final fun component4 ()Ljava/lang/Long;
 	public final fun component5 ()Ljava/lang/String;
-	public final fun copy (Ljava/util/List;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;)Lcom/entitlerhq/entitler/FeatureList;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/FeatureList;Ljava/util/List;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/FeatureList;
+	public final fun component6 ()Z
+	public final fun copy (Ljava/util/List;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;Z)Lcom/entitlerhq/entitler/FeatureList;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/FeatureList;Ljava/util/List;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZILjava/lang/Object;)Lcom/entitlerhq/entitler/FeatureList;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChange ()Ljava/lang/String;
 	public final fun getEnvironment ()Lcom/entitlerhq/entitler/Environment;
 	public final fun getFeatures ()Ljava/util/List;
 	public final fun getRelease ()Ljava/lang/Long;
+	public final fun getStale ()Z
 	public final fun getTrack ()Lcom/entitlerhq/entitler/Track;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -1765,7 +1858,7 @@ public final class com/entitlerhq/entitler/MemoryCacheStore : com/entitlerhq/ent
 	public fun <init> (I)V
 	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun get (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun set (Ljava/lang/String;Lcom/entitlerhq/entitler/CacheEntry;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun set-exY8QGI (Ljava/lang/String;Lcom/entitlerhq/entitler/CacheEntry;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class com/entitlerhq/entitler/MeterWindow {
@@ -2083,6 +2176,20 @@ public final class com/entitlerhq/entitler/PeriodListing$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class com/entitlerhq/entitler/Plan : com/entitlerhq/entitler/PlanChoice {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/Plan;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Plan;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Plan;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPlan ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/entitlerhq/entitler/PlanChoice {
+}
+
 public final class com/entitlerhq/entitler/PlanOverride {
 	public static final field Companion Lcom/entitlerhq/entitler/PlanOverride$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/PlanSummary;Ljava/lang/String;Lcom/entitlerhq/entitler/Channel;Ljava/time/Instant;Ljava/lang/String;)V
@@ -2116,54 +2223,6 @@ public final synthetic class com/entitlerhq/entitler/PlanOverride$$serializer : 
 }
 
 public final class com/entitlerhq/entitler/PlanOverride$Companion {
-	public final fun serializer ()Lkotlinx/serialization/KSerializer;
-}
-
-public final class com/entitlerhq/entitler/PlanSpace {
-	public static final field Companion Lcom/entitlerhq/entitler/PlanSpace$Companion;
-	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;Z)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun component10 ()Lcom/entitlerhq/entitler/Experiment;
-	public final fun component11 ()Z
-	public final fun component2 ()Ljava/util/List;
-	public final fun component3 ()Ljava/util/List;
-	public final fun component4 ()Ljava/time/Instant;
-	public final fun component5 ()Lcom/entitlerhq/entitler/Environment;
-	public final fun component6 ()Lcom/entitlerhq/entitler/Track;
-	public final fun component7 ()Ljava/lang/Long;
-	public final fun component8 ()Ljava/lang/String;
-	public final fun component9 ()Z
-	public final fun copy (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;Z)Lcom/entitlerhq/entitler/PlanSpace;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/PlanSpace;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;ZILjava/lang/Object;)Lcom/entitlerhq/entitler/PlanSpace;
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getAsOf ()Ljava/time/Instant;
-	public final fun getChange ()Ljava/lang/String;
-	public final fun getCustomer ()Ljava/lang/String;
-	public final fun getEnvironment ()Lcom/entitlerhq/entitler/Environment;
-	public final fun getExperiment ()Lcom/entitlerhq/entitler/Experiment;
-	public final fun getHeld ()Ljava/util/List;
-	public final fun getOptions ()Ljava/util/List;
-	public final fun getRelease ()Ljava/lang/Long;
-	public final fun getStale ()Z
-	public final fun getTesters ()Z
-	public final fun getTrack ()Lcom/entitlerhq/entitler/Track;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final synthetic class com/entitlerhq/entitler/PlanSpace$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
-	public static final field INSTANCE Lcom/entitlerhq/entitler/PlanSpace$$serializer;
-	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
-	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/entitlerhq/entitler/PlanSpace;
-	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
-	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
-	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/entitlerhq/entitler/PlanSpace;)V
-	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
-	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
-}
-
-public final class com/entitlerhq/entitler/PlanSpace$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
@@ -2928,9 +2987,9 @@ public final class com/entitlerhq/entitler/Scopes {
 }
 
 public abstract interface class com/entitlerhq/entitler/ServerCustomer : com/entitlerhq/entitler/Customer {
-	public abstract fun addAddOn-7Yrd8eY (Lcom/entitlerhq/entitler/Sku;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun addAddOn-7Yrd8eY (Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun addAddOn-7Yrd8eY (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/Sku;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun billing-dnQKTGw (Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun billing-dnQKTGw$default (Lcom/entitlerhq/entitler/ServerCustomer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -2938,9 +2997,9 @@ public abstract interface class com/entitlerhq/entitler/ServerCustomer : com/ent
 	public static synthetic fun billingPortal-5_5nbZA$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun cancel-51bEbmg (Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun cancel-51bEbmg$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public abstract fun checkout-7Yrd8eY (Lcom/entitlerhq/entitler/Sku;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun checkout-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/Sku;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun checkout-rl3MWlM (Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun checkout-rl3MWlM (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun checkout-rl3MWlM$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun checkout-rl3MWlM$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun delete-5_5nbZA (ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun delete-5_5nbZA$default (Lcom/entitlerhq/entitler/ServerCustomer;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -2958,9 +3017,9 @@ public abstract interface class com/entitlerhq/entitler/ServerCustomer : com/ent
 	public static synthetic fun setAddOnQuantity-51bEbmg$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;ILjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun setTrack-5_5nbZA (Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun setTrack-5_5nbZA$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public abstract fun subscribe-51bEbmg (Lcom/entitlerhq/entitler/Sku;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun subscribe-51bEbmg$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/Sku;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun subscribe-yV_PMig (Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun subscribe-yV_PMig (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun subscribe-yV_PMig$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun subscribe-yV_PMig$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun token-Q0pmBt8 (Ljava/util/List;Lkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun token-Q0pmBt8$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/util/List;Lkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -2973,12 +3032,12 @@ public abstract interface class com/entitlerhq/entitler/ServerCustomer : com/ent
 }
 
 public final class com/entitlerhq/entitler/ServerCustomer$DefaultImpls {
-	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/Sku;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun billing-dnQKTGw$default (Lcom/entitlerhq/entitler/ServerCustomer;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun billingPortal-5_5nbZA$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun cancel-51bEbmg$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun checkout-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/Sku;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun checkout-rl3MWlM$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun checkout-rl3MWlM$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun delete-5_5nbZA$default (Lcom/entitlerhq/entitler/ServerCustomer;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun details-Kx4hsE0$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -2987,7 +3046,7 @@ public final class com/entitlerhq/entitler/ServerCustomer$DefaultImpls {
 	public static synthetic fun removeAddOn-5_5nbZA$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun setAddOnQuantity-51bEbmg$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;ILjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun setTrack-5_5nbZA$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun subscribe-51bEbmg$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/Sku;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun subscribe-yV_PMig$default (Lcom/entitlerhq/entitler/ServerCustomer;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun subscribe-yV_PMig$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun token-Q0pmBt8$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/util/List;Lkotlin/time/Duration;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun undoAddOnChange-5_5nbZA$default (Lcom/entitlerhq/entitler/ServerCustomer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -3010,7 +3069,7 @@ public final class com/entitlerhq/entitler/ServerCustomers$DefaultImpls {
 	public static synthetic fun page-7Yrd8eY$default (Lcom/entitlerhq/entitler/ServerCustomers;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
-public final class com/entitlerhq/entitler/Sku {
+public final class com/entitlerhq/entitler/Sku : com/entitlerhq/entitler/PlanChoice {
 	public fun <init> (Ljava/lang/String;Ljava/util/Map;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/util/Map;
@@ -3307,18 +3366,20 @@ public final class com/entitlerhq/entitler/UsageEventError$Companion {
 
 public final class com/entitlerhq/entitler/UsageEventResult {
 	public static final field Companion Lcom/entitlerhq/entitler/UsageEventResult$Companion;
-	public fun <init> (ILcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;ZLcom/entitlerhq/entitler/UsageEventError;)V
-	public synthetic fun <init> (ILcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;ZLcom/entitlerhq/entitler/UsageEventError;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;ZLcom/entitlerhq/entitler/UsageEventError;Ljava/lang/String;)V
+	public synthetic fun <init> (ILcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;ZLcom/entitlerhq/entitler/UsageEventError;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component2 ()Lcom/entitlerhq/entitler/UsageOutcome;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Z
 	public final fun component5 ()Lcom/entitlerhq/entitler/UsageEventError;
-	public final fun copy (ILcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;ZLcom/entitlerhq/entitler/UsageEventError;)Lcom/entitlerhq/entitler/UsageEventResult;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/UsageEventResult;ILcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;ZLcom/entitlerhq/entitler/UsageEventError;ILjava/lang/Object;)Lcom/entitlerhq/entitler/UsageEventResult;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun copy (ILcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;ZLcom/entitlerhq/entitler/UsageEventError;Ljava/lang/String;)Lcom/entitlerhq/entitler/UsageEventResult;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/UsageEventResult;ILcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;ZLcom/entitlerhq/entitler/UsageEventError;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/UsageEventResult;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getError ()Lcom/entitlerhq/entitler/UsageEventError;
 	public final fun getId ()Ljava/lang/String;
+	public final fun getIdempotencyKey ()Ljava/lang/String;
 	public final fun getIndex ()I
 	public final fun getLate ()Z
 	public final fun getOutcome ()Lcom/entitlerhq/entitler/UsageOutcome;
@@ -3615,49 +3676,49 @@ public final class com/entitlerhq/entitler/UsageSource$Companion {
 }
 
 public abstract interface class com/entitlerhq/entitler/VendorActions {
-	public abstract fun addAddOn-7Yrd8eY (Lcom/entitlerhq/entitler/Sku;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun addAddOn-7Yrd8eY (Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun addAddOn-7Yrd8eY (Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Sku;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun cancelUsage-5_5nbZA (Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun cancelUsage-5_5nbZA$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public abstract fun checkout-7Yrd8eY (Lcom/entitlerhq/entitler/Sku;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun checkout-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Sku;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun checkout-rl3MWlM (Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun checkout-rl3MWlM (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun checkout-rl3MWlM$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun checkout-rl3MWlM$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun grant-7Yrd8eY (Lcom/entitlerhq/entitler/Feature;Lcom/entitlerhq/entitler/FeatureValue;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun grant-7Yrd8eY (Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun grant-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Feature;Lcom/entitlerhq/entitler/FeatureValue;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun grant-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public abstract fun override-yV_PMig (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun override-yV_PMig$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun override-51bEbmg (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun override-51bEbmg$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun revokeGrant-5_5nbZA (Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun revokeGrant-5_5nbZA$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun setAddOnQuantity-51bEbmg (Ljava/lang/String;ILjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun setAddOnQuantity-51bEbmg$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;ILjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun setMeter-51bEbmg (Lcom/entitlerhq/entitler/Feature$Metered;JLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun setMeter-51bEbmg$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Feature$Metered;JLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public abstract fun subscribe-51bEbmg (Lcom/entitlerhq/entitler/Sku;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun subscribe-51bEbmg$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Sku;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun subscribe-yV_PMig (Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun subscribe-yV_PMig (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun subscribe-yV_PMig$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun subscribe-yV_PMig$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun undoOverride-5_5nbZA (Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun undoOverride-5_5nbZA$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class com/entitlerhq/entitler/VendorActions$DefaultImpls {
-	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Sku;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun addAddOn-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun cancelUsage-5_5nbZA$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun checkout-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Sku;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun checkout-rl3MWlM$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun checkout-rl3MWlM$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun grant-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Feature;Lcom/entitlerhq/entitler/FeatureValue;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun grant-7Yrd8eY$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun override-yV_PMig$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun override-51bEbmg$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun revokeGrant-5_5nbZA$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun setAddOnQuantity-51bEbmg$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;ILjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun setMeter-51bEbmg$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Feature$Metered;JLjava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun subscribe-51bEbmg$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/Sku;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun subscribe-yV_PMig$default (Lcom/entitlerhq/entitler/VendorActions;Lcom/entitlerhq/entitler/PlanChoice;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun subscribe-yV_PMig$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/ChangeTiming;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun undoOverride-5_5nbZA$default (Lcom/entitlerhq/entitler/VendorActions;Ljava/lang/String;Ljava/lang/String;Lkotlin/time/Duration;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }

@@ -1,54 +1,100 @@
 package com.entitlerhq.entitler
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import okio.ByteString.Companion.encodeUtf8
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration
 
-private const val REFRESH_BEFORE_MILLIS = 60_000L
+private const val REFRESH_MARGIN_SECONDS = 60L
 private const val MILLIS_PER_SECOND = 1000L
+
+internal class HeldToken(
+    val token: String,
+    private val receivedAt: Long,
+) {
+    private val claims = claimsOf(token)
+    private val exp = claims?.long("exp")
+    private val iat = claims?.long("iat")
+
+    fun expiresSoon(now: Long): Boolean {
+        val exp = exp ?: return false
+        val start = iat ?: (receivedAt / MILLIS_PER_SECOND)
+        val margin = minOf(REFRESH_MARGIN_SECONDS, (exp - start) / 2)
+        return now >= (exp - margin) * MILLIS_PER_SECOND
+    }
+}
+
+internal fun isReadableToken(token: String): Boolean {
+    val claims = claimsOf(token) ?: return false
+    val exp = claims.long("exp") ?: return false
+    if (!claims.containsKey("iat")) return true
+    val iat = claims.long("iat") ?: return false
+    return iat < exp
+}
 
 internal class TokenSource(
     fixed: String?,
     private val provider: (suspend () -> String)?,
     private val clock: () -> Long,
+    private val timeout: Duration,
+    private val scope: CoroutineScope,
 ) {
-    @Volatile private var current: String? = fixed
-    private val mutex = Mutex()
+    private val lock = Any()
+
+    @Volatile private var current: HeldToken? = fixed?.let { HeldToken(it, clock()) }
+
+    private var pending: Deferred<Result<String>>? = null
 
     val refreshable: Boolean get() = provider != null
 
+    val held: String? get() = current?.token
+
     suspend fun get(): String {
-        val token = current
-        if (token != null && !(refreshable && expiresSoon(token))) return token
-        return refresh(token)
+        val held = current
+        if (held != null && !(refreshable && held.expiresSoon(clock()))) return held.token
+        return refresh(held?.token)
     }
 
-    suspend fun refresh(seen: String?): String =
-        mutex.withLock {
-            val token = current
-            if (token != null && token != seen && !expiresSoon(token)) return token
-            fetch().also { current = it }
-        }
-
-    private suspend fun fetch(): String {
-        val provide = provider ?: error("A fixed token cannot be refreshed.")
-        val answer =
-            runCatching { provide() }.getOrElse {
-                if (it is CancellationException) throw it
-                throw EntitlerTokenException("The token provider failed: ${it.javaClass.simpleName}.", it)
+    suspend fun refresh(seen: String?): String {
+        val provide = provider ?: return checkNotNull(current).token
+        val waiting =
+            synchronized(lock) {
+                val held = current
+                if (held != null && held.token != seen && !held.expiresSoon(clock())) return held.token
+                pending ?: scope.async { runCatching { fetch(provide) } }.also { pending = it }
             }
-        val token = answer.trim()
-        if (token.isEmpty()) throw EntitlerTokenException("The token provider answered a blank token.")
-        if (claimsOf(token) == null) throw EntitlerTokenException("The token provider answered a token that cannot be read as a JWT.")
-        return token
+        return waiting.await().getOrThrow()
     }
 
-    private fun expiresSoon(token: String): Boolean {
-        val exp = claimsOf(token)?.long("exp") ?: return false
-        return exp * MILLIS_PER_SECOND - REFRESH_BEFORE_MILLIS <= clock()
+    private suspend fun fetch(provide: suspend () -> String): String {
+        try {
+            val answer =
+                runCatching { withTimeoutOrNull(timeout) { provide() } }.getOrElse {
+                    if (it is CancellationException) throw it
+                    tokenError("The token provider failed: ${it.javaClass.simpleName}.", it)
+                } ?: tokenError("The token provider did not answer within the client's timeout.")
+            val token = answer.trim()
+            if (token.isEmpty()) tokenError("The token provider answered a blank token.")
+            if (!isReadableToken(token)) tokenError("The token provider answered a token that cannot be read.")
+            synchronized(lock) { current = HeldToken(token, clock()) }
+            return token
+        } finally {
+            synchronized(lock) { pending = null }
+        }
     }
 }
+
+private fun tokenError(
+    message: String,
+    cause: Throwable? = null,
+): Nothing = throw EntitlerTokenException(message, cause)
+
+internal class Credential(
+    val bearer: String,
+    val identityToken: String?,
+)
 
 internal class Credentials(
     private val key: String?,
@@ -61,34 +107,28 @@ internal class Credentials(
             else -> "in-app with an identity token"
         }
 
-    val refreshable: Boolean get() = token?.refreshable == true
-
-    suspend fun current(): Credential {
-        val token = token?.get() ?: return Credential(checkNotNull(key), null)
-        return if (key == null) Credential(token, null) else Credential(key, token)
-    }
-
-    suspend fun refresh(seen: Credential) {
-        token?.refresh(seen.identityToken ?: seen.bearer)
-    }
-
-    fun principal(credential: Credential): String =
+    val principalKind: String =
         when {
-            token == null -> "key\n${credential.bearer}"
-            credential.identityToken == null -> claimed(credential.bearer, "iss", "eid", "sub")
-            else -> "identity\n$key\n" + claimed(credential.identityToken, "iss", "sub")
+            token == null -> "key"
+            key == null -> "customer-token"
+            else -> "identity"
         }
 
-    private fun claimed(
-        token: String,
-        vararg names: String,
-    ): String {
-        val claims = claimsOf(token) ?: return "token\n" + token.encodeUtf8().sha256().hex()
-        return names.joinToString("\n", prefix = "claims\n") { claims.string(it).orEmpty() }
-    }
-}
+    val refreshable: Boolean get() = token?.refreshable == true
 
-internal class Credential(
-    val bearer: String,
-    val identityToken: String?,
-)
+    suspend fun current(): Credential = credentialOf(token?.get())
+
+    fun held(): Credential? = token?.held?.let(::credentialOf)
+
+    suspend fun refresh(seen: Credential): Credential = credentialOf(token?.refresh(seen.identityToken ?: seen.bearer))
+
+    private fun credentialOf(token: String?): Credential =
+        when {
+            token == null -> Credential(checkNotNull(key), null)
+            key == null -> Credential(token, null)
+            else -> Credential(key, token)
+        }
+
+    fun principal(credential: Credential): String =
+        sha256(if (credential.identityToken == null) credential.bearer else credential.bearer + "\n" + credential.identityToken)
+}

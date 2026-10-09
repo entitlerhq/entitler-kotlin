@@ -39,7 +39,7 @@ class RequestsTest {
         assertEquals(path, request.path)
         assertEquals("Bearer $SERVER_KEY", request.headers["Authorization"])
         assertEquals("application/json", request.headers["Accept"])
-        assertTrue(request.headers["User-Agent"]!!.startsWith("entitler-kotlin/0.1.0 java/"))
+        assertTrue(request.headers["User-Agent"]!!.startsWith("entitler-kotlin/0.1.0 jvm/"))
         if (method == "GET") {
             assertNull(request.headers["Idempotency-Key"], path)
         } else {
@@ -65,7 +65,7 @@ class RequestsTest {
             expect("GET", "$encoded/entitlements/export_pdf", null, "check") { customer.check(Feature.OnOff("export_pdf")) }
             expect("GET", "$encoded/entitlements/a%2Fb", null, "check") { customer.check("a/b") }
             expect("GET", "$encoded/entitlements", null, "entitlements") { customer.entitlements() }
-            expect("GET", "$encoded/plans", null, "plan-space") { customer.planSpace() }
+            expect("GET", "$encoded/plans", null, "plan-space") { customer.plans() }
             expect("GET", "$encoded/pricing", null, "customer-pricing") { customer.pricing() }
             expect("GET", "$encoded/usage", null, "usage") { customer.usage() }
             expect("GET", "$encoded/usage?cursor=c%2B1", null, "usage") { customer.usage(cursor = "c+1") }
@@ -113,8 +113,8 @@ class RequestsTest {
     fun `registration, details and tokens send the documented requests`() =
         runTest {
             expect("PUT", encoded, null, "registered") { customer.register() }
-            expect("PUT", encoded, """{"name":"Ada","email":"ada@example.com","metadata":{"team":"core"}}""", "registered") {
-                customer.register(name = "Ada", email = "ada@example.com", metadata = mapOf("team" to "core"))
+            expect("PUT", encoded, """{"name":"Ada","email":"ada@example.com","metadata":{"team":"core","old":null}}""", "registered") {
+                customer.register(name = "Ada", email = "ada@example.com", metadata = mapOf("team" to "core", "old" to null))
             }
             expect("PATCH", encoded, """{"name":"Ada","metadata":{"team":null,"tier":"gold"}}""", "summary") {
                 customer.update(name = "Ada", metadata = mapOf("team" to null, "tier" to "gold"))
@@ -201,10 +201,10 @@ class RequestsTest {
             expect(
                 "POST",
                 "$encoded/subscription",
-                """{"plan":"team","period":"Monthly","when":"now","selfServe":false,"override":true}""",
+                """{"plan":"team","period":"Monthly","selfServe":false,"override":true}""",
                 "change",
             ) {
-                vendor.override("team", period = "Monthly", timing = ChangeTiming.Now)
+                vendor.override("team", period = "Monthly")
             }
             expect("DELETE", "$encoded/subscription/override", null, "details") { vendor.undoOverride() }
             expect("DELETE", "$encoded/subscription/override?product=main", null, "details") { vendor.undoOverride("main") }
@@ -251,7 +251,7 @@ class RequestsTest {
             val vendor = customer.vendor
             expect("POST", "$encoded/grants", """{"feature":"sso"}""", "details") { vendor.grant(Feature.OnOff("sso")) }
             expect("POST", "$encoded/grants", """{"feature":"team_seats","value":"10","days":30,"reason":"Pilot"}""", "details") {
-                vendor.grant(Feature.Setting("team_seats"), FeatureValue.Amount(10), days = 30, reason = "Pilot")
+                vendor.grant(Feature.Config("team_seats"), FeatureValue.Amount(10), days = 30, reason = "Pilot")
             }
             expect("POST", "$encoded/grants", """{"feature":"ai_credits","value":"unlimited"}""", "details") {
                 vendor.grant("ai_credits", FeatureValue.Unlimited)

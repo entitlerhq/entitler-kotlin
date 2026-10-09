@@ -103,7 +103,7 @@ class RetryTest {
     fun `an invalid idempotency key fails before any request`() =
         runTest {
             api.server().use { server ->
-                for (key in listOf("", "x".repeat(201), "tab\tkey", "é")) {
+                for (key in listOf("", "x".repeat(201), "tab\tkey", "é", " leading", "trailing ")) {
                     val failure =
                         assertFailsWith<IllegalArgumentException> {
                             server.customer("u").recordUsage(Feature.Metered("ai_credits"), 1, idempotencyKey = key)
@@ -228,7 +228,7 @@ class RetryTest {
                 api.reply(418, "teapot")
                 val failure = assertFailsWith<EntitlerApiException> { server.customer("u").check("export_pdf") }
                 assertEquals(ErrorCode.HttpError, failure.code)
-                assertEquals("Entitler request failed with HTTP 418.", failure.message)
+                assertEquals("Entitler answered with HTTP 418.", failure.message)
                 assertNull(failure.requestId)
                 assertNull(failure.retryAfter)
                 assertNull(failure.idempotencyKey)
@@ -237,12 +237,67 @@ class RetryTest {
         }
 
     @Test
-    fun `an answer the SDK cannot read is a connection error`() =
+    fun `an answer the SDK cannot read is invalid_response and is not retried`() =
         runTest {
             api.server().use { server ->
-                api.reply(200, """{"customer":"u"}""")
-                val failure = assertFailsWith<EntitlerConnectionException> { server.customer("u").check("export_pdf") }
+                api.reply(200, """{"customer":"u"}""", "x-request-id" to "req_2")
+                val failure =
+                    assertFailsWith<EntitlerApiException> {
+                        server
+                            .customer(
+                                "u",
+                            ).recordUsage(Feature.Metered("ai_credits"), 1, idempotencyKey = "k9")
+                    }
+                assertEquals(ErrorCode.InvalidResponse, failure.code)
+                assertEquals(200, failure.status)
+                assertEquals("req_2", failure.requestId)
+                assertEquals("k9", failure.idempotencyKey)
                 assertIs<kotlinx.serialization.SerializationException>(failure.cause)
+                assertEquals(1, api.server.requestCount)
+            }
+        }
+
+    @Test
+    fun `Retry-After takes digits or any of the three HTTP date forms, and ignores anything else`() {
+        val now = Instant.parse("1994-11-06T08:49:30Z").toEpochMilli()
+        assertEquals(7.seconds, retryAfterOf("7", now))
+        assertEquals(7.seconds, retryAfterOf(" 7 ", now))
+        assertEquals(7.seconds, retryAfterOf("Sun, 06 Nov 1994 08:49:37 GMT", now))
+        assertEquals(7.seconds, retryAfterOf("Sunday, 06-Nov-94 08:49:37 GMT", now))
+        assertEquals(7.seconds, retryAfterOf("Sun Nov  6 08:49:37 1994", now))
+        assertEquals(0.seconds, retryAfterOf("Sun, 06 Nov 1994 08:49:00 GMT", now))
+        for (bad in listOf("", "-1", "1.5", "soon", "+3")) assertNull(retryAfterOf(bad, now), bad)
+    }
+
+    @Test
+    fun `redirects are never followed and fail with http_error`() =
+        runTest {
+            val other = mockwebserver3.MockWebServer().apply { start() }
+            try {
+                api.server { maxRetries = 0 }.use { server ->
+                    for (status in listOf(301, 302, 307, 308)) {
+                        api.reply(
+                            status,
+                            """{"error":{"code":"moved","message":"Elsewhere."}}""",
+                            "Location" to other.url("/steal").toString(),
+                        )
+                        val failure =
+                            assertFailsWith<EntitlerApiException> { server.customer("u").recordUsage(Feature.Metered("ai_credits"), 1) }
+                        assertEquals(status, failure.status)
+                        assertEquals(ErrorCode.HttpError, failure.code)
+                        assertEquals("Entitler answered with HTTP $status.", failure.message)
+                    }
+                }
+                EntitlerIdentityClient(PUBLISHABLE_KEY, "identity") {
+                    api.setUp(this)
+                    httpClient = okhttp3.OkHttpClient()
+                }.use { client ->
+                    api.reply(307, "", "Location" to other.url("/steal").toString())
+                    assertFailsWith<EntitlerApiException> { client.me.check("export_pdf") }
+                }
+                assertEquals(0, other.requestCount)
+            } finally {
+                other.close()
             }
         }
 }

@@ -228,4 +228,33 @@ class SnapshotTest {
             assertEquals("Pass clockSkew as a whole number of seconds from 0 to 300.", error.message)
         }
     }
+
+    @Test
+    fun `the compact form, the header object and crit are enforced`() {
+        val token = sign(claims())
+        failure(ErrorCode.SnapshotInvalid, notASnapshot) { verify("") }
+        failure(ErrorCode.SnapshotInvalid, notASnapshot) { verify(token + "=") }
+        failure(ErrorCode.SnapshotInvalid, notASnapshot) { verify(token.replaceFirst(".", "+.")) }
+        failure(ErrorCode.SnapshotInvalid, notASnapshot) { verify(base64Url("[1]") + "." + token.substringAfter('.')) }
+        for (crit in listOf("[\"exp\"]", "null", "[]")) {
+            failure(ErrorCode.SnapshotInvalid, notASnapshot) {
+                verify(sign(claims(), header = """{"typ":"entitlements+jwt","alg":"ES256","kid":"k1","crit":$crit}"""))
+            }
+        }
+        failure(ErrorCode.SnapshotInvalid, "None of the keys passed signed this snapshot. Fetch them again with snapshotKeys().") {
+            verify(sign(claims(), header = """{"typ":"entitlements+jwt","alg":"ES256","kid":1}"""))
+        }
+    }
+
+    @Test
+    fun `instants outside years 0001 to 9999 are a snapshot error`() {
+        failure(ErrorCode.SnapshotInvalid, notASnapshot) { verify(sign(claims(exp = 253_402_300_800))) }
+    }
+
+    @Test
+    fun `a blank expected customer or environment is an argument error`() {
+        val message = "Provide the customer and environment the snapshot must be for."
+        assertEquals(message, assertFailsWith<IllegalArgumentException> { verify(sign(claims()), customer = " ") }.message)
+        assertEquals(message, assertFailsWith<IllegalArgumentException> { verify(sign(claims()), environment = "") }.message)
+    }
 }

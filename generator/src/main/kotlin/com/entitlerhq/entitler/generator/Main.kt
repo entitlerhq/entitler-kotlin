@@ -143,9 +143,9 @@ private fun fetch(
             }.use { it.features() }
         }
     } catch (error: EntitlerApiException) {
-        exit(1, "Entitler request failed: ${error.message} (${error.code})", error)
+        exit(1, "Entitler request failed: ${error.message.orEmpty().removeSuffix(".")} (${error.code}).", error)
     } catch (error: EntitlerException) {
-        exit(1, "Entitler request failed: ${error.message}", error)
+        exit(1, "Entitler request failed: ${error.message.orEmpty().removeSuffix(".")}.", error)
     }
 
 private fun counted(count: Int): String = if (count == 1) "1 feature" else "$count features"

@@ -10,7 +10,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import okio.ByteString.Companion.decodeBase64
 import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.Signature
@@ -22,9 +21,6 @@ import java.security.spec.EllipticCurve
 import java.time.Instant
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-
-/** The issuer Entitler signs snapshots as. */
-public const val SNAPSHOT_ISSUER: String = "https://api.entitler.dev/customers"
 
 /**
  * A public key that verifies snapshots, as a JSON Web Key.
@@ -126,15 +122,16 @@ public fun verifySnapshot(
     require(clockSkew.inWholeMilliseconds % MILLIS == 0L && clockSkew.inWholeSeconds in 0..MAX_SKEW_SECONDS) {
         "Pass clockSkew as a whole number of seconds from 0 to 300."
     }
-    val parts = token.trim().split('.')
-    val header = parts.takeIf { it.size == 3 }?.let { decodeJwtPart(it[0]) }
-    val signature = parts.getOrNull(2)?.decodeBase64()
-    val isSnapshot = header?.string("typ") == SNAPSHOT_TYPE && header.string("alg") == "ES256"
+    require(customer.isNotBlank() && environment.isNotBlank()) { "Provide the customer and environment the snapshot must be for." }
+    val parts = token.split('.')
+    val header = parts.takeIf { it.size == 3 && it.none(String::isEmpty) }?.let { decodeJwtPart(it[0]) }
+    val signature = parts.getOrNull(2)?.let(::decodeBase64Url)
+    val isSnapshot = header?.string("typ") == SNAPSHOT_TYPE && header.string("alg") == "ES256" && !header.containsKey("crit")
     if (header == null || signature == null || !isSnapshot) invalid(NOT_A_SNAPSHOT)
     val key =
         keys.firstOrNull { it.kid == header.string("kid") }
             ?: invalid("None of the keys passed signed this snapshot. Fetch them again with snapshotKeys().")
-    if (!signatureHolds(key, "${parts[0]}.${parts[1]}".toByteArray(Charsets.US_ASCII), signature.toByteArray())) {
+    if (!signatureHolds(key, "${parts[0]}.${parts[1]}".toByteArray(Charsets.US_ASCII), signature)) {
         invalid("This snapshot was changed after Entitler signed it.")
     }
     val claims = decodeJwtPart(parts[1])?.let(::snapshotClaimsOf) ?: invalid(NOT_A_SNAPSHOT)
@@ -221,9 +218,11 @@ private class Claims(
 )
 
 private fun snapshotClaimsOf(claims: JsonObject): Claims? =
-    runCatching {
-        strictJson.decodeFromJsonElement(Claims.serializer(), claims)
-    }.getOrNull()
+    runCatching { strictJson.decodeFromJsonElement(Claims.serializer(), claims) }
+        .getOrNull()
+        ?.takeIf { instantOf(it.iat) != null && instantOf(it.exp) != null }
+
+private fun instantOf(seconds: Long): Instant? = runCatching { Instant.ofEpochSecond(seconds) }.getOrNull()?.takeIf(::isInRange)
 
 private val strictJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
@@ -233,10 +232,10 @@ private fun signatureHolds(
     signature: ByteArray,
 ): Boolean {
     if (signature.size != SIGNATURE_BYTES || key.kty != "EC" || key.crv != "P-256") return false
-    val x = key.x.decodeBase64() ?: return false
-    val y = key.y.decodeBase64() ?: return false
+    val x = decodeBase64Url(key.x) ?: return false
+    val y = decodeBase64Url(key.y) ?: return false
     return runCatching {
-        val point = ECPoint(BigInteger(1, x.toByteArray()), BigInteger(1, y.toByteArray()))
+        val point = ECPoint(BigInteger(1, x), BigInteger(1, y))
         val publicKey = KeyFactory.getInstance("EC").generatePublic(ECPublicKeySpec(point, P256))
         Signature.getInstance("SHA256withECDSA").run {
             initVerify(publicKey)

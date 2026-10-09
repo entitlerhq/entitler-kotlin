@@ -9,14 +9,12 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import okio.ByteString
-import okio.ByteString.Companion.decodeBase64
-import okio.ByteString.Companion.encodeUtf8
+import java.security.MessageDigest
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
+import kotlin.io.encoding.Base64
 
 internal val json =
     Json {
@@ -26,44 +24,81 @@ internal val json =
 
 private val rfc3339 = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 
+private const val MIN_YEAR = 1
+private const val MAX_YEAR = 9999
+
+internal fun isInRange(instant: Instant): Boolean =
+    runCatching { instant.atOffset(ZoneOffset.UTC).year in MIN_YEAR..MAX_YEAR }.getOrDefault(false)
+
 internal fun formatInstant(instant: Instant): String = rfc3339.format(instant)
 
-internal fun parseInstant(value: String): Instant = OffsetDateTime.parse(value).toInstant()
+internal fun parseInstant(value: String): Instant? =
+    runCatching {
+        OffsetDateTime.parse(value).toInstant()
+    }.getOrNull()?.takeIf(::isInRange)
 
 internal object InstantSerializer : KSerializer<Instant> {
     override val descriptor = PrimitiveSerialDescriptor("com.entitlerhq.entitler.Instant", PrimitiveKind.STRING)
 
-    override fun deserialize(decoder: Decoder): Instant {
-        val value = decoder.decodeString()
-        return try {
-            parseInstant(value)
-        } catch (error: DateTimeParseException) {
-            throw SerializationException("Expected an RFC 3339 instant.", error)
-        }
-    }
+    override fun deserialize(decoder: Decoder): Instant =
+        parseInstant(decoder.decodeString()) ?: throw SerializationException("Expected an RFC 3339 instant in the years 0001 to 9999.")
 
-    override fun serialize(encoder: Encoder, value: Instant) = encoder.encodeString(formatInstant(value))
+    override fun serialize(
+        encoder: Encoder,
+        value: Instant,
+    ) = encoder.encodeString(formatInstant(value))
 }
 
 private const val UNRESERVED = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()"
+private const val HEX_DIGITS = "0123456789ABCDEF"
+private const val NIBBLE = 4
+private const val LOW_NIBBLE = 0xF
+private const val BYTE_MASK = 0xFF
+private const val ASCII_LIMIT = 0x80
 
 internal fun encodeComponent(value: String): String {
+    require(isValidUnicode(value)) { "Pass an id that is valid Unicode." }
     val out = StringBuilder()
-    for (byte in value.encodeUtf8().toByteArray()) {
-        val char = byte.toInt().toChar()
-        if (byte >= 0 && char in UNRESERVED) {
+    for (byte in value.encodeToByteArray()) {
+        val unsigned = byte.toInt() and BYTE_MASK
+        val char = unsigned.toChar()
+        if (unsigned < ASCII_LIMIT && char in UNRESERVED) {
             out.append(char)
         } else {
-            out.append('%').append(ByteString.of(byte).hex().uppercase())
+            out.append('%').append(HEX_DIGITS[unsigned shr NIBBLE]).append(HEX_DIGITS[unsigned and LOW_NIBBLE])
         }
     }
     return out.toString()
 }
 
+internal fun pathSegment(id: String): String {
+    require(id.isEmpty() || id.any { it != '.' }) { "Pass an id that is not made only of dots." }
+    return encodeComponent(id)
+}
+
+private fun isValidUnicode(value: String): Boolean {
+    var index = 0
+    while (index < value.length) {
+        val char = value[index]
+        if (char.isLowSurrogate()) return false
+        if (char.isHighSurrogate()) {
+            if (index + 1 >= value.length || !value[index + 1].isLowSurrogate()) return false
+            index++
+        }
+        index++
+    }
+    return true
+}
+
+private val base64Url = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
+
+internal fun decodeBase64Url(value: String): ByteArray? = runCatching { base64Url.decode(value) }.getOrNull()
+
+internal fun encodeBase64Url(bytes: ByteArray): String = base64Url.encode(bytes)
+
 internal fun decodeJwtPart(part: String): JsonObject? =
-    part
-        .decodeBase64()
-        ?.utf8()
+    decodeBase64Url(part)
+        ?.decodeToString()
         ?.let { runCatching { json.parseToJsonElement(it) as? JsonObject }.getOrNull() }
 
 internal fun claimsOf(token: String): JsonObject? {
@@ -74,3 +109,12 @@ internal fun claimsOf(token: String): JsonObject? {
 internal fun JsonObject.string(name: String): String? = (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
 internal fun JsonObject.long(name: String): Long? = (this[name] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toLongOrNull()
+
+internal fun sha256(value: String): String =
+    MessageDigest
+        .getInstance("SHA-256")
+        .digest(value.encodeToByteArray())
+        .joinToString("") {
+            val unsigned = it.toInt() and BYTE_MASK
+            "${HEX_DIGITS[unsigned shr NIBBLE]}${HEX_DIGITS[unsigned and LOW_NIBBLE]}"
+        }.lowercase()

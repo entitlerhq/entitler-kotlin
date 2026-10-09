@@ -5,9 +5,18 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import mockwebserver3.Dispatcher
+import mockwebserver3.MockResponse
+import mockwebserver3.RecordedRequest
+import okhttp3.Cache
+import okhttp3.OkHttpClient
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -15,33 +24,42 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 
 class CacheTest {
     private val api = FakeApi()
 
+    @TempDir
+    lateinit var directory: File
+
     @AfterEach
     fun close() = api.close()
 
     private class RecordingStore : CacheStore {
         val entries = mutableMapOf<String, CacheEntry>()
+        val ttls = mutableListOf<Duration>()
 
         override suspend fun get(key: String): CacheEntry? = entries[key]
 
         override suspend fun set(
             key: String,
             entry: CacheEntry,
+            ttl: Duration,
         ) {
             entries[key] = entry
+            ttls += ttl
         }
     }
+
+    private val etag = "ETag" to "\"v1\""
 
     @Test
     fun `a fresh entry answers without a request`() =
         runTest {
             api.server().use { server ->
-                api.replyFixture("check", 200, "ETag" to "\"v1\"", "Cache-Control" to "private, max-age=60")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "private, max-age=60")
                 val customer = server.customer("u")
                 val first = customer.check("export_pdf")
                 api.now += 59_000
@@ -53,11 +71,30 @@ class CacheTest {
         }
 
     @Test
-    fun `an entry past its max-age is revalidated and a 304 answers the kept body`() =
+    fun `an answer's Age counts toward its max-age, and no-cache always revalidates`() =
         runTest {
             api.server().use { server ->
-                api.replyFixture("check", 200, "ETag" to "\"v1\"", "Cache-Control" to "max-age=60")
-                api.reply(304, "", "ETag" to "\"v2\"", "Cache-Control" to "max-age=30")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=60", "Age" to "50")
+                api.reply(304, "")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=60, no-cache")
+                api.reply(304, "")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                api.now += 10_000
+                customer.check("export_pdf")
+                assertEquals(2, api.server.requestCount)
+                customer.check("sso")
+                customer.check("sso")
+                assertEquals(4, api.server.requestCount)
+            }
+        }
+
+    @Test
+    fun `a 304 renews the entry, merging the headers it sends`() =
+        runTest {
+            api.server().use { server ->
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=60")
+                api.reply(304, "", "ETag" to "\"v2\"")
                 api.reply(304, "")
                 val customer = server.customer("u")
                 val first = customer.check("export_pdf")
@@ -65,7 +102,7 @@ class CacheTest {
                 assertEquals(first, customer.check("export_pdf"))
                 api.take()
                 assertEquals("\"v1\"", api.take().headers["If-None-Match"])
-                api.now += 29_000
+                api.now += 59_000
                 customer.check("export_pdf")
                 assertEquals(2, api.server.requestCount)
                 api.now += 1_000
@@ -78,7 +115,7 @@ class CacheTest {
     fun `an entry with only an ETag is revalidated every time`() =
         runTest {
             api.server().use { server ->
-                api.replyFixture("check", 200, "ETag" to "\"v1\"", "Cache-Control" to "private, no-cache")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "private, no-cache")
                 api.reply(304, "")
                 val customer = server.customer("u")
                 customer.check("export_pdf")
@@ -89,10 +126,10 @@ class CacheTest {
         }
 
     @Test
-    fun `a write to the customer revalidates a fresh entry`() =
+    fun `a write to the customer revalidates a fresh entry, and others keep theirs`() =
         runTest {
             api.server().use { server ->
-                api.replyFixture("check", 200, "ETag" to "\"v1\"", "Cache-Control" to "max-age=600")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
                 api.replyFixture("usage-result")
                 api.reply(304, "")
                 val customer = server.customer("u")
@@ -102,10 +139,70 @@ class CacheTest {
                 api.now += 1
                 customer.check("export_pdf")
                 assertEquals(3, api.server.requestCount)
-                server.customer("other").let { api.replyFixture("check", 200, "Cache-Control" to "max-age=600") }
+                api.replyFixture("check", 200, "Cache-Control" to "max-age=600")
                 server.customer("other").check("export_pdf")
                 server.customer("other").check("export_pdf")
                 assertEquals(4, api.server.requestCount)
+            }
+        }
+
+    @Test
+    fun `a failed write still bumps the generation, and tokens and snapshots do not`() =
+        runTest {
+            api.server { maxRetries = 0 }.use { server ->
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                api.replyFixture("token")
+                api.replyFixture("snapshot")
+                api.reply(400, """{"error":{"code":"invalid_body","message":"No."}}""")
+                api.reply(304, "")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                api.now += 1
+                customer.token()
+                customer.snapshot()
+                customer.check("export_pdf")
+                assertEquals(3, api.server.requestCount)
+                assertFailsWith<EntitlerApiException> { customer.update(name = "x") }
+                api.now += 1
+                customer.check("export_pdf")
+                assertEquals(5, api.server.requestCount)
+            }
+        }
+
+    @Test
+    fun `a read that started before a write and answered after it is never kept as fresh`() =
+        runTest {
+            val readArrived = CountDownLatch(1)
+            val writeDone = CountDownLatch(1)
+            api.server.dispatcher =
+                object : Dispatcher() {
+                    override fun dispatch(request: RecordedRequest): MockResponse =
+                        if (request.method == "GET") {
+                            readArrived.countDown()
+                            if (api.server.requestCount <= 1) writeDone.await(5, TimeUnit.SECONDS)
+                            MockResponse
+                                .Builder()
+                                .body(
+                                    fixture("check"),
+                                ).addHeader("ETag", "\"v1\"")
+                                .addHeader("Cache-Control", "max-age=600")
+                                .build()
+                        } else {
+                            MockResponse.Builder().body(fixture("usage-result")).build()
+                        }
+                }
+            api.server { clock = System::currentTimeMillis }.use { server ->
+                val customer = server.customer("u")
+                withContext(Dispatchers.IO) {
+                    val read = async { customer.check("export_pdf") }
+                    readArrived.await(5, TimeUnit.SECONDS)
+                    customer.recordUsage(Feature.Metered("ai_credits"), 1)
+                    writeDone.countDown()
+                    read.await()
+                    Thread.sleep(5)
+                    customer.check("export_pdf")
+                }
+                assertEquals(3, api.server.requestCount)
             }
         }
 
@@ -121,28 +218,50 @@ class CacheTest {
         }
 
     @Test
-    fun `no-store answers are never kept`() =
+    fun `no-store answers are never kept, and kept entries carry the store's lifetime`() =
         runTest {
             val store = RecordingStore()
             api.server { cache = store }.use { server ->
-                api.replyFixture("check", 200, "ETag" to "\"v1\"", "Cache-Control" to "no-store, max-age=60")
-                api.replyFixture("check", 200)
-                server.customer("u").check("export_pdf")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "no-store, max-age=60")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=60", "Age" to "3")
                 server.customer("u").check("export_pdf")
                 assertTrue(store.entries.isEmpty())
+                server.customer("u").check("export_pdf")
+                val entry = store.entries.values.single()
+                assertEquals(1, entry.v)
+                assertEquals("\"v1\"", entry.etag)
+                assertEquals("max-age=60", entry.cacheControl)
+                assertEquals(3, entry.age)
+                assertEquals(24.hours + 60.seconds, store.ttls.single())
             }
+        }
+
+    @Test
+    fun `the cache key is SHA-256 of the documented JSON array`() =
+        runTest {
+            val store = RecordingStore()
+            api
+                .server {
+                    cache = store
+                    asOf = Instant.parse("2026-07-01T09:30:00Z")
+                }.use { server ->
+                    api.replyFixture("check", 200, etag)
+                    server.customer("a/b").check("export_pdf")
+                }
+            val url = api.baseUrl.trimEnd('/') + "/customers/a%2Fb/entitlements/export_pdf"
+            val expected =
+                sha256("""["entitler-cache-v1","GET","$url","key","${sha256(SERVER_KEY)}","2026-07-01T09:30:00.000Z",null]""")
+            assertEquals(setOf(expected), store.entries.keys)
         }
 
     @Test
     fun `cache keys depend on the principal, as-of and visitor but never hold a credential`() =
         runTest {
             val store = RecordingStore()
-            val headers = arrayOf("ETag" to "\"v\"", "Cache-Control" to "max-age=60")
+            val headers = arrayOf(etag, "Cache-Control" to "max-age=60")
             api.server { cache = store }.use {
-                it.customer("u").let { c ->
-                    api.replyFixture("check", 200, *headers)
-                    c.check("export_pdf")
-                }
+                api.replyFixture("check", 200, *headers)
+                it.customer("u").check("export_pdf")
             }
             EntitlerServer("ent_test_other") {
                 api.setUp(this)
@@ -180,28 +299,28 @@ class CacheTest {
         }
 
     @Test
-    fun `a refreshed token keeps its customer's entries`() =
+    fun `a refreshed token starts new entries`() =
         runTest {
             val store = RecordingStore()
             var exp = api.now / 1000 + 30
-            val client =
-                EntitlerClient({ customerToken(exp = exp++) }) {
-                    api.setUp(this)
-                    cache = store
-                }
-            api.replyFixture("check", 200, "ETag" to "\"v\"", "Cache-Control" to "max-age=600")
-            client.me.check("export_pdf")
-            client.me.check("export_pdf")
-            assertEquals(1, api.server.requestCount)
-            assertEquals(1, store.entries.size)
-            client.close()
+            EntitlerClient({ customerToken(exp = exp++) }) {
+                api.setUp(this)
+                cache = store
+            }.use { client ->
+                repeat(2) { api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600") }
+                client.me.check("export_pdf")
+                api.now += 20_000
+                client.me.check("export_pdf")
+                assertEquals(2, api.server.requestCount)
+                assertEquals(2, store.entries.size)
+            }
         }
 
     @Test
     fun `answers are copies`() =
         runTest {
             api.server().use { server ->
-                api.replyFixture("entitlements", 200, "Cache-Control" to "max-age=60")
+                api.replyFixture("entitlements", 200, etag, "Cache-Control" to "max-age=60")
                 val first = server.customer("u").entitlements()
                 val second = server.customer("u").entitlements()
                 assertEquals(first, second)
@@ -213,17 +332,38 @@ class CacheTest {
     fun `the memory store evicts the least recently used entry`() =
         runTest {
             val store = MemoryCacheStore(2)
-            val entry = CacheEntry("{}", null, null, Instant.EPOCH)
-            store.set("a", entry)
-            store.set("b", entry)
+            val entry = CacheEntry(body = "{}", receivedAt = Instant.EPOCH)
+            store.set("a", entry, 1.seconds)
+            store.set("b", entry, 1.seconds)
             store.get("a")
-            store.set("c", entry)
+            store.set("c", entry, 1.seconds)
             assertSame(entry, store.get("a"))
             assertNull(store.get("b"))
             assertSame(entry, store.get("c"))
             assertFailsWith<IllegalArgumentException> { MemoryCacheStore(0) }
             assertFalse(entry.toString().contains("{}"))
         }
+
+    @Test
+    fun `entries serialise with kotlinx serialization`() {
+        val entry =
+            CacheEntry(
+                body = """{"a":1}""",
+                etag = "\"e\"",
+                cacheControl = "max-age=5",
+                age = 2,
+                receivedAt = Instant.parse("2026-10-09T01:00:00Z"),
+            )
+        val text =
+            kotlinx.serialization.json.Json
+                .encodeToString(CacheEntry.serializer(), entry)
+        assertTrue(text.contains("\"v\":1"))
+        assertEquals(
+            entry,
+            kotlinx.serialization.json.Json
+                .decodeFromString(CacheEntry.serializer(), text),
+        )
+    }
 
     @Test
     fun `the memory store is safe for concurrent use`() =
@@ -233,7 +373,7 @@ class CacheTest {
                 (1..2000)
                     .map { i ->
                         async {
-                            store.set("k${i % 100}", CacheEntry("$i", null, null, Instant.EPOCH))
+                            store.set("k${i % 100}", CacheEntry(body = "$i", receivedAt = Instant.EPOCH), 1.seconds)
                             store.get("k${(i + 1) % 100}")
                         }
                     }.awaitAll()
@@ -245,7 +385,7 @@ class CacheTest {
     fun `concurrent checks through the cache all answer`() =
         runTest {
             api.server().use { server ->
-                repeat(20) { api.replyFixture("check", 200, "ETag" to "\"v\"", "Cache-Control" to "max-age=60") }
+                repeat(20) { api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=60") }
                 val answers =
                     withContext(Dispatchers.Default) {
                         (1..20).map { async { server.customer("u").check("export_pdf") } }.awaitAll()
@@ -255,10 +395,47 @@ class CacheTest {
         }
 
     @Test
+    fun `a failing custom store counts as a miss and goes to onError`() =
+        runTest {
+            val broken =
+                object : CacheStore {
+                    override suspend fun get(key: String): CacheEntry? = error("store down")
+
+                    override suspend fun set(
+                        key: String,
+                        entry: CacheEntry,
+                        ttl: Duration,
+                    ) = error("store down")
+                }
+            api.server { cache = broken }.use { server ->
+                api.replyFixture("check", 200, etag)
+                assertTrue(server.customer("u").check("export_pdf").entitled)
+                assertEquals(listOf("store down", "store down"), api.errors.map { it.message })
+            }
+        }
+
+    @Test
+    fun `requests bypass an injected client's HTTP cache`() =
+        runTest {
+            val http = OkHttpClient.Builder().cache(Cache(directory, 1_000_000)).build()
+            api
+                .server {
+                    httpClient = http
+                    cache = null
+                }.use { server ->
+                    repeat(2) { api.replyFixture("check", 200, "Cache-Control" to "public, max-age=600") }
+                    server.customer("u").check("export_pdf")
+                    server.customer("u").check("export_pdf")
+                    assertEquals(2, api.server.requestCount)
+                    assertEquals("no-cache", api.take().headers["Cache-Control"])
+                }
+        }
+
+    @Test
     fun `an unreachable Entitler answers a kept entry marked stale and calls onError`() =
         runTest {
             api.server { maxRetries = 0 }.use { server ->
-                api.replyFixture("check", 200, "ETag" to "\"v\"")
+                api.replyFixture("check", 200, etag)
                 api.reply(503, """{"error":{"code":"unavailable","message":"Down."}}""")
                 val customer = server.customer("u")
                 customer.check("export_pdf")
@@ -271,6 +448,42 @@ class CacheTest {
         }
 
     @Test
+    fun `an undecodable 2xx is invalid_response and counts as unreachable`() =
+        runTest {
+            api.server { maxRetries = 0 }.use { server ->
+                api.replyFixture("check", 200, etag)
+                api.reply(200, "<html>captive portal</html>")
+                api.reply(200, "<html>captive portal</html>")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                assertTrue(customer.check("export_pdf").stale)
+                assertEquals(ErrorCode.InvalidResponse, (api.errors.single() as EntitlerApiException).code)
+                val failure = assertFailsWith<EntitlerApiException> { customer.check("sso") }
+                assertEquals(ErrorCode.InvalidResponse, failure.code)
+                assertEquals("Entitler sent an answer this SDK cannot read.", failure.message)
+            }
+        }
+
+    @Test
+    fun `after an unreachable read, kept entries answer for 30 seconds, then one request goes through`() =
+        runTest {
+            api.server { maxRetries = 0 }.use { server ->
+                api.replyFixture("check", 200, etag)
+                api.reply(503, "")
+                api.reply(304, "")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                assertTrue(customer.check("export_pdf").stale)
+                api.now += 29_000
+                assertTrue(customer.check("export_pdf").stale)
+                assertEquals(2, api.server.requestCount)
+                api.now += 1_000
+                assertFalse(customer.check("export_pdf").stale)
+                assertEquals(3, api.server.requestCount)
+            }
+        }
+
+    @Test
     fun `a kept entry older than staleFor does not stand in`() =
         runTest {
             api
@@ -278,7 +491,7 @@ class CacheTest {
                     maxRetries = 0
                     staleFor = 10.seconds
                 }.use { server ->
-                    api.replyFixture("check", 200, "ETag" to "\"v\"")
+                    api.replyFixture("check", 200, etag)
                     api.reply(500, "")
                     val customer = server.customer("u")
                     customer.check("export_pdf")
@@ -292,11 +505,33 @@ class CacheTest {
     fun `failures that are not unreachability never stand in`() =
         runTest {
             api.server { maxRetries = 0 }.use { server ->
-                api.replyFixture("check", 200, "ETag" to "\"v\"")
+                api.replyFixture("check", 200, etag)
                 api.reply(403, """{"error":{"code":"scope_required","message":"No."}}""")
                 val customer = server.customer("u")
                 customer.check("export_pdf")
                 assertFailsWith<EntitlerApiException> { customer.check("export_pdf") }
+            }
+        }
+
+    @Test
+    fun `when the token provider fails, the previous token's entries answer stale`() =
+        runTest {
+            var calls = 0
+            EntitlerClient({
+                calls++
+                if (calls > 2) error("offline") else customerToken(sub = "s$calls", exp = api.now / 1000 + 120)
+            }) {
+                api.setUp(this)
+                maxRetries = 0
+            }.use { client ->
+                api.replyFixture("check", 200, etag)
+                client.me.check("export_pdf")
+                api.now += 61_000
+                api.replyFixture("check", 200, etag)
+                client.me.check("export_pdf")
+                api.now += 61_000
+                assertTrue(client.me.check("export_pdf").stale)
+                assertTrue(api.errors.single() is EntitlerTokenException)
             }
         }
 
@@ -327,7 +562,7 @@ class CacheTest {
     fun `isEntitled answers a stale check's decision`() =
         runTest {
             api.server { maxRetries = 0 }.use { server ->
-                api.replyFixture("check", 200, "ETag" to "\"v\"")
+                api.replyFixture("check", 200, etag)
                 api.reply(502, "")
                 val customer = server.customer("u")
                 customer.check("export_pdf")
@@ -337,15 +572,27 @@ class CacheTest {
         }
 
     @Test
-    fun `an onError that throws never breaks isEntitled`() =
+    fun `an onError that throws changes nothing`() =
         runTest {
             api
                 .server {
                     maxRetries = 0
                     onError = { error("broken handler") }
                 }.use { server ->
+                    api.replyFixture("check", 200, etag)
+                    api.reply(503, "")
+                    server.customer("v").check("export_pdf")
+                    assertTrue(server.customer("v").check("export_pdf").stale)
                     api.reply(500, "")
                     assertFalse(server.customer("u").isEntitled("export_pdf"))
+                    api.replyFixture("usage-held")
+                    api.reply(500, "")
+                    assertFailsWith<IllegalStateException> {
+                        server
+                            .customer(
+                                "v",
+                            ).withHold(Feature.Metered("ai_credits"), 1) { error("work") }
+                    }
                 }
         }
 
@@ -364,8 +611,8 @@ class CacheTest {
     fun `server pricing and features go through the cache`() =
         runTest {
             api.server().use { server ->
-                api.replyFixture("pricing", 200, "Cache-Control" to "max-age=60")
-                api.replyFixture("features", 200, "Cache-Control" to "max-age=60")
+                api.replyFixture("pricing", 200, etag, "Cache-Control" to "max-age=60")
+                api.replyFixture("features", 200, etag, "Cache-Control" to "max-age=60")
                 server.pricing()
                 server.pricing()
                 server.features()
