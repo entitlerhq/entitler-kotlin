@@ -305,6 +305,7 @@ public data class IssuedCustomerToken(
     val scopes: List<Scope>,
     val expiresAt: Instant,
 ) {
+    /** A string form that never shows the token. */
     override fun toString(): String = "IssuedCustomerToken(customer=$customer, scopes=$scopes, expiresAt=$expiresAt)"
 }
 
@@ -323,6 +324,7 @@ public data class IssuedSnapshot(
     val expiresAt: Instant,
     val keyId: String,
 ) {
+    /** A string form that never shows the token. */
     override fun toString(): String = "IssuedSnapshot(expiresAt=$expiresAt, keyId=$keyId)"
 }
 

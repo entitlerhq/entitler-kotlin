@@ -20,6 +20,7 @@ public data class CacheEntry(
     val maxAge: Duration?,
     val receivedAt: Instant,
 ) {
+    /** A string form that never shows the body. */
     override fun toString(): String = "CacheEntry(etag=$etag, maxAge=$maxAge, receivedAt=$receivedAt)"
 }
 

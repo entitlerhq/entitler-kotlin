@@ -105,7 +105,7 @@ dokka {
 
 mavenPublishing {
     publishToMavenCentral(automaticRelease = true)
-    signAllPublications()
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) signAllPublications()
     coordinates(artifactId = "entitler")
     pom {
         name = "Entitler"

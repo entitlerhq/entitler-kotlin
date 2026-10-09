@@ -17,6 +17,7 @@ public data class ErrorCode(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -218,6 +219,7 @@ public data class Scope(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -293,6 +295,7 @@ public data class FeatureType(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -323,6 +326,7 @@ public data class UsageMode(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -347,6 +351,7 @@ public data class UsageOutcome(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -392,6 +397,7 @@ public data class UsageRefusal(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -416,6 +422,7 @@ public data class HoldState(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -446,6 +453,7 @@ public data class EnvironmentKind(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -474,6 +482,7 @@ public data class UsageSource(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
@@ -501,6 +510,7 @@ public data class PaymentStatus(
     /** The raw value, as the API sends it. */
     public val value: String,
 ) {
+    /** The raw value. */
     override fun toString(): String = value
 
     /** The values this SDK knows. */
