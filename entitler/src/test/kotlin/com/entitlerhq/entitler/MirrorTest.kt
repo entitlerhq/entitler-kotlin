@@ -130,6 +130,8 @@ class MirrorTest {
         mirrors("plan-space", CustomerPlans.serializer())
         mirrors("pricing-full", Pricing.serializer())
         mirrors("customer-pricing", Pricing.serializer())
+        mirrors("plan-change", PlanChange.serializer())
+        mirrors("grant-change", GrantChange.serializer())
         mirrors("features", FeatureList.serializer())
         mirrors("usage", CustomerUsage.serializer())
         mirrors("usage-result", UsageResult.serializer())

@@ -33,6 +33,7 @@ import com.entitlerhq.entitler.PlanChange
 import com.entitlerhq.entitler.PlanSummary
 import com.entitlerhq.entitler.Pricing
 import com.entitlerhq.entitler.PricingPlan
+import com.entitlerhq.entitler.ProductSummary
 import com.entitlerhq.entitler.ProviderPage
 import com.entitlerhq.entitler.PublishedProduct
 import com.entitlerhq.entitler.RegisteredCustomer
@@ -446,7 +447,7 @@ public object Answers {
         effective: Effective = Effective.Now,
         changed: Boolean = true,
         until: Instant? = null,
-    ): PlanChange = PlanChange("main", plan?.let(::plan), quantity, effective, AS_OF, until, changed)
+    ): PlanChange = PlanChange(ProductSummary("main", "Main"), plan?.let(::plan), quantity, effective, AS_OF, until, changed)
 
     /** A grant made or revoked. */
     public fun grantChange(

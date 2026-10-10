@@ -1,5 +1,8 @@
 {
-  "product": "main",
+  "product": {
+    "key": "main",
+    "name": "Main"
+  },
   "plan": {
     "id": "p_pro",
     "key": "pro",

@@ -32,7 +32,7 @@ private fun printPricing(pricing: Pricing) {
     for (plan in pricing.plans.filter { it.kind == PlanKind.Plan }) {
         println(plan.name + if (plan.default) " (where everyone starts)" else "")
         for (period in plan.periods) {
-            val listing = plan.listings.firstOrNull { it.period?.label == period.label }
+            val listing = plan.listings.firstOrNull { it.period?.key == period.key }
             val price = listing?.channels?.firstNotNullOfOrNull { it.price }
             val shown = price?.let { "${it.amount / MINOR_UNITS} ${it.currency.uppercase()}" } ?: "Coming soon"
             println("  ${period.label}: $shown")

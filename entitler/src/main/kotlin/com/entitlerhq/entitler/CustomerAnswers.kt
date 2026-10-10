@@ -334,7 +334,7 @@ public data class BillingDrift(
 /**
  * A customer's billing in one product.
  *
- * @property product The product's key, or null.
+ * @property product The product the change is in, or null.
  * @property status The provider subscription's status, or null.
  * @property sku The SKU billed, or null.
  * @property items How many items the subscription holds.
@@ -393,7 +393,7 @@ public data class BillingSync(
  * A plan or add-on change, made or booked: the answer to `cancel`, `undoPendingChange`, `setPlan` and
  * `setAddOn`, and the fields of a [SubscribeStep.Done].
  *
- * @property product The product's key, or null.
+ * @property product The product the change is in, or null.
  * @property plan The plan or add-on the change leaves the customer on, or null when none in that product.
  * @property quantity An add-on's quantity after the change (0 when removed), or null for a plan.
  * @property effective [Effective.Now], or [Effective.Renewal] at [at].
@@ -404,7 +404,7 @@ public data class BillingSync(
  */
 @Serializable
 public data class PlanChange(
-    val product: String? = null,
+    val product: ProductSummary? = null,
     val plan: PlanSummary? = null,
     val quantity: Long? = null,
     val effective: Effective,

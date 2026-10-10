@@ -487,12 +487,14 @@ public data class PublishedProduct(
 /**
  * A billing period a plan is sold for.
  *
+ * @property key The period's key, such as `monthly`, which stays the same when its label is renamed or translated.
  * @property label The period's label, such as `Monthly`.
  * @property count How many units it lasts.
  * @property unit The unit.
  */
 @Serializable
 public data class BillingPeriod(
+    val key: String,
     val label: String,
     val count: Int,
     val unit: PeriodUnit,
