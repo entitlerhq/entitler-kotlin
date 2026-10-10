@@ -244,11 +244,12 @@ class CommandTest {
     @Test
     fun `help prints usage and exits 0, no command prints usage and exits 1`() {
         assertEquals(0, run("--help").code)
-        assertTrue(run("--help").out.startsWith("Usage: entitler generate"))
+        assertTrue(run("--help").out.startsWith("Usage: entitler <command>"))
+        assertEquals(0, run("snapshot-keys", "--help").code)
         assertEquals(0, run("generate", "--help").code)
         val none = run()
         assertEquals(1, none.code)
-        assertTrue(none.err.startsWith("Usage: entitler generate"))
+        assertTrue(none.err.startsWith("Usage: entitler <command>"))
         assertEquals(1, run("publish").code)
     }
 
@@ -257,5 +258,104 @@ class CommandTest {
         assertEquals("Unknown option --colour.", run("generate", "--colour").err.lines().first())
         assertEquals("Give --out a value.", run("generate", "--out").err.lines().first())
         assertEquals("Unexpected argument stray.", run("generate", "stray").err.lines().first())
+    }
+
+    @Test
+    fun `an empty list never overwrites constants unless allowed`() {
+        val file = File(directory, "Features.kt")
+        reply(count = 1)
+        run("generate", "--out", file.path, "--base-url", base)
+        val before = file.readText()
+        reply(count = 0)
+        val refused = run("generate", "--out", file.path, "--base-url", base)
+        assertEquals(1, refused.code)
+        assertEquals(
+            "Entitler listed no features, so $file was left as it is. Check the key's environment, or pass --allow-empty.",
+            refused.err,
+        )
+        assertEquals(before, file.readText())
+        reply(count = 0)
+        assertEquals("Wrote 0 features to $file.", run("generate", "--allow-empty", "--out", file.path, "--base-url", base).out)
+        assertFalse(file.readText().contains("val "))
+    }
+
+    @Test
+    fun `a publishable key is refused with the client's message`() {
+        val result = run("generate", "--key", "ent_pk_test_abc", "--base-url", base, "--out", File(directory, "F.kt").path)
+        assertEquals(1, result.code)
+        assertEquals("A publishable key belongs in EntitlerClient. Use a secret key from the dashboard on your server.", result.err)
+    }
+
+    @Test
+    fun `snapshot-keys writes the key set without a key, two-space indented`() {
+        val file = File(directory, "keys/entitler-snapshot-keys.json")
+        val key = """{"kty":"EC","crv":"P-256","x":"xx","y":"yy","kid":"k1","alg":"ES256","use":"sig"}"""
+        api.enqueue(MockResponse.Builder().body("""{"keys":[$key,${key.replace("k1", "k2")}]}""").build())
+        val result = run("snapshot-keys", "--out", file.path, "--base-url", base, key = null)
+        assertEquals(0, result.code)
+        assertEquals("Wrote 2 snapshot keys to $file.", result.out)
+        val expected =
+            """
+            {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "xx",
+                  "y": "yy",
+                  "kid": "k1",
+                  "alg": "ES256",
+                  "use": "sig"
+                },
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "xx",
+                  "y": "yy",
+                  "kid": "k2",
+                  "alg": "ES256",
+                  "use": "sig"
+                }
+              ]
+            }
+
+            """.trimIndent()
+        assertEquals(expected, file.readText())
+        val request = api.takeRequest()
+        assertEquals("/customers/snapshot-keys", request.target)
+        assertEquals(null, request.headers["Authorization"])
+        api.enqueue(MockResponse.Builder().body("""{"keys":[$key]}""").build())
+        assertEquals("Wrote 1 snapshot key to $file.", run("snapshot-keys", "--out=${file.path}", "--base-url", base).out)
+    }
+
+    @Test
+    fun `snapshot-keys refuses an empty key set and reports failures`() {
+        val file = File(directory, "entitler-snapshot-keys.json")
+        file.writeText("kept")
+        api.enqueue(MockResponse.Builder().body("""{"keys":[]}""").build())
+        val empty = run("snapshot-keys", "--out", file.path, "--base-url", base)
+        assertEquals(1, empty.code)
+        assertEquals("Entitler published no snapshot keys, so $file was left as it is.", empty.err)
+        assertEquals("kept", file.readText())
+        api.enqueue(
+            MockResponse
+                .Builder()
+                .code(400)
+                .body("""{"error":{"code":"invalid_path","message":"Down."}}""")
+                .build(),
+        )
+        val failed = run("snapshot-keys", "--out", file.path, "--base-url", base)
+        assertEquals("Entitler request failed: Down (invalid_path).", failed.err)
+        assertEquals("Unknown option --key.", run("snapshot-keys", "--key", "k").err.lines().first())
+        assertEquals(
+            "\"a\\\"b\\\\c\\u0001\",",
+            snapshotKeysJson(
+                com.entitlerhq.entitler.SnapshotKeys(
+                    listOf(
+                        com.entitlerhq.entitler.SnapshotKey("a\"b\\c\u0001", "", "", "", "", "", ""),
+                    ),
+                ),
+            ).lines()[3].substringAfter(": "),
+        )
     }
 }

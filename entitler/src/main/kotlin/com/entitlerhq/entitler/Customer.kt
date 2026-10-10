@@ -321,38 +321,29 @@ public interface Customer {
  * Only the first of [finish], [release] and [close] acts; a later call answers the first one's result
  * without a request. Each runs to the end even when the caller is cancelled, so work cancelled halfway
  * still settles or releases.
- *
- * @property id The hold's id.
- * @property amount The amount held.
- * @property expiresAt When the hold expires on its own, recording nothing, or null when the answer did not say.
- * @property result The hold's answer.
- * @property isDuplicate True when another caller holds the same key and may be doing the same work.
  */
-public class Hold internal constructor(
-    private val customer: CustomerImpl,
-    private val feature: Feature.Metered,
-    private val key: String,
-    public val result: UsageResult,
-) : Closeable {
-    public val id: String = checkNotNull(result.holdId)
-    public val amount: Long = result.amount
-    public val expiresAt: Instant? = result.expiresAt
-    public val isDuplicate: Boolean = result.outcome == UsageOutcome.Duplicate
+public interface Hold : Closeable {
+    /** The hold's id. */
+    public val id: String
 
-    private val started = AtomicBoolean(false)
-    private val outcome = CompletableDeferred<Result<UsageResult>>()
+    /** The amount held. */
+    public val amount: Long
+
+    /** When the hold expires on its own, recording nothing, or null when the answer did not say. */
+    public val expiresAt: Instant?
+
+    /** The hold's answer. */
+    public val result: UsageResult
+
+    /** True when another caller holds the same key and may be doing the same work. */
+    public val isDuplicate: Boolean
 
     /**
      * The total really used so far, from 0, with no request; a later value replaces an earlier one. Work
      * that reports as it goes sets 0 before it starts, so finishing after a failure that used nothing frees
      * the whole hold.
      */
-    @Volatile
-    public var used: Long? = null
-        set(value) {
-            require(value == null || value in 0..MAX_AMOUNT) { "Pass the amount used as a whole number of 0 or more." }
-            field = value
-        }
+    public var used: Long?
 
     /**
      * Ends the work however it ended and charges for the work that happened: settles [used] (the held
@@ -362,22 +353,50 @@ public class Hold internal constructor(
      *
      * @throws EntitlerUsageSettlementException when settling or recording the excess fails after its retries.
      */
-    public suspend fun finish(): UsageResult = act { settle() }
+    public suspend fun finish(): UsageResult
 
     /** Frees the hold, recording nothing, for work that never ran. */
-    public suspend fun release(): UsageResult = act { customer.releaseUsage(id, timeout = customer.engine.timeout) }
+    public suspend fun release(): UsageResult
 
     /**
      * Disposes of the hold when neither [finish] nor [release] ran: settles [used] when it was set, else
      * releases, in the client's own scope without blocking. A failure goes to `onError`; a hold left
      * unsettled expires on its own.
      */
+    override fun close()
+}
+
+internal class HoldHandle(
+    private val customer: CustomerImpl,
+    private val feature: Feature.Metered,
+    private val key: String,
+    override val result: UsageResult,
+) : Hold {
+    override val id: String = checkNotNull(result.holdId)
+    override val amount: Long = result.amount
+    override val expiresAt: Instant? = result.expiresAt
+    override val isDuplicate: Boolean = result.outcome == UsageOutcome.Duplicate
+
+    private val started = AtomicBoolean(false)
+    private val outcome = CompletableDeferred<Result<UsageResult>>()
+
+    @Volatile
+    override var used: Long? = null
+        set(value) {
+            require(value == null || value in 0..MAX_AMOUNT) { "Pass the amount used as a whole number of 0 or more." }
+            field = value
+        }
+
+    override suspend fun finish(): UsageResult = act { settle() }
+
+    override suspend fun release(): UsageResult = act { customer.releaseUsage(id, timeout = customer.engine.timeout) }
+
     override fun close() {
         if (started.get()) return
         customer.engine.scope.launch { dispose() }
     }
 
-    internal suspend fun dispose() {
+    suspend fun dispose() {
         try {
             act { if (used == null) customer.releaseUsage(id, timeout = customer.engine.timeout) else settle() }
         } catch (error: EntitlerException) {
@@ -415,7 +434,6 @@ public class Hold internal constructor(
         }
     }
 
-    /** A string form naming the hold. */
     override fun toString(): String = "Hold(id=$id, amount=$amount, used=$used)"
 
     private companion object {
@@ -686,7 +704,7 @@ internal open class CustomerImpl(
         val held = hold(feature, amount, idempotencyKey, ttl, timeout, MAX_HOLD_KEY_LENGTH)
         val open = held.outcome == UsageOutcome.Held || held.outcome == UsageOutcome.Duplicate
         return when {
-            open && held.holdId != null -> Hold(this, feature, idempotencyKey, held)
+            open && held.holdId != null -> HoldHandle(this, feature, idempotencyKey, held)
             held.outcome == UsageOutcome.Settled || held.outcome == UsageOutcome.Released -> throw EntitlerUsageReplayedException(held)
             else -> throw EntitlerUsageRefusedException(held)
         }
@@ -700,7 +718,7 @@ internal open class CustomerImpl(
         timeout: Duration?,
         work: suspend (hold: Hold) -> T,
     ): T {
-        val hold = startHold(feature, amount, idempotencyKey, ttl, timeout)
+        val hold = startHold(feature, amount, idempotencyKey, ttl, timeout) as HoldHandle
         var finished = false
         val result =
             try {

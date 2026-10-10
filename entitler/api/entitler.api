@@ -1665,19 +1665,17 @@ public final class com/entitlerhq/entitler/HeldPlan$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
-public final class com/entitlerhq/entitler/Hold : java/io/Closeable {
-	public static final field EXCESS Ljava/lang/String;
-	public fun close ()V
-	public final fun finish (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun getAmount ()J
-	public final fun getExpiresAt ()Ljava/time/Instant;
-	public final fun getId ()Ljava/lang/String;
-	public final fun getResult ()Lcom/entitlerhq/entitler/UsageResult;
-	public final fun getUsed ()Ljava/lang/Long;
-	public final fun isDuplicate ()Z
-	public final fun release (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun setUsed (Ljava/lang/Long;)V
-	public fun toString ()Ljava/lang/String;
+public abstract interface class com/entitlerhq/entitler/Hold : java/io/Closeable {
+	public abstract fun close ()V
+	public abstract fun finish (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getAmount ()J
+	public abstract fun getExpiresAt ()Ljava/time/Instant;
+	public abstract fun getId ()Ljava/lang/String;
+	public abstract fun getResult ()Lcom/entitlerhq/entitler/UsageResult;
+	public abstract fun getUsed ()Ljava/lang/Long;
+	public abstract fun isDuplicate ()Z
+	public abstract fun release (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun setUsed (Ljava/lang/Long;)V
 }
 
 public final class com/entitlerhq/entitler/Impact {

@@ -542,5 +542,40 @@ internal object SubscribeStepSerializer : kotlinx.serialization.KSerializer<Subs
     override fun serialize(
         encoder: kotlinx.serialization.encoding.Encoder,
         value: SubscribeStep,
-    ): Unit = throw kotlinx.serialization.SerializationException("Steps are only decoded.")
+    ) {
+        val output = encoder as kotlinx.serialization.json.JsonEncoder
+        val next = kotlinx.serialization.json.JsonPrimitive(nextOf(value))
+        val fields =
+            when (value) {
+                is SubscribeStep.Done -> {
+                    output.json.encodeToJsonElement(PlanChange.serializer(), value.change) as kotlinx.serialization.json.JsonObject
+                }
+
+                is SubscribeStep.Pay -> {
+                    kotlinx.serialization.json.JsonObject(
+                        mapOf("url" to kotlinx.serialization.json.JsonPrimitive(value.url)),
+                    )
+                }
+
+                is SubscribeStep.Manage -> {
+                    kotlinx.serialization.json.JsonObject(
+                        mapOf("billedBy" to kotlinx.serialization.json.JsonPrimitive(value.billedBy.value)),
+                    )
+                }
+
+                else -> {
+                    kotlinx.serialization.json.JsonObject(emptyMap())
+                }
+            }
+        output.encodeJsonElement(kotlinx.serialization.json.JsonObject(mapOf("next" to next) + fields))
+    }
+
+    private fun nextOf(step: SubscribeStep): String =
+        when (step) {
+            is SubscribeStep.Done -> "done"
+            is SubscribeStep.Pay -> "pay"
+            SubscribeStep.Confirming -> "confirming"
+            is SubscribeStep.Manage -> "manage"
+            is SubscribeStep.Unknown -> step.value
+        }
 }
