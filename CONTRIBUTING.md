@@ -27,12 +27,14 @@ The build produces JVM 11 bytecode with `-Xjdk-release=11`, so any JDK from 17 r
 ## Integration tests
 
 The live tests run against `https://api.entitler.dev` with the key in `ENTITLER_TEST_KEY`, a test
-environment key with the server preset plus `tracks:assign`. They are skipped when it is unset. They
+environment key with the server preset plus `tracks:assign`, and the publishable key of the same
+environment in `ENTITLER_TEST_PUBLISHABLE_KEY` for the signed-out pricing test. They are skipped when
+`ENTITLER_TEST_KEY` is unset. They
 create customers named `sdk-kotlin-<random>` and erase them at the end, and never write the
 catalogue, tracks or keys.
 
 ```sh
-ENTITLER_TEST_KEY=... ./gradlew :entitler:integrationTest
+ENTITLER_TEST_KEY=... ENTITLER_TEST_PUBLISHABLE_KEY=... ./gradlew :entitler:integrationTest
 ```
 
 ## Releasing

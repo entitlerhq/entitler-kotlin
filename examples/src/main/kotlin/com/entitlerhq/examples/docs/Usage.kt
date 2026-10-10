@@ -3,10 +3,12 @@ package com.entitlerhq.examples.docs
 import com.entitlerhq.entitler.Customer
 import com.entitlerhq.entitler.EntitlerServer
 import com.entitlerhq.entitler.EntitlerUsageRefusedException
+import com.entitlerhq.entitler.EntitlerUsageReplayedException
 import com.entitlerhq.entitler.UsageBatchEvent
 import com.entitlerhq.entitler.UsageMode
 import com.entitlerhq.entitler.UsageOutcome
 import com.entitlerhq.examples.generatedfeatures.Features
+import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import kotlin.time.Duration.Companion.minutes
 
@@ -57,6 +59,30 @@ suspend fun holdsByHand(
     }
 }
 
+/** Recording usage: a hold around streamed work. */
+suspend fun streamReply(
+    customer: Customer,
+    messageId: String,
+    chunks: Flow<String>,
+) {
+    try {
+        customer.startHold(Features.aiCredits, 500, idempotencyKey = "reply-$messageId").use { hold ->
+            hold.used = 0
+            var tokens = 0L
+            chunks.collect { chunk ->
+                tokens += chunk.length
+                hold.used = tokens
+                print(chunk)
+            }
+            hold.finish()
+        }
+    } catch (refused: EntitlerUsageRefusedException) {
+        println("Refused: ${refused.result.refusal}")
+    } catch (replayed: EntitlerUsageReplayedException) {
+        println("Already streamed: ${replayed.result.outcome}")
+    }
+}
+
 /** Recording usage: withHold. */
 suspend fun withHoldExample(
     customer: Customer,
@@ -78,7 +104,10 @@ suspend fun batch(
     entitler: EntitlerServer,
     rows: List<MeterRow>,
 ) {
-    val events = rows.map { UsageBatchEvent(it.customerId, Features.aiCredits, it.amount, it.at, idempotencyKey = it.rowId) }
+    val events =
+        rows.map { row ->
+            UsageBatchEvent(row.customerId, Features.aiCredits, row.amount, idempotencyKey = "meter-row-${row.rowId}", occurredAt = row.at)
+        }
     val result = entitler.recordUsageBatch(events)
     println("${result.recorded} recorded, ${result.duplicates} already recorded, ${result.errors} not recorded")
 }

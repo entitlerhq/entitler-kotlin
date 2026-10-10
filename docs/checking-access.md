@@ -30,8 +30,22 @@ val seats =
     }
 ```
 
-Never decide entitlement from the value yourself: a metered feature with an allowance of 100 and
-nothing remaining has a value of 100 and is not entitled.
+Never decide entitlement from the value yourself. For a metered feature, `entitled` means allowance
+remains: a feature with an allowance of 100 and nothing remaining has a value of 100 and is not
+entitled.
+
+## Asking again with `revalidate`
+
+Reads keep an answer for as long as Entitler's `max-age` allows (see [reliability](reliability.md)).
+Right after a change the customer made, such as an upgrade or the [return page](billing-pages.md#the-return-page),
+pass `revalidate = true` so the read asks Entitler again instead of answering the kept one:
+
+```kotlin
+val check = customer.check(Features.exportPdf, revalidate = true)
+if (check.entitled) showExportButton()
+```
+
+Every read takes `revalidate`: `check`, `isEntitled`, `entitlements`, `plans`, `pricing` and `usage`.
 
 ## `isEntitled`: a check that never fails
 

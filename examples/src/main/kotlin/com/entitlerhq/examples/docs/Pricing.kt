@@ -1,5 +1,6 @@
 package com.entitlerhq.examples.docs
 
+import com.entitlerhq.entitler.EntitlerPublishableClient
 import com.entitlerhq.entitler.EntitlerServer
 import com.entitlerhq.entitler.ServerCustomer
 
@@ -22,4 +23,12 @@ suspend fun signUp(
     customer.register(name = "Ada Lovelace", email = "ada@example.com", visitor = visitor)
     val pricing = customer.pricing(visitor = visitor)
     println(pricing.experiment?.arm)
+}
+
+/** Pricing pages: a signed-out paywall in an app, with the publishable key. */
+suspend fun appPaywall(publishableKey: String) {
+    EntitlerPublishableClient(publishableKey).use { entitler ->
+        val pricing = entitler.pricing()
+        pricing.plans.forEach { plan -> println(plan.name) }
+    }
 }

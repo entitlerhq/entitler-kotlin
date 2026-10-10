@@ -24,20 +24,26 @@ Entitler.")`.
 Download `entitler-generator-0.1.0-all.jar` from Maven Central and run it:
 
 ```sh
-java -jar entitler-generator-0.1.0-all.jar generate --out src/main/kotlin/Features.kt --package com.example
+java -jar entitler-generator-0.1.0-all.jar generate --package com.example
 ```
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--out <file>` | `src/main/kotlin/Features.kt` | the file to write |
+| `--out <file>` | `src/main/kotlin/EntitlerFeatures.kt` | the file to write |
 | `--package <name>` | none | the Kotlin package to declare |
 | `--key <key>` | `ENTITLER_KEY` | an API key with `plans:read` |
 | `--base-url <url>` | `https://api.entitler.dev` | the API's base URL |
 | `--check` | | fail when the file is out of date, without writing it |
+| `--allow-empty` | | write the file even when Entitler lists no features |
 | `--help` | | show the usage |
 
 Options take `--flag value` or `--flag=value`. It exits with 0 on success or when the file is up to
-date, and 1 otherwise.
+date, and 1 otherwise. When Entitler lists no features and the file already holds some, it leaves the
+file as it is and fails, since an empty list usually means a key from the wrong environment; pass
+`--allow-empty` when you mean it.
+
+Generate from the live environment, with a key holding only `plans:read`: a test environment's All
+customers track may follow an open change.
 
 Or run it from Gradle, with a `JavaExec` task:
 
@@ -51,7 +57,7 @@ dependencies {
 tasks.register<JavaExec>("generateFeatures") {
     classpath = entitlerGenerator
     mainClass = "com.entitlerhq.entitler.generator.MainKt"
-    args("generate", "--out", "src/main/kotlin/Features.kt", "--package", "com.example")
+    args("generate", "--package", "com.example")
 }
 ```
 
@@ -65,7 +71,8 @@ decided in key order after the kept names. Features no longer listed disappear.
 ## In CI
 
 `--check` compares the file it would write with the one you have, ignoring the `Read from` line, so a
-new release with the same features stays up to date:
+new release with the same features stays up to date. Run it nightly and on `main`, not as a required
+pull request check, since pull requests from forks have no key:
 
 ```sh
 java -jar entitler-generator-0.1.0-all.jar generate --check --package com.example
@@ -75,3 +82,16 @@ java -jar entitler-generator-0.1.0-all.jar generate --check --package com.exampl
 
 `renderFeatures(features, packageName, existing)` is public, for build tooling that fetches the
 features itself.
+
+## Snapshot keys
+
+The same JAR writes the keys an app pins to verify [offline snapshots](offline-snapshots.md). It needs no
+key, and writes nothing when Entitler publishes no keys:
+
+```sh
+java -jar entitler-generator-0.1.0-all.jar snapshot-keys --out src/main/resources/snapshot-keys.json
+```
+
+`--out` defaults to `entitler-snapshot-keys.json`. Run it from a `JavaExec` task like the one above,
+with `args("snapshot-keys", "--out", "src/main/resources/snapshot-keys.json")`, before each release
+build.

@@ -15,7 +15,7 @@ suspend fun quickStart() {
         exportPdf()
     }
 
-    customer.recordUsage(Features.aiCredits, 5)
+    customer.recordUsage(Features.aiCredits, 5, idempotencyKey = "summary-job_42")
 }
 
 /** The README's in-app client. */

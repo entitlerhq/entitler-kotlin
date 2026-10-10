@@ -3,13 +3,14 @@
 Usage is recorded on metered features, in whole numbers of the feature's unit. Usage methods take only
 `Feature.Metered`, so a typo or an on/off feature fails to compile.
 
-## Idempotency keys from your own work
+## Idempotency keys name the event
 
-Every usage write carries an idempotency key, kept by Entitler per customer and never freed, so a
-retried write never counts twice. Pass a key derived from your own unit of work (a job id, a message
-id): a retry from another process, or after a restart, is then recognised. Without one, the SDK
-generates a key that protects only its own retries. Reusing a key for a different request answers
-`422 idempotency_mismatch`.
+Every report and hold requires an idempotency key, kept by Entitler per customer and never freed, so a
+retried write never counts twice, whether the retry comes from the SDK, another process or a restart.
+Name the key after the event that caused the usage (this message, this export request, this webhook
+delivery), never after an object whose state changes, such as a document or a deal: a key reused after
+the object changes replays the first answer and records nothing. Reusing a key for a different request
+answers `422 idempotency_mismatch`. A replay answers with `replayed` true.
 
 ## Gate mode
 
@@ -45,10 +46,86 @@ val result =
 if (result.overBy > 0) println("Over the allowance by ${result.overBy}")
 ```
 
-## Holds
+## Holds around work: `startHold`
 
-A hold reserves an amount against `remaining` until it is settled, released, or expires (`ttl` from 1
-second to an hour; 5 minutes by default). Settle with the real amount, from 0 to the amount held:
+A hold reserves an amount before work whose cost is known only as it goes, such as a streamed model
+reply. `startHold` holds the amount and answers a `Hold`, a `Closeable` handle. Set `hold.used` to the
+total used so far as the work goes (no request is sent), then `finish()`:
+
+```kotlin
+try {
+    customer.startHold(Features.aiCredits, 500, idempotencyKey = "reply-$messageId").use { hold ->
+        hold.used = 0
+        var tokens = 0L
+        chunks.collect { chunk ->
+            tokens += chunk.length
+            hold.used = tokens
+            print(chunk)
+        }
+        hold.finish()
+    }
+} catch (refused: EntitlerUsageRefusedException) {
+    println("Refused: ${refused.result.refusal}")
+} catch (replayed: EntitlerUsageReplayedException) {
+    println("Already streamed: ${replayed.result.outcome}")
+}
+```
+
+- `finish()` charges for the work that happened, whether it succeeded, failed or was cut off: it
+  settles `used`, or the held amount when nothing was reported. Anything past the held amount is
+  recorded in observe mode under the hold's key plus `:excess`, and so is the whole amount when the hold
+  expired first. Streamed work sets `used = 0` before it starts, so finishing after a failure that used
+  nothing frees the whole hold.
+- `release()` frees the hold, recording nothing, for work that never ran.
+- `close()`, through `use`, acts only when neither ran: it settles `used` when it was set, else
+  releases. So a disconnect after 3,000 tokens charges for 3,000 tokens.
+- Only the first of `finish`, `release` and `close` acts; later calls answer its result. Each runs to
+  the end even when the caller is cancelled.
+- A refused hold throws `EntitlerUsageRefusedException`: there is no allowance. A key that replays a
+  hold already settled, released or expired throws `EntitlerUsageReplayedException`: the work this key
+  stands for already happened, so never show a paying customer an upgrade prompt for it.
+- `isDuplicate` is true when another caller holds the same key and may be doing the same work, so you
+  can wait for that caller's result instead of paying for the work twice.
+- When `finish()` cannot settle, it throws `EntitlerUsageSettlementException` with the hold id, the
+  amount to settle and the excess still to record: keep your output and call `settleUsage` before the
+  hold expires. Failures inside `close()` go to `onError`; a hold never settled expires on its own.
+- The key is at most 193 characters, leaving room for `:excess`. `ttl` runs from 1 second to an hour,
+  5 minutes by default.
+
+While work runs, `remaining` drops by the whole hold and rises again when it settles, so a live meter
+shows `held` apart from `used`:
+
+```kotlin
+val credits = customer.check(Features.aiCredits)
+println("${credits.used} used, ${credits.held} on hold, ${credits.remaining} left, starting again at ${credits.resetsAt}")
+```
+
+## `withHold`: work inside one call
+
+`withHold` wraps `startHold` for work that runs inside one call: it holds the amount, runs your block,
+finishes with the amount the block set in `hold.used`, and answers the block's own result. When the
+block throws or is cancelled, it settles `used` when set, else releases, and the error propagates.
+
+```kotlin
+try {
+    val summary =
+        customer.withHold(Features.aiCredits, 100, idempotencyKey = "summary-$jobId") { hold ->
+            summarise("…").also { hold.used = it.creditsUsed }
+        }
+    println(summary.text)
+} catch (refused: EntitlerUsageRefusedException) {
+    println("Refused: ${refused.result.refusal}")
+}
+```
+
+A settlement failure carries the block's result in `EntitlerUsageSettlementException.result`. The
+accounting happens exactly once, but the block does not: two callers sharing a key may both run it.
+Read `hold.isDuplicate`, or coordinate the work yourself when it must run once.
+
+## Holds by hand
+
+`holdUsage`, `settleUsage` and `releaseUsage` are the requests underneath, for a hold settled from
+another process. Settle with the real amount, from 0 to the amount held:
 
 ```kotlin
 val hold = customer.holdUsage(Features.aiCredits, 100, ttl = 10.minutes, idempotencyKey = "hold-$jobId")
@@ -64,57 +141,35 @@ try {
 ```
 
 Settling the same amount again answers `duplicate`; a hold that was settled, released or expired
-answers `409 hold_settled`, `hold_released` or `hold_expired`. Releasing twice is safe. `hold(holdId)`
-reads a hold back.
-
-## `withHold`
-
-`withHold` does the above for you: it holds the amount, runs your block with the hold, and settles the
-amount the block reports in `hold.used` (the held amount when it never sets it). It answers the block's
-own result.
-
-```kotlin
-try {
-    val summary =
-        customer.withHold(Features.aiCredits, 100, idempotencyKey = "summary-$jobId") { hold ->
-            summarise("…").also { hold.used = it.creditsUsed }
-        }
-    println(summary.text)
-} catch (refused: EntitlerUsageRefusedException) {
-    println("Refused: ${refused.result.refusal}")
-}
-```
-
-- A refused hold, or a key that replays a hold already settled, released or expired, never runs the
-  block; the call throws `EntitlerUsageRefusedException` with the answer.
-- When the block reports more than was held, the excess is recorded in observe mode with the hold's
-  key plus `:excess`. When the hold expired while the block ran, the whole amount is recorded that way.
-- When the block throws or is cancelled, the hold is released (a failed release goes to `onError`) and
-  the error propagates.
-- When settling or recording the excess fails, the call throws `EntitlerUsageSettlementException`,
-  carrying the hold id, the amount, the excess still to record and the block's result, so you keep the
-  output and can call `settleUsage` before the hold expires.
-- `withHold`'s key is at most 193 characters, leaving room for `:excess`.
-- The accounting happens exactly once, but the block does not: two callers sharing a key at the same
-  time may both run it. Coordinate the work yourself when it must run once.
+answers `409 hold_settled`, `hold_released` or `hold_expired`. Releasing twice is safe.
 
 ## Batches
 
 On the server, `recordUsageBatch` records events of many customers in observe mode, in requests of at
-most 500 events sent in order, and answers one result per event in input order, each with its
-idempotency key. A request that fails after its retries answers its events with outcome `error` (with
-`connection_failed` or `timed_out` when no answer arrived) and the next request still goes; resend the
-events answered `error` with the same keys. Keys derived from your own unit of work make any resend
-safe. An empty list sends nothing.
+most 500 events sent in order, and answers one result per event in input order. Every event carries its
+own idempotency key, and each request's key is derived from its events, so resending the same events
+replays the first answer. The call never throws: an event the SDK can refuse (a blank customer, a bad
+amount or key) is answered `error` and not sent, and a request that fails after its retries answers its
+events `error` (with `connection_failed` or `timed_out` when no answer arrived) while the next request
+still goes. Resend the events answered `error`; their keys make it safe.
 
 ```kotlin
-val events = rows.map { UsageBatchEvent(it.customerId, Features.aiCredits, it.amount, it.at, idempotencyKey = it.rowId) }
+val events =
+    rows.map { row ->
+        UsageBatchEvent(row.customerId, Features.aiCredits, row.amount, idempotencyKey = "meter-row-${row.rowId}", occurredAt = row.at)
+    }
 val result = entitler.recordUsageBatch(events)
 println("${result.recorded} recorded, ${result.duplicates} already recorded, ${result.errors} not recorded")
 ```
 
 ## Corrections
 
-`vendor.cancelUsage(usageId)` takes a report off the meter, and `vendor.setMeter(feature, used)` sets
-the meter. Both answer a `UsageResult` (`cancelled` and `adjusted`). Client reports from customer and
-identity tokens are limited to 100 every 10 seconds per customer; the SDK retries `429` answers.
+`cancelUsage(usageId)` takes a report off the meter, and `adjustMeter` moves it `by` an amount or sets
+it `to` one (see [company decisions](company-decisions.md)).
+
+## Limits on devices
+
+Reports and holds sent with customer and identity tokens count towards 100 every 10 seconds per
+customer, shared by all of that customer's devices; settlements and releases do not count. The SDK
+retries `429 rate_limited` answers. Counting on a device is advisory: a modified app can skip it, so
+only usage recorded by your server can be enforced.

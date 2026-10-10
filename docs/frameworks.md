@@ -1,6 +1,8 @@
 # Ktor and Spring
 
-Build one `EntitlerServer` per application, share it, and close it when the application stops.
+Build one `EntitlerServer` per application, share it, and close it when the application stops. Server
+code acts on any customer through `entitler.customer(id)`, so it never holds a client per person; the
+one-client-per-signed-in-customer rule is for [apps](in-app-client.md#one-client-per-signed-in-customer).
 
 ## Ktor
 

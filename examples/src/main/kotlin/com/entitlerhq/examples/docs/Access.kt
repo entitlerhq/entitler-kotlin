@@ -57,3 +57,9 @@ object MyFeatures {
     /** Spent on AI actions each month. */
     val aiCredits = Feature.Metered("ai_credits")
 }
+
+/** Checking access: asking again after a change the customer just made. */
+suspend fun afterUpgrade(customer: Customer) {
+    val check = customer.check(Features.exportPdf, revalidate = true)
+    if (check.entitled) showExportButton()
+}

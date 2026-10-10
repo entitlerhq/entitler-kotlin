@@ -9,10 +9,12 @@ dependencies {
     implementation(libs.spring.context)
     implementation(libs.spring.web)
 
+    testImplementation(project(":entitler-testing"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.serialization.json)
+    testImplementation(libs.mockwebserver)
     testRuntimeOnly(libs.junit.launcher)
 }
 

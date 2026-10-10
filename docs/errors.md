@@ -11,11 +11,17 @@ blank customer id, are `IllegalArgumentException`s, raised before any request.
 | `EntitlerTimeoutException` | an attempt took longer than its timeout | `idempotencyKey` |
 | `EntitlerTokenException` | a token provider failed or answered an unusable token | `cause` |
 | `EntitlerSnapshotException` | a snapshot failed verification | `code`: `snapshot_invalid` or `snapshot_expired` |
-| `EntitlerUsageRefusedException` | `withHold` could not hold the amount | `result`, the refused answer |
+| `EntitlerUsageRefusedException` | `startHold` or `withHold` could not hold the amount | `result`, the refused answer |
+| `EntitlerUsageReplayedException` | `startHold` or `withHold` was given the key of a hold already settled, released or expired | `result`, the replayed answer |
+| `EntitlerUsageSettlementException` | a hold's `finish()` could not settle | `holdId`, `amount`, `excess`, `result`, `cause` |
+
+A closed client throws `IllegalStateException`. `isUnreachable` answers true when Entitler could not be
+reached: a connection failure, a timeout, a failed token provider, and API answers `429`, `5xx` and
+`invalid_response`. An offline-capable app falls back to its [snapshot](offline-snapshots.md) then.
 
 ```kotlin
 try {
-    customer.vendor.grant(Features.sso, days = 30)
+    customer.grant(Features.sso, days = 30, actor = "support")
 } catch (error: EntitlerException) {
     when (error) {
         is EntitlerApiException -> {
@@ -34,7 +40,11 @@ try {
             println("Sign in again.")
         }
 
-        is EntitlerSnapshotException, is EntitlerUsageRefusedException, is EntitlerUsageSettlementException -> {
+        is EntitlerSnapshotException,
+        is EntitlerUsageRefusedException,
+        is EntitlerUsageReplayedException,
+        is EntitlerUsageSettlementException,
+        -> {
             throw error
         }
     }
@@ -48,8 +58,10 @@ same key and never count twice.
 
 `ErrorCode` is an open set: every code the API documents is a constant (`ErrorCode.ScopeRequired`,
 `ErrorCode.CustomerNotFound`, `ErrorCode.NotSelfServe`…), and a code this SDK does not know yet keeps
-its raw value. `ErrorCode.HttpError` (`http_error`) is the SDK's own, for an answer with no error code.
-The codes you are most likely to handle:
+its raw value. `ErrorCode.HttpError` (`http_error`) is the SDK's own, for an answer with no error code,
+and `ErrorCode.InvalidResponse` (`invalid_response`) for an answer it cannot read. API messages are
+written for you, the developer, not for the people using your app: show your own copy. The codes you are
+most likely to handle:
 
 | Code | Meaning |
 | --- | --- |
@@ -61,8 +73,17 @@ The codes you are most likely to handle:
 | `not_metered` | usage on a feature that is not metered |
 | `idempotency_mismatch` | a key reused for a different request |
 | `hold_settled`, `hold_released`, `hold_expired` | the hold is closed |
-| `not_self_serve` | a self-serve change off the customer's self-serve paths |
-| `payment_required` | a plan change waits on a payment, see `payment` |
-| `stale` | no payment provider connection, or the answer is out of date |
-| `limit_reached` | a limit, such as reading as of another instant without the capability |
+| `capability_required` | the organisation's plan lacks a capability, such as as-of reads or the customer portal |
 | `rate_limited` | too many requests; the SDK retries |
+| `registration_closed` | the sign-in provider does not let people register themselves |
+
+## Codes of the billing calls
+
+| Call | Codes |
+| --- | --- |
+| `subscribe` | `not_self_serve`, `return_url_required`, `payment_required` (a declined payment), `scope_required` (in-app without `billing:self`), `capability_required` (in-app without the customer portal) |
+| `cancel`, `undoPendingChange` | `not_self_serve`, `scope_required`, `capability_required` |
+| `billingPortal` | `stale` (no provider has billed the customer), `scope_required`, `capability_required` |
+| `syncBilling` | `scope_required`, `capability_required` |
+| `setPlan` | `billed_elsewhere` (a store SKU where Stripe bills the product), `payment_required` (with `payment.status`), `not_found` (no such plan or SKU) |
+| `setAddOn`, `grant`, `revokeGrant`, `adjustMeter` | `customer_not_found`, `feature_not_found`, `not_found`, `scope_required` |

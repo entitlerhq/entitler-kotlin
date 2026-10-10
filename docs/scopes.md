@@ -12,17 +12,18 @@ For an identity client, `registration` says whether the sign-in provider lets a 
 
 | Call | Scope |
 | --- | --- |
-| `check`, `isEntitled`, `entitlements`, `plans`, `Customer.pricing`, `snapshot` | `entitlements:read` |
-| `usage`, `hold` | `usage:read` |
-| `recordUsage`, `holdUsage`, `settleUsage`, `releaseUsage`, `withHold`, `recordUsageBatch` | `usage:write` |
+| `check`, `isEntitled`, `entitlements`, `snapshot` | `entitlements:read` |
+| `plans`, `Customer.pricing`, `EntitlerServer.pricing`, the publishable client's `pricing`, `features` | `plans:read` |
+| `usage`, `usageLog` | `usage:read` |
+| `recordUsage`, `startHold`, `withHold`, `holdUsage`, `settleUsage`, `releaseUsage`, `recordUsageBatch` | `usage:write` |
+| `subscribe`, `cancel`, `undoPendingChange`, `billingPortal`, `syncBilling` | `customers:write` on the server; `billing:self` in an app |
 | `register` | `customers:register`; changing an existing customer's details also needs `customers:write` or `customers:profile` |
-| `details`, `customers.list`, `billing`, `providers` | `customers:read` |
+| `details`, `customers.list`, `billing` | `customers:read` |
 | `update` | `customers:write` or `customers:profile` |
-| `customers.create`, `delete`, billing changes, `vendor` actions | `customers:write` |
+| `customers.create`, `erase`, `setPlan`, `setAddOn`, `grant`, `revokeGrant`, `adjustMeter`, `cancelUsage` | `customers:write` |
 | `token` | `tokens:mint` |
 | `setTrack` | `tracks:assign` |
-| `EntitlerServer.pricing`, `features` | `plans:read` |
 | `scopes`, `snapshotKeys`, `verifySnapshot`, `newVisitorId` | none |
 
-Customer tokens hold at most `entitlements:read`, `usage:read` and `usage:write`; an identity token
-beside a publishable key holds at most those and `customers:register`.
+`token()` without `scopes` mints `entitlements:read` only. Ask for `usage:write` only when the app
+records usage itself, and for `billing:self` only for people who may buy for the customer.

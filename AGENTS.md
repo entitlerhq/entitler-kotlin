@@ -20,13 +20,22 @@
   unchanged with its manifest, and the tests check every file's SHA-256 before running a case.
 - Never edit a case. A case the SDK cannot pass is a question about the specification.
 
+## Modules
+
+- `entitler`: the library. `entitler-generator` (`generator/`): the `entitler` command-line tool, with
+  `generate` and `snapshot-keys`. `entitler-testing` (`testing/`): `fakeCustomer` and the `Answers`
+  builders apps use in their tests; it never goes into the library. `examples`: the runnable examples
+  and the sources of every documentation snippet.
+- Every Kotlin snippet in `README.md` and `docs/` is copied from a file under `examples/src`;
+  `SnippetsTest` fails otherwise.
+
 ## Before pushing
 
 Run, and fix everything they report:
 
 ```sh
 ./gradlew ktlintCheck detekt build dokkaGenerate publishToMavenLocal :examples:build
-ENTITLER_TEST_KEY=... ./gradlew :entitler:integrationTest
+ENTITLER_TEST_KEY=... ENTITLER_TEST_PUBLISHABLE_KEY=... ./gradlew :entitler:integrationTest
 ```
 
 The repository's only required check is `All checks passed`.
