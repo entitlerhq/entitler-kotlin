@@ -204,9 +204,58 @@ fun conformanceTests(
     run: (JsonObject) -> Unit,
 ): List<org.junit.jupiter.api.DynamicTest> =
     Conformance.cases(file).map { case ->
-        org.junit.jupiter.api.DynamicTest
-            .dynamicTest(case.str("name")) { run(case) }
+        org.junit.jupiter.api.DynamicTest.dynamicTest(case.str("name")) {
+            contradicted(file, case)?.let {
+                org.junit.jupiter.api.Assumptions
+                    .abort<Unit>(it)
+            }
+            run(case)
+        }
     }
+
+/**
+ * Why a case of the suite built for spec 8 contradicts spec 9, until the suite is rebuilt; null when it
+ * still holds.
+ */
+fun contradicted(
+    file: String,
+    case: JsonObject,
+): String? =
+    when (file) {
+        "cache-keys.json" -> contradictedCacheKey(case)
+        "idempotency-keys.json" -> contradictedKey(case)
+        else -> null
+    }
+
+private fun contradictedCacheKey(case: JsonObject): String? {
+    val route = (case["built"] as? JsonObject)?.str("route").orEmpty()
+    return when {
+        case.str(
+            "principalKind",
+        ) == "identity" -> "Spec 9, 4.3: identity clients take only ent_pk_ keys, and the case's ent_pub_ key is refused."
+
+        case.str("asOf") == null -> null
+
+        case.str("principalKind") != "key" -> "Spec 9, 4.3 and 6.6: in-app clients take no as-of."
+
+        !route.startsWith("/customers/") -> "Spec 9, 6.6: pricing never sends as-of; only a server customer's reads take it."
+
+        else -> null
+    }
+}
+
+private fun contradictedKey(case: JsonObject): String? {
+    val refused = (case["outcome"] as? JsonObject)?.str("kind") == "ArgumentError"
+    return when {
+        case.str("method") == "recordUsageBatch" -> "Spec 9, 5.2: a batch takes no key; each request's key derives from its events."
+
+        case.str(
+            "method",
+        ) == "batchEvent" && refused -> "Spec 9, 5.2: an invalid event key is answered error without a request, not raised."
+
+        else -> null
+    }
+}
 
 fun JsonObject.str(name: String): String? = (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
 

@@ -1,7 +1,10 @@
 package com.entitlerhq.entitler
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.DeserializationStrategy
@@ -54,6 +57,7 @@ internal class ApiRequest(
     val visitor: String? = null,
     val timeout: Duration? = null,
     val anonymous: Boolean = false,
+    val asOf: String? = null,
 )
 
 internal class Answer(
@@ -67,7 +71,7 @@ internal class Answer(
 private val jsonType = "application/json".toMediaType()
 private val retriedStatuses = setOf(408, 429, 500, 502, 503, 504)
 private const val MAX_BACKOFF_SECONDS = 8.0
-private const val MAX_KEY_LENGTH = 200
+internal const val MAX_KEY_LENGTH = 200
 private const val OUTAGE_WINDOW_MILLIS = 30_000L
 private const val MILLIS_PER_SECOND = 1000L
 private const val CANNOT_READ = "Entitler sent an answer this SDK cannot read."
@@ -158,20 +162,21 @@ private val USER_AGENT: String =
                 ?: "jvm/${System.getProperty("java.version") ?: "unknown"}"
         )
 
+internal const val CLOSED = "This Entitler client is closed. Create a new one."
+
 internal class Engine(
     config: EntitlerConfig,
     private val credentials: Credentials,
-    val visitor: String?,
-    private val scope: CoroutineScope? = null,
+    private val visitor: Visitor?,
+    val scope: CoroutineScope,
 ) {
     val baseUrl: String = config.baseUrl.trim().trimEnd('/')
     val timeout = config.timeout
     private val maxRetries = config.maxRetries
     private val maxRetryDelay = config.maxRetryDelay
-    private val cache = config.cache
+    private val cache = config.store
     private val staleFor = config.staleFor
     private val onError = config.onError
-    private val asOf = config.asOf?.let(::formatInstant)
     private val ownsHttp = config.httpClient == null
     private val http =
         (config.httpClient ?: OkHttpClient())
@@ -192,7 +197,13 @@ internal class Engine(
 
     @Volatile private var outageUntil = 0L
 
+    @Volatile private var closed = false
+
+    private val inFlight = ConcurrentHashMap.newKeySet<Job>()
+
     val kind: String get() = credentials.kind
+
+    fun ensureOpen() = check(!closed) { CLOSED }
 
     fun report(error: Throwable) {
         runCatching { onError?.invoke(error) }
@@ -204,7 +215,11 @@ internal class Engine(
     }
 
     fun close() {
-        scope?.cancel()
+        if (closed) return
+        closed = true
+        inFlight.forEach { it.cancel() }
+        scope.cancel()
+        (cache as? MemoryCacheStore)?.clear()
         if (ownsHttp) {
             http.dispatcher.executorService.shutdown()
             http.connectionPool.evictAll()
@@ -223,18 +238,16 @@ internal class Engine(
         request: ApiRequest,
         customer: String?,
         deserializer: DeserializationStrategy<T>,
+        revalidate: Boolean = false,
     ): T {
+        ensureOpen()
         val store = cache ?: return call(request, deserializer)
-        val credential =
-            try {
-                if (request.anonymous) null else credentials.current()
-            } catch (error: EntitlerTokenException) {
-                return staleFromPrevious(store, request, deserializer, error)
-            }
+        val credential = if (request.anonymous) null else guarded { credentials.current() }
         val kept = storeGet(store, cacheKey(request, credential))
         val now = clock()
         val keptStale = kept != null && now < outageUntil && isYoung(kept, now)
-        if (kept != null && (keptStale || isFresh(kept, now, customer))) return decodeKept(kept, deserializer, keptStale)
+        val fresh = !revalidate && isFresh(kept, now, customer)
+        if (kept != null && (keptStale || fresh)) return decodeKept(kept, deserializer, keptStale)
         return fetchThrough(store, request, customer, credential, kept, deserializer)
     }
 
@@ -265,19 +278,6 @@ internal class Engine(
         return result.second
     }
 
-    private suspend fun <T> staleFromPrevious(
-        store: CacheStore,
-        request: ApiRequest,
-        deserializer: DeserializationStrategy<T>,
-        error: EntitlerTokenException,
-    ): T {
-        val previous = credentials.held() ?: throw error
-        val kept = storeGet(store, cacheKey(request, previous))
-        if (kept == null || !isYoung(kept, clock())) throw error
-        report(error)
-        return decodeKept(kept, deserializer, stale = true)
-    }
-
     private fun <T> standIn(
         kept: CacheEntry?,
         error: EntitlerException,
@@ -298,10 +298,11 @@ internal class Engine(
     ): Boolean = now - entry.receivedAt.toEpochMilli() < staleFor.inWholeMilliseconds
 
     private fun isFresh(
-        entry: CacheEntry,
+        entry: CacheEntry?,
         now: Long,
         customer: String?,
     ): Boolean {
+        if (entry == null) return false
         val directives = directives(entry.cacheControl)
         val maxAge = directives.maxAge ?: return false
         val received = entry.receivedAt.toEpochMilli()
@@ -347,11 +348,11 @@ internal class Engine(
         }
     }
 
-    fun cacheKey(
+    suspend fun cacheKey(
         request: ApiRequest,
         credential: Credential?,
     ): String {
-        val visitor = if (request.anonymous) null else request.visitor ?: visitor
+        val visitor = if (request.anonymous) null else request.visitor ?: visitor?.get()
         val parts =
             listOf(
                 "entitler-cache-v1",
@@ -359,7 +360,7 @@ internal class Engine(
                 urlOf(request),
                 if (credential == null) null else credentials.principalKind,
                 credential?.let(credentials::principal),
-                if (request.anonymous) null else asOf,
+                if (request.anonymous) null else request.asOf,
                 visitor,
             )
         return sha256(JsonArray(parts.map { it?.let(::JsonPrimitive) ?: JsonNull }).toString())
@@ -371,7 +372,7 @@ internal class Engine(
         stale: Boolean,
     ): T =
         try {
-            decode(entry.body, deserializer, stale)
+            decode(entry.body, deserializer, stale = stale)
         } catch (error: SerializationException) {
             throw EntitlerApiException(HTTP_OK, ErrorCode.InvalidResponse, CANNOT_READ, cause = error)
         }
@@ -382,7 +383,7 @@ internal class Engine(
         deserializer: DeserializationStrategy<T>,
     ): T =
         try {
-            decode(body, deserializer)
+            decode(body, deserializer, replayed = answer.headers["Idempotent-Replayed"].equals("true", ignoreCase = true))
         } catch (error: SerializationException) {
             throw EntitlerApiException(
                 status = answer.status,
@@ -398,6 +399,33 @@ internal class Engine(
         request: ApiRequest,
         ifNoneMatch: String? = null,
         first: Credential? = null,
+    ): Answer = guarded { attempts(request, ifNoneMatch, first) }
+
+    suspend fun <T> guarded(block: suspend () -> T): T {
+        ensureOpen()
+        val outcome =
+            coroutineScope {
+                val work = async { runCatching { block() } }
+                inFlight += work
+                try {
+                    if (closed) work.cancel()
+                    work.await()
+                } catch (error: CancellationException) {
+                    if (!closed) throw error
+                    Result.failure(IllegalStateException(CLOSED, error))
+                } finally {
+                    inFlight -= work
+                }
+            }
+        val failure = outcome.exceptionOrNull()
+        if (failure is CancellationException && closed) throw IllegalStateException(CLOSED, failure)
+        return outcome.getOrThrow()
+    }
+
+    private suspend fun attempts(
+        request: ApiRequest,
+        ifNoneMatch: String?,
+        first: Credential?,
     ): Answer {
         val idempotencyKey = idempotencyKeyOf(request)
         var retries = 0
@@ -503,12 +531,13 @@ internal class Engine(
         }
     }
 
-    private fun httpRequest(
+    private suspend fun httpRequest(
         request: ApiRequest,
         idempotencyKey: String?,
         credential: Credential?,
         ifNoneMatch: String?,
     ): Request {
+        val visitor = if (request.anonymous) null else request.visitor ?: visitor?.get()
         val builder =
             Request
                 .Builder()
@@ -539,10 +568,8 @@ internal class Engine(
             it.identityToken?.let { token -> builder.header("Entitler-Identity-Token", token) }
         }
         idempotencyKey?.let { builder.header("Idempotency-Key", it) }
-        if (!request.anonymous) {
-            (request.visitor ?: visitor)?.let { builder.header("Entitler-Visitor", it) }
-            asOf?.let { builder.header("Entitler-As-Of", it) }
-        }
+        visitor?.let { builder.header("Entitler-Visitor", it) }
+        request.asOf?.let { builder.header("Entitler-As-Of", it) }
         ifNoneMatch?.let { builder.header("If-None-Match", it) }
         return builder.build()
     }
@@ -637,9 +664,11 @@ internal fun <T> decode(
     body: String,
     deserializer: DeserializationStrategy<T>,
     stale: Boolean = false,
+    replayed: Boolean = false,
 ): T {
     val element = json.parseToJsonElement(body)
-    val marked = if (stale && element is JsonObject) JsonObject(element + ("stale" to JsonPrimitive(true))) else element
+    val marks = listOfNotNull("stale".takeIf { stale }, "replayed".takeIf { replayed })
+    val marked = if (marks.isNotEmpty() && element is JsonObject) JsonObject(element + marks.map { it to JsonPrimitive(true) }) else element
     checkShape(deserializer.descriptor, marked)
     return json.decodeFromJsonElement(deserializer, marked)
 }

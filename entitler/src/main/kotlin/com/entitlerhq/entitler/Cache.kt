@@ -79,6 +79,8 @@ public class MemoryCacheStore(
 
     override suspend fun get(key: String): CacheEntry? = synchronized(entries) { entries[key] }
 
+    internal fun clear() = synchronized(entries) { entries.clear() }
+
     override suspend fun set(
         key: String,
         entry: CacheEntry,

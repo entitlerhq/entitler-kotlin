@@ -124,9 +124,6 @@ class DecodingTest {
             api.replyFixture("details")
             val details = customer.details()
             assertEquals("test_1001", details.customer.externalId)
-            assertNull(details.selfServe)
-            api.replyFixture("change")
-            assertEquals(true, customer.subscribe("pro").selfServe)
             api.replyFixture("customers")
             assertTrue(
                 server.customers
@@ -137,42 +134,11 @@ class DecodingTest {
             api.replyFixture("billing")
             customer.billing()
             api.replyFixture("track")
-            assertEquals("Beta", customer.setTrack("j_beta").track.name)
+            assertEquals("Beta", customer.setTrack("Beta").track.name)
             api.replyFixture("token")
             assertEquals(listOf(Scope.EntitlementsRead, Scope.UsageRead, Scope.UsageWrite), customer.token().scopes)
             api.replyFixture("provider-page")
             assertTrue(customer.billingPortal("https://a.example").url.startsWith("https://"))
-        }
-
-    @Test
-    fun `providers with connections and alerts decode`() =
-        runTest {
-            api.replyFixture("providers-full")
-            val providers = customer.providers()
-            assertEquals(
-                1500,
-                providers.connections
-                    .single()
-                    .state.payments
-                    .single()
-                    .amount!!
-                    .value,
-            )
-            assertEquals(
-                Instant.parse("2026-09-30T14:00:00Z"),
-                providers.connections
-                    .single()
-                    .state.payments
-                    .single()
-                    .paidAt,
-            )
-            assertEquals(
-                2,
-                providers.alerts
-                    .single()
-                    .facts.count,
-            )
-            assertEquals(listOf("cn_1"), providers.linked)
         }
 
     @Test

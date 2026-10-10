@@ -95,44 +95,75 @@ private const val MAX_SKEW_SECONDS = 300
 private const val MILLIS = 1000L
 
 /**
+ * What a snapshot must match to verify: the keys that may have signed it, and the customer and
+ * environment it must be for.
+ *
+ * Take [customer] from the app's own session (the signed-in person's external id; for an identity-token
+ * customer `<provider id>:<subject>`), never from the stored snapshot, and [environment] from the build,
+ * beside the snapshot keys it ships.
+ *
+ * @property keys The keys from [EntitlerServer.snapshotKeys], shipped with the app.
+ * @property customer The customer the app expects.
+ * @property environment The id of the environment the app expects.
+ * @property issuer The issuer Entitler signs as.
+ * @property now The instant to verify at.
+ * @property clockSkewSeconds How far the snapshot's signing instant may be ahead of [now], 0 to 300 seconds.
+ */
+public data class SnapshotExpectation
+    @JvmOverloads
+    constructor(
+        val keys: List<SnapshotKey>,
+        val customer: String,
+        val environment: String,
+        val issuer: String = SNAPSHOT_ISSUER,
+        val now: Instant = Instant.now(),
+        val clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
+    ) {
+        /** The same expectation, from the key set `snapshotKeys()` answers. */
+        @JvmOverloads
+        public constructor(
+            keys: SnapshotKeys,
+            customer: String,
+            environment: String,
+            issuer: String = SNAPSHOT_ISSUER,
+            now: Instant = Instant.now(),
+            clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
+        ) : this(keys.keys, customer, environment, issuer, now, clockSkewSeconds)
+    }
+
+/**
  * Verifies a snapshot from `snapshot()` with no request, against keys from `snapshotKeys()`.
  *
  * ```kotlin
- * val verified = verifySnapshot(stored.token, bundledKeys, customer = userId, environment = environmentId)
+ * val expected = SnapshotExpectation(bundledKeys, customer = userId, environment = BuildConfig.ENTITLER_ENVIRONMENT)
+ * val verified = verifySnapshot(stored.token, expected)
  * if (verified.entitlements.has(Features.exportPdf)) showExportButton()
  * ```
  *
- * @param customer The customer the app expects.
- * @param environment The id of the environment the app expects.
- * @param clockSkewSeconds How far the snapshot's signing instant may be ahead of [now], in seconds from 0 to 300.
  * @throws EntitlerSnapshotException when the snapshot is not valid or has expired.
+ * @throws IllegalArgumentException when [expected] is blank or its skew is out of range.
  */
-@JvmOverloads
 public fun verifySnapshot(
     token: String,
-    keys: List<SnapshotKey>,
-    customer: String,
-    environment: String,
-    issuer: String = SNAPSHOT_ISSUER,
-    now: Instant = Instant.now(),
-    clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
+    expected: SnapshotExpectation,
 ): VerifiedSnapshot {
-    require(clockSkewSeconds in 0..MAX_SKEW_SECONDS) { "Pass clockSkewSeconds as a whole number from 0 to 300." }
-    require(customer.isNotBlank() && environment.isNotBlank()) { "Provide the customer and environment the snapshot must be for." }
+    require(expected.clockSkewSeconds in 0..MAX_SKEW_SECONDS) { "Pass clockSkewSeconds as a whole number from 0 to 300." }
+    require(expected.customer.isNotBlank() && expected.environment.isNotBlank()) {
+        "Provide the customer and environment the snapshot must be for."
+    }
     val parts = token.split('.')
     val header = parts.takeIf { it.size == 3 && decodeBase64Url(it[1]) != null }?.let { decodeJwtPart(it[0]) }
     val signature = parts.getOrNull(2)?.let(::decodeBase64Url)
     val isSnapshot = header?.string("typ") == SNAPSHOT_TYPE && header.string("alg") == "ES256" && !header.containsKey("crit")
     if (header == null || signature == null || !isSnapshot) invalid(NOT_A_SNAPSHOT)
     val key =
-        keys.firstOrNull { it.kid == header.string("kid") }
+        expected.keys.firstOrNull { it.kid == header.string("kid") }
             ?: invalid("None of the keys passed signed this snapshot. Fetch them again with snapshotKeys().")
     if (!signatureHolds(key, "${parts[0]}.${parts[1]}".toByteArray(Charsets.US_ASCII), signature)) {
         invalid("This snapshot was changed after Entitler signed it.")
     }
     val claims = decodeJwtPart(parts[1])?.let(::snapshotClaimsOf) ?: invalid(NOT_A_SNAPSHOT)
-    checkClaims(claims, issuer, customer, environment, now, clockSkewSeconds)
-    val expiresAt = Instant.ofEpochSecond(claims.exp)
+    checkClaims(claims, expected)
     return VerifiedSnapshot(
         customer = claims.sub,
         environment = SnapshotEnvironment(claims.environment.id),
@@ -140,7 +171,7 @@ public fun verifySnapshot(
         release = claims.release,
         change = claims.change,
         testers = claims.testers,
-        expiresAt = expiresAt,
+        expiresAt = Instant.ofEpochSecond(claims.exp),
         entitlements =
             Entitlements(
                 customer = claims.sub,
@@ -154,26 +185,15 @@ public fun verifySnapshot(
     )
 }
 
-/** Verifies a snapshot against the key set from `snapshotKeys()`; see the overload taking a key list. */
-@JvmOverloads
-public fun verifySnapshot(
-    token: String,
-    keys: SnapshotKeys,
-    customer: String,
-    environment: String,
-    issuer: String = SNAPSHOT_ISSUER,
-    now: Instant = Instant.now(),
-    clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
-): VerifiedSnapshot = verifySnapshot(token, keys.keys, customer, environment, issuer, now, clockSkewSeconds)
-
 private fun checkClaims(
     claims: Claims,
-    issuer: String,
-    customer: String,
-    environment: String,
-    now: Instant,
-    clockSkewSeconds: Int,
+    expected: SnapshotExpectation,
 ) {
+    val issuer = expected.issuer
+    val customer = expected.customer
+    val environment = expected.environment
+    val now = expected.now
+    val clockSkewSeconds = expected.clockSkewSeconds
     if (claims.iss != issuer) invalid("This snapshot was not issued by $issuer.")
     if (claims.iat * MILLIS > now.toEpochMilli() + clockSkewSeconds * MILLIS) {
         val signedFor = formatInstant(Instant.ofEpochSecond(claims.iat))

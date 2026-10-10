@@ -50,8 +50,6 @@ internal class TokenSource(
 
     val refreshable: Boolean get() = provider != null
 
-    val held: String? get() = current?.token
-
     suspend fun get(): String {
         val held = current
         if (held != null && !(refreshable && held.expiresSoon(clock()))) return held.token
@@ -103,9 +101,11 @@ internal class Credential(
 internal class Credentials(
     private val key: String?,
     private val token: TokenSource?,
+    publishable: Boolean = false,
 ) {
     val kind: String =
         when {
+            publishable -> "in-app with a publishable key"
             token == null -> "server"
             key == null -> "in-app with a customer token"
             else -> "in-app with an identity token"
@@ -121,8 +121,6 @@ internal class Credentials(
     val refreshable: Boolean get() = token?.refreshable == true
 
     suspend fun current(): Credential = credentialOf(token?.get())
-
-    fun held(): Credential? = token?.held?.let(::credentialOf)
 
     suspend fun refresh(seen: Credential): Credential = credentialOf(token?.refresh(seen.identityToken ?: seen.bearer))
 

@@ -1,0 +1,13 @@
+{
+  "grant": {
+    "id": "g_1",
+    "feature": "sso",
+    "value": "",
+    "from": "2026-10-09T01:00:00.000Z",
+    "until": "2026-11-08T01:00:00.000Z",
+    "revokedAt": null,
+    "reason": "Pilot",
+    "by": "Internal tools",
+    "actor": "agent_7"
+  }
+}

@@ -32,6 +32,9 @@ public data class ErrorCode(
         /** Reading or writing at another instant is not allowed here. */
         public val AsOfNotAllowed: ErrorCode = ErrorCode("as_of_not_allowed")
 
+        /** Another provider already bills that product. */
+        public val BilledElsewhere: ErrorCode = ErrorCode("billed_elsewhere")
+
         /** The request body is too large. */
         public val BodyTooLarge: ErrorCode = ErrorCode("body_too_large")
 
@@ -40,6 +43,9 @@ public data class ErrorCode(
 
         /** A cap in the organisation's Entitler plan is reached. */
         public val CapReached: ErrorCode = ErrorCode("cap_reached")
+
+        /** The organisation's plan lacks the capability the request needs; the message names it. */
+        public val CapabilityRequired: ErrorCode = ErrorCode("capability_required")
 
         /** A carried-forward change conflicts with another. */
         public val CarryForwardConflict: ErrorCode = ErrorCode("carry_forward_conflict")
@@ -53,6 +59,9 @@ public data class ErrorCode(
         /** The track needs a change for this. */
         public val ChangeRequired: ErrorCode = ErrorCode("change_required")
 
+        /** No answer arrived for a batch request; the SDK's own code, only on batch event results. */
+        public val ConnectionFailed: ErrorCode = ErrorCode("connection_failed")
+
         /** The connection is in use. */
         public val ConnectionInUse: ErrorCode = ErrorCode("connection_in_use")
 
@@ -61,9 +70,6 @@ public data class ErrorCode(
 
         /** The call needs a payment provider connection. */
         public val ConnectionRequired: ErrorCode = ErrorCode("connection_required")
-
-        /** No answer arrived for a batch request; the SDK's own code, only on batch event results. */
-        public val ConnectionFailed: ErrorCode = ErrorCode("connection_failed")
 
         /** The payment provider connection's key cannot be read. */
         public val ConnectionUnreadable: ErrorCode = ErrorCode("connection_unreadable")
@@ -110,9 +116,6 @@ public data class ErrorCode(
         /** The amount is not valid. */
         public val InvalidAmount: ErrorCode = ErrorCode("invalid_amount")
 
-        /** The API sent a 2xx answer this SDK cannot read; the SDK's own code. */
-        public val InvalidResponse: ErrorCode = ErrorCode("invalid_response")
-
         /** The request body is not valid. */
         public val InvalidBody: ErrorCode = ErrorCode("invalid_body")
 
@@ -124,6 +127,9 @@ public data class ErrorCode(
 
         /** The path is not valid. */
         public val InvalidPath: ErrorCode = ErrorCode("invalid_path")
+
+        /** The API sent a 2xx answer this SDK cannot read; the SDK's own code. */
+        public val InvalidResponse: ErrorCode = ErrorCode("invalid_response")
 
         /** The last environment cannot be removed. */
         public val LastEnvironment: ErrorCode = ErrorCode("last_environment")
@@ -173,6 +179,12 @@ public data class ErrorCode(
         /** Too many requests; retry after a while. */
         public val RateLimited: ErrorCode = ErrorCode("rate_limited")
 
+        /** The sign-in provider does not let people register themselves. */
+        public val RegistrationClosed: ErrorCode = ErrorCode("registration_closed")
+
+        /** The change needs a payment page, so pass a return URL. */
+        public val ReturnUrlRequired: ErrorCode = ErrorCode("return_url_required")
+
         /** The change needs a review. */
         public val ReviewRequired: ErrorCode = ErrorCode("review_required")
 
@@ -187,6 +199,9 @@ public data class ErrorCode(
 
         /** The snapshot is not valid; the SDK's own code. */
         public val SnapshotInvalid: ErrorCode = ErrorCode("snapshot_invalid")
+
+        /** No snapshot signing key is available. */
+        public val SnapshotKeyUnavailable: ErrorCode = ErrorCode("snapshot_key_unavailable")
 
         /** The answer is out of date, such as a checkout without a payment provider connection. */
         public val Stale: ErrorCode = ErrorCode("stale")
@@ -245,6 +260,9 @@ public data class Scope(
 
         /** Records usage and places holds. */
         public val UsageWrite: Scope = Scope("usage:write")
+
+        /** Lets a customer token or identity token make the customer's own billing choices. */
+        public val BillingSelf: Scope = Scope("billing:self")
 
         /** Registers customers. */
         public val CustomersRegister: Scope = Scope("customers:register")
@@ -421,37 +439,6 @@ public data class UsageRefusal(
 }
 
 internal object UsageRefusalSerializer : OpenStringSerializer<UsageRefusal>("UsageRefusal", ::UsageRefusal, UsageRefusal::value)
-
-/**
- * The state of a usage hold.
- *
- * An open set: a value this SDK does not know keeps its raw [value].
- */
-@Serializable(with = HoldStateSerializer::class)
-public data class HoldState(
-    /** The raw value, as the API sends it. */
-    public val value: String,
-) {
-    /** The raw value. */
-    override fun toString(): String = value
-
-    /** The values this SDK knows. */
-    public companion object {
-        /** Open until settled, released or expired. */
-        public val Open: HoldState = HoldState("open")
-
-        /** Settled. */
-        public val Settled: HoldState = HoldState("settled")
-
-        /** Released. */
-        public val Released: HoldState = HoldState("released")
-
-        /** Expired on its own. */
-        public val Expired: HoldState = HoldState("expired")
-    }
-}
-
-internal object HoldStateSerializer : OpenStringSerializer<HoldState>("HoldState", ::HoldState, HoldState::value)
 
 /**
  * The kind of environment.
@@ -830,41 +817,6 @@ internal object MeterUnitSerializer : OpenStringSerializer<MeterUnit>(
 )
 
 /**
- * The move that would give a customer more of a feature.
- *
- * An open set: a value this SDK does not know keeps its raw [value].
- */
-@Serializable(with = UpgradeMoveSerializer::class)
-public data class UpgradeMove(
-    /** The raw value, as the API sends it. */
-    public val value: String,
-) {
-    /** The raw value. */
-    override fun toString(): String = value
-
-    /** The values this SDK knows. */
-    public companion object {
-        /** Subscribe to the plan. */
-        public val Subscribe: UpgradeMove = UpgradeMove("subscribe")
-
-        /** Move up to the plan. */
-        public val Upgrade: UpgradeMove = UpgradeMove("upgrade")
-
-        /** Switch to the plan. */
-        public val Switch: UpgradeMove = UpgradeMove("switch")
-
-        /** Add the plan as an add-on. */
-        public val Add: UpgradeMove = UpgradeMove("add")
-    }
-}
-
-internal object UpgradeMoveSerializer : OpenStringSerializer<UpgradeMove>(
-    "UpgradeMove",
-    ::UpgradeMove,
-    UpgradeMove::value,
-)
-
-/**
  * How a move changes a feature for the customer.
  *
  * An open set: a value this SDK does not know keeps its raw [value].
@@ -880,16 +832,16 @@ public data class ImpactKind(
     /** The values this SDK knows. */
     public companion object {
         /** The customer gains the feature. */
-        public val Gains: ImpactKind = ImpactKind("Gains")
+        public val Gains: ImpactKind = ImpactKind("gains")
 
         /** The customer loses the feature. */
-        public val Loses: ImpactKind = ImpactKind("Loses")
+        public val Loses: ImpactKind = ImpactKind("loses")
 
         /** The feature's value changes. */
-        public val Changes: ImpactKind = ImpactKind("Changes")
+        public val Changes: ImpactKind = ImpactKind("changes")
 
         /** The feature stays the same. */
-        public val Same: ImpactKind = ImpactKind("Same")
+        public val Same: ImpactKind = ImpactKind("same")
     }
 }
 
@@ -964,131 +916,6 @@ internal object TaxBehaviourSerializer : OpenStringSerializer<TaxBehaviour>(
     "TaxBehaviour",
     ::TaxBehaviour,
     TaxBehaviour::value,
-)
-
-/**
- * The kind of move to a plan.
- *
- * An open set: a value this SDK does not know keeps its raw [value].
- */
-@Serializable(with = PlanMoveSerializer::class)
-public data class PlanMove(
-    /** The raw value, as the API sends it. */
-    public val value: String,
-) {
-    /** The raw value. */
-    override fun toString(): String = value
-
-    /** The values this SDK knows. */
-    public companion object {
-        /** Subscribe to a first plan. */
-        public val Subscribe: PlanMove = PlanMove("subscribe")
-
-        /** Move from the held plan. */
-        public val Move: PlanMove = PlanMove("move")
-
-        /** Add an add-on. */
-        public val Add: PlanMove = PlanMove("add")
-
-        /** Replace the held plan in another product. */
-        public val Replace: PlanMove = PlanMove("replace")
-    }
-}
-
-internal object PlanMoveSerializer : OpenStringSerializer<PlanMove>(
-    "PlanMove",
-    ::PlanMove,
-    PlanMove::value,
-)
-
-/**
- * Which way a move goes.
- *
- * An open set: a value this SDK does not know keeps its raw [value].
- */
-@Serializable(with = MoveDirectionSerializer::class)
-public data class MoveDirection(
-    /** The raw value, as the API sends it. */
-    public val value: String,
-) {
-    /** The raw value. */
-    override fun toString(): String = value
-
-    /** The values this SDK knows. */
-    public companion object {
-        /** An upgrade. */
-        public val Up: MoveDirection = MoveDirection("up")
-
-        /** A downgrade. */
-        public val Down: MoveDirection = MoveDirection("down")
-
-        /** A move across, neither up nor down. */
-        public val Cross: MoveDirection = MoveDirection("cross")
-    }
-}
-
-internal object MoveDirectionSerializer : OpenStringSerializer<MoveDirection>(
-    "MoveDirection",
-    ::MoveDirection,
-    MoveDirection::value,
-)
-
-/**
- * How a plan is sold.
- *
- * An open set: a value this SDK does not know keeps its raw [value].
- */
-@Serializable(with = SellingSerializer::class)
-public data class Selling(
-    /** The raw value, as the API sends it. */
-    public val value: String,
-) {
-    /** The raw value. */
-    override fun toString(): String = value
-
-    /** The values this SDK knows. */
-    public companion object {
-        /** The customer moves themselves. */
-        public val SelfServe: Selling = Selling("self-serve")
-
-        /** Only the vendor can make the move. */
-        public val SalesLed: Selling = Selling("sales-led")
-    }
-}
-
-internal object SellingSerializer : OpenStringSerializer<Selling>(
-    "Selling",
-    ::Selling,
-    Selling::value,
-)
-
-/**
- * When a move takes effect.
- *
- * An open set: a value this SDK does not know keeps its raw [value].
- */
-@Serializable(with = MoveTimingSerializer::class)
-public data class MoveTiming(
-    /** The raw value, as the API sends it. */
-    public val value: String,
-) {
-    /** The raw value. */
-    override fun toString(): String = value
-
-    /** The values this SDK knows. */
-    public companion object {
-        /** Now. */
-        public val Now: MoveTiming = MoveTiming("now")
-
-        /** At the end of the current period. */
-        public val End: MoveTiming = MoveTiming("end")
-    }
-}
-
-internal object MoveTimingSerializer : OpenStringSerializer<MoveTiming>(
-    "MoveTiming",
-    ::MoveTiming,
-    MoveTiming::value,
 )
 
 /**
@@ -1188,4 +1015,272 @@ internal object UsageEventKindSerializer : OpenStringSerializer<UsageEventKind>(
     "UsageEventKind",
     ::UsageEventKind,
     UsageEventKind::value,
+)
+
+/**
+ * The kind of move to a plan.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = MoveSerializer::class)
+public data class Move(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Subscribe from no plan in a product. */
+        public val Subscribe: Move = Move("subscribe")
+
+        /** Move up to another plan. */
+        public val Upgrade: Move = Move("upgrade")
+
+        /** Move down to another plan. */
+        public val Downgrade: Move = Move("downgrade")
+
+        /** Switch to a plan neither up nor down. */
+        public val Switch: Move = Move("switch")
+
+        /** Add an add-on. */
+        public val Add: Move = Move("add")
+
+        /** Replace an add-on with another. */
+        public val Replace: Move = Move("replace")
+    }
+}
+
+internal object MoveSerializer : OpenStringSerializer<Move>(
+    "Move",
+    ::Move,
+    Move::value,
+)
+
+/**
+ * Who can make a move.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = MoveActionSerializer::class)
+public data class MoveAction(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The customer can make the move alone. */
+        public val Buy: MoveAction = MoveAction("buy")
+
+        /** A sales-led move, which only the company can make. */
+        public val Contact: MoveAction = MoveAction("contact")
+
+        /** Neither can make it now; the answer says why. */
+        public val Unavailable: MoveAction = MoveAction("unavailable")
+    }
+}
+
+internal object MoveActionSerializer : OpenStringSerializer<MoveAction>(
+    "MoveAction",
+    ::MoveAction,
+    MoveAction::value,
+)
+
+/**
+ * The kind of change booked for a renewal.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = BookedChangeTypeSerializer::class)
+public data class BookedChangeType(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** A move to another plan. */
+        public val Move: BookedChangeType = BookedChangeType("move")
+
+        /** A cancel, moving to the default plan. */
+        public val Cancel: BookedChangeType = BookedChangeType("cancel")
+    }
+}
+
+internal object BookedChangeTypeSerializer : OpenStringSerializer<BookedChangeType>(
+    "BookedChangeType",
+    ::BookedChangeType,
+    BookedChangeType::value,
+)
+
+/**
+ * When a plan change takes effect.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = TimingSerializer::class)
+public data class Timing(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Now. */
+        public val Now: Timing = Timing("now")
+
+        /** At the end of the current period, at renewal. */
+        public val End: Timing = Timing("end")
+    }
+}
+
+internal object TimingSerializer : OpenStringSerializer<Timing>(
+    "Timing",
+    ::Timing,
+    Timing::value,
+)
+
+/**
+ * How a company plan change is billed.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = PlanBillingSerializer::class)
+public data class PlanBilling(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Charge the change through the provider that bills the product. */
+        public val Provider: PlanBilling = PlanBilling("provider")
+
+        /** Move the customer in Entitler while the provider keeps billing the plan it bills, until a later change. */
+        public val Keep: PlanBilling = PlanBilling("keep")
+
+        /** End the provider's subscription when the change takes effect, so the customer holds the plan outside any provider. */
+        public val End: PlanBilling = PlanBilling("end")
+    }
+}
+
+internal object PlanBillingSerializer : OpenStringSerializer<PlanBilling>(
+    "PlanBilling",
+    ::PlanBilling,
+    PlanBilling::value,
+)
+
+/**
+ * When a plan change took or takes effect.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = EffectiveSerializer::class)
+public data class Effective(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Now. */
+        public val Now: Effective = Effective("now")
+
+        /** At renewal. */
+        public val Renewal: Effective = Effective("renewal")
+    }
+}
+
+internal object EffectiveSerializer : OpenStringSerializer<Effective>(
+    "Effective",
+    ::Effective,
+    Effective::value,
+)
+
+/**
+ * Whether a purchase was paid with real money or test money.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = MoneyKindSerializer::class)
+public data class MoneyKind(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** Money that is charged. */
+        public val Real: MoneyKind = MoneyKind("real")
+
+        /** Test money, never charged. */
+        public val Test: MoneyKind = MoneyKind("test")
+    }
+}
+
+internal object MoneyKindSerializer : OpenStringSerializer<MoneyKind>(
+    "MoneyKind",
+    ::MoneyKind,
+    MoneyKind::value,
+)
+
+/**
+ * A provider subscription's status.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = SubscriptionStatusSerializer::class)
+public data class SubscriptionStatus(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The first payment has not succeeded yet. */
+        public val Incomplete: SubscriptionStatus = SubscriptionStatus("incomplete")
+
+        /** The first payment never succeeded. */
+        public val IncompleteExpired: SubscriptionStatus = SubscriptionStatus("incomplete_expired")
+
+        /** In a trial. */
+        public val Trialing: SubscriptionStatus = SubscriptionStatus("trialing")
+
+        /** Active and paid. */
+        public val Active: SubscriptionStatus = SubscriptionStatus("active")
+
+        /** A renewal payment failed and is being retried. */
+        public val PastDue: SubscriptionStatus = SubscriptionStatus("past_due")
+
+        /** Cancelled. */
+        public val Canceled: SubscriptionStatus = SubscriptionStatus("canceled")
+
+        /** Renewal payments failed. */
+        public val Unpaid: SubscriptionStatus = SubscriptionStatus("unpaid")
+
+        /** Paused. */
+        public val Paused: SubscriptionStatus = SubscriptionStatus("paused")
+    }
+}
+
+internal object SubscriptionStatusSerializer : OpenStringSerializer<SubscriptionStatus>(
+    "SubscriptionStatus",
+    ::SubscriptionStatus,
+    SubscriptionStatus::value,
 )

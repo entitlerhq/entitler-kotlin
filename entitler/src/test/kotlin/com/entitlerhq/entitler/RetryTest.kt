@@ -76,8 +76,8 @@ class RetryTest {
             api.server().use { server ->
                 api.reply(503, error)
                 api.reply(502, error)
-                api.replyFixture("usage-result")
-                server.customer("u").recordUsage(Feature.Metered("ai_credits"), 1)
+                api.replyFixture("summary")
+                server.customer("u").update(name = "Ada")
                 val keys = List(3) { api.take().headers["Idempotency-Key"] }
                 assertEquals(1, keys.toSet().size)
                 assertTrue(Regex("[0-9a-f-]{36}").matches(keys.first()!!))
@@ -196,7 +196,10 @@ class RetryTest {
                 val failure =
                     withContext(kotlinx.coroutines.Dispatchers.IO) {
                         assertFailsWith<EntitlerTimeoutException> {
-                            server.customer("u").recordUsage(Feature.Metered("ai_credits"), 1, timeout = 200.milliseconds)
+                            server
+                                .customer(
+                                    "u",
+                                ).recordUsage(Feature.Metered("ai_credits"), 1, idempotencyKey = "k", timeout = 200.milliseconds)
                         }
                     }
                 assertTrue(failure.idempotencyKey!!.isNotEmpty())
@@ -282,7 +285,12 @@ class RetryTest {
                             "Location" to other.url("/steal").toString(),
                         )
                         val failure =
-                            assertFailsWith<EntitlerApiException> { server.customer("u").recordUsage(Feature.Metered("ai_credits"), 1) }
+                            assertFailsWith<EntitlerApiException> {
+                                server
+                                    .customer(
+                                        "u",
+                                    ).recordUsage(Feature.Metered("ai_credits"), 1, idempotencyKey = "k")
+                            }
                         assertEquals(status, failure.status)
                         assertEquals(ErrorCode.HttpError, failure.code)
                         assertEquals("Entitler answered with HTTP $status.", failure.message)

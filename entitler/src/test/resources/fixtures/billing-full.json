@@ -2,7 +2,10 @@
   "provider": "stripe",
   "status": "active",
   "sku": {
-    "period": "Monthly",
+    "period": {
+      "key": "monthly",
+      "label": "Monthly"
+    },
     "connector": "stripe",
     "ids": {
       "price": "price_1"

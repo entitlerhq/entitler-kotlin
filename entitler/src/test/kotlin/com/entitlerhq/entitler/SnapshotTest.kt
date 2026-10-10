@@ -100,7 +100,7 @@ class SnapshotTest {
         customer: String = "user_1",
         environment: String = "e_1",
         clockSkewSeconds: Int = 60,
-    ) = verifySnapshot(token, keys, customer, environment, now = now, clockSkewSeconds = clockSkewSeconds)
+    ) = verifySnapshot(token, SnapshotExpectation(keys, customer, environment, now = now, clockSkewSeconds = clockSkewSeconds))
 
     private fun failure(
         code: ErrorCode,
@@ -131,7 +131,8 @@ class SnapshotTest {
         assertNull(verified.entitlements.environment)
         assertEquals(
             verified,
-            verifySnapshot(sign(claims()), SnapshotKeys(listOf(key)), "user_1", "e_1", now = now).copy(expiresAt = verified.expiresAt),
+            verifySnapshot(sign(claims()), SnapshotExpectation(SnapshotKeys(listOf(key)), "user_1", "e_1", now = now))
+                .copy(expiresAt = verified.expiresAt),
         )
     }
 
@@ -139,10 +140,9 @@ class SnapshotTest {
     fun `the clients verify too`() {
         val server = EntitlerServer(SERVER_KEY)
         val client = EntitlerClient(customerToken())
-        assertEquals("user_1", server.verifySnapshot(sign(claims()), listOf(key), "user_1", "e_1", now = now).customer)
-        assertEquals("user_1", client.verifySnapshot(sign(claims()), SnapshotKeys(listOf(key)), "user_1", "e_1", now = now).customer)
-        assertEquals("user_1", server.verifySnapshot(sign(claims()), SnapshotKeys(listOf(key)), "user_1", "e_1", now = now).customer)
-        assertEquals("user_1", client.verifySnapshot(sign(claims()), listOf(key), "user_1", "e_1", now = now).customer)
+        val expected = SnapshotExpectation(listOf(key), "user_1", "e_1", now = now)
+        assertEquals("user_1", server.verifySnapshot(sign(claims()), expected).customer)
+        assertEquals("user_1", client.verifySnapshot(sign(claims()), expected).customer)
         server.close()
         client.close()
     }

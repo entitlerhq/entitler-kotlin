@@ -52,7 +52,7 @@ class ConformanceRequestsTest {
             val store = RecordingStore()
             val built = case["built"]!!.jsonObject
             cacheClient(case, transport, store).use { client ->
-                val outcome = runCatching { readRoute(client, built, case.str("visitor")) }
+                val outcome = runCatching { readRoute(client, built, case.str("visitor"), asOfOf(case)) }
                 outcome.exceptionOrNull()?.let { error ->
                     if (error !is EntitlerApiException || error.code != ErrorCode.InvalidResponse) throw error
                 }
@@ -89,33 +89,51 @@ class ConformanceRequestsTest {
         transport: FakeTransport,
         store: CacheStore,
     ): java.io.Closeable {
-        val asOf = case.str("asOfInput")?.let { OffsetDateTime.parse(it).toInstant() } ?: case.str("asOf")?.let(Instant::parse)
         val common: EntitlerConfig.() -> Unit = {
             baseUrl = case["built"]!!.jsonObject.str("baseUrl")!!
             httpClient = transport.client
-            cache = store
             maxRetries = 0
-            this.asOf = asOf
         }
         val inApp: EntitlerClientConfig.() -> Unit = {
             common()
+            testStore = store
             visitor = case.str("visitor")
         }
         return when (case.str("principalKind")) {
-            "key" -> EntitlerServer(case.str("credential")!!, common)
-            "customer-token" -> EntitlerClient(case.str("credential")!!, inApp)
-            else -> EntitlerIdentityClient(case.str("key")!!, case.str("identityToken")!!, inApp)
+            "key" -> {
+                EntitlerServer(case.str("credential")!!) {
+                    common()
+                    cache = store
+                }
+            }
+
+            "customer-token" -> {
+                EntitlerClient(case.str("credential")!!, inApp)
+            }
+
+            else -> {
+                EntitlerIdentityClient(case.str("key")!!, case.str("identityToken")!!, inApp)
+            }
         }
     }
+
+    private fun asOfOf(case: JsonObject): Instant? =
+        case.str("asOfInput")?.let { OffsetDateTime.parse(it).toInstant() } ?: case.str("asOf")?.let(Instant::parse)
 
     private suspend fun readRoute(
         client: java.io.Closeable,
         built: JsonObject,
         visitor: String?,
+        asOf: Instant?,
     ) {
         val params = built["params"]!!.jsonObject
         val server = client as? EntitlerServer
-        val customer = server?.customer(params.str("id") ?: "-") ?: (client as EntitlerClient).me
+        val serverCustomer = server?.customer(params.str("id") ?: "-")
+        val customer = serverCustomer ?: (client as EntitlerClient).me
+        if (asOf != null) {
+            checkNotNull(serverCustomer).check(params.str("feature")!!, asOf = asOf)
+            return
+        }
         when (built.str("route")) {
             "/customers/{id}/entitlements/{feature}" -> customer.check(params.str("feature")!!)
             "/customers/{id}/entitlements" -> customer.entitlements()
@@ -170,10 +188,10 @@ class ConformanceRequestsTest {
         val customer = server.customer(params.getValue("id"))
         when (request.str("route")) {
             "/customers/{id}/entitlements/{feature}" -> customer.check(params.getValue("feature"))
-            "/customers/{id}/subscription/add-ons/{plan}" -> customer.removeAddOn(params.getValue("plan"))
-            "/customers/{id}/usage/holds/{holdId}" -> customer.hold(params.getValue("holdId"))
-            "/customers/{id}/grants/{grantId}" -> customer.vendor.revokeGrant(params.getValue("grantId"))
-            "/customers/{id}/usage/{usageId}" -> customer.vendor.cancelUsage(params.getValue("usageId"))
+            "/customers/{id}/subscription/add-ons/{plan}" -> customer.cancel(addOn = params.getValue("plan"))
+            "/customers/{id}/usage/holds/{holdId}" -> customer.releaseUsage(params.getValue("holdId"))
+            "/customers/{id}/grants/{grantId}" -> customer.revokeGrant(params.getValue("grantId"))
+            "/customers/{id}/usage/{usageId}" -> customer.cancelUsage(params.getValue("usageId"))
             else -> fail("Unknown route.")
         }
     }
@@ -208,22 +226,17 @@ class ConformanceRequestsTest {
         val customer = server.customer("user_42")
         when (case.str("method")) {
             "write" -> {
-                customer.recordUsage(credits, 1, idempotencyKey = key)
+                customer.recordUsage(credits, 1, idempotencyKey = checkNotNull(key))
             }
 
             "withHold" -> {
                 val answers = listOf("usage-held", "usage-settled", "usage-result").map { Canned.Status(200, body = fixture(it)) }
                 transport.queue.addAll(answers)
-                customer.withHold(credits, 100, idempotencyKey = key) { it.used = 130 }
-            }
-
-            "recordUsageBatch" -> {
-                val events = case["events"]!!.jsonPrimitive.int
-                server.recordUsageBatch(List(events) { UsageBatchEvent("user_42", credits, 1) }, idempotencyKey = key)
+                customer.withHold(credits, 100, idempotencyKey = checkNotNull(key)) { it.used = 130 }
             }
 
             "batchEvent" -> {
-                server.recordUsageBatch(listOf(UsageBatchEvent("user_42", credits, 1, idempotencyKey = key)))
+                server.recordUsageBatch(listOf(UsageBatchEvent("user_42", credits, 1, idempotencyKey = checkNotNull(key))))
             }
 
             else -> {

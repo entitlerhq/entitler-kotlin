@@ -135,7 +135,7 @@ class CacheTest {
                 val customer = server.customer("u")
                 customer.check("export_pdf")
                 api.now += 1
-                customer.recordUsage(Feature.Metered("ai_credits"), 1)
+                customer.recordUsage(Feature.Metered("ai_credits"), 1, idempotencyKey = "k")
                 api.now += 1
                 customer.check("export_pdf")
                 assertEquals(3, api.server.requestCount)
@@ -196,7 +196,7 @@ class CacheTest {
                 withContext(Dispatchers.IO) {
                     val read = async { customer.check("export_pdf") }
                     readArrived.await(5, TimeUnit.SECONDS)
-                    customer.recordUsage(Feature.Metered("ai_credits"), 1)
+                    customer.recordUsage(Feature.Metered("ai_credits"), 1, idempotencyKey = "k")
                     writeDone.countDown()
                     read.await()
                     Thread.sleep(5)
@@ -240,14 +240,10 @@ class CacheTest {
     fun `the cache key is SHA-256 of the documented JSON array`() =
         runTest {
             val store = RecordingStore()
-            api
-                .server {
-                    cache = store
-                    asOf = Instant.parse("2026-07-01T09:30:00Z")
-                }.use { server ->
-                    api.replyFixture("check", 200, etag)
-                    server.customer("a/b").check("export_pdf")
-                }
+            api.server { cache = store }.use { server ->
+                api.replyFixture("check", 200, etag)
+                server.customer("a/b").check("export_pdf", asOf = Instant.parse("2026-07-01T19:30:00+10:00"))
+            }
             val url = api.baseUrl.trimEnd('/') + "/customers/a%2Fb/entitlements/export_pdf"
             val expected =
                 sha256("""["entitler-cache-v1","GET","$url","key","${sha256(SERVER_KEY)}","2026-07-01T09:30:00.000Z",null]""")
@@ -270,14 +266,10 @@ class CacheTest {
                 api.replyFixture("check", 200, *headers)
                 it.customer("u").check("export_pdf")
             }
-            api
-                .server {
-                    cache = store
-                    asOf = Instant.parse("2026-07-01T09:30:00Z")
-                }.use {
-                    api.replyFixture("check", 200, *headers)
-                    it.customer("u").check("export_pdf")
-                }
+            api.server { cache = store }.use {
+                api.replyFixture("check", 200, *headers)
+                it.customer("u").check("export_pdf", asOf = Instant.parse("2026-07-01T09:30:00Z"))
+            }
             api.server { cache = store }.use {
                 api.replyFixture("customer-pricing", 200, *headers)
                 it.customer("u").pricing(visitor = "v".repeat(20))
@@ -301,18 +293,15 @@ class CacheTest {
     @Test
     fun `a refreshed token starts new entries`() =
         runTest {
-            val store = RecordingStore()
             var exp = api.now / 1000 + 30
-            EntitlerClient({ customerToken(exp = exp++) }) {
-                api.setUp(this)
-                cache = store
-            }.use { client ->
+            EntitlerClient({ customerToken(exp = exp++) }) { api.setUp(this) }.use { client ->
                 repeat(2) { api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600") }
                 client.me.check("export_pdf")
                 api.now += 20_000
                 client.me.check("export_pdf")
                 assertEquals(2, api.server.requestCount)
-                assertEquals(2, store.entries.size)
+                assertNull(api.take().headers["If-None-Match"])
+                assertNull(api.take().headers["If-None-Match"])
             }
         }
 
@@ -514,7 +503,7 @@ class CacheTest {
         }
 
     @Test
-    fun `when the token provider fails, the previous token's entries answer stale`() =
+    fun `when the token provider fails, entries kept under the previous token are never answered`() =
         runTest {
             var calls = 0
             EntitlerClient({
@@ -530,7 +519,8 @@ class CacheTest {
                 api.replyFixture("check", 200, etag)
                 client.me.check("export_pdf")
                 api.now += 61_000
-                assertTrue(client.me.check("export_pdf").stale)
+                assertFailsWith<EntitlerTokenException> { client.me.check("export_pdf") }
+                assertFalse(client.me.isEntitled("export_pdf"))
                 assertTrue(api.errors.single() is EntitlerTokenException)
             }
         }
@@ -591,7 +581,7 @@ class CacheTest {
                         server
                             .customer(
                                 "v",
-                            ).withHold(Feature.Metered("ai_credits"), 1) { error("work") }
+                            ).withHold(Feature.Metered("ai_credits"), 1, idempotencyKey = "k") { error("work") }
                     }
                 }
         }

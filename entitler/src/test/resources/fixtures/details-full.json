@@ -60,7 +60,10 @@
     },
     "version": 1,
     "cohort": 2,
-    "period": "Monthly",
+    "period": {
+      "key": "monthly",
+      "label": "Monthly"
+    },
     "startedAt": "2026-09-18T21:30:19.974Z",
     "renewsAt": "2026-10-18T21:30:19.974Z",
     "billing": {
@@ -95,20 +98,6 @@
         }
       }
     ],
-    "override": {
-      "from": {
-        "id": "n_3",
-        "key": "starter",
-        "name": "Starter"
-      },
-      "period": "Monthly",
-      "billedBy": {
-        "provider": "stripe",
-        "connectionId": "cn_1"
-      },
-      "since": "2026-10-02T00:00:00.000Z",
-      "by": "admin@example.com"
-    },
     "pending": {
       "type": "move",
       "plan": {
@@ -153,7 +142,10 @@
         },
         "version": 1,
         "cohort": 2,
-        "period": "Monthly",
+        "period": {
+          "key": "monthly",
+          "label": "Monthly"
+        },
         "startedAt": "2026-09-18T21:30:19.974Z",
         "renewsAt": "2026-10-18T21:30:19.974Z",
         "billing": null,
@@ -178,7 +170,6 @@
             "movingTo": null
           }
         ],
-        "override": null,
         "pending": null
       }
     }
@@ -223,7 +214,8 @@
           "value": true
         }
       ],
-      "entitled": true
+      "entitled": true,
+      "upgrades": []
     },
     {
       "key": "priority_support",
@@ -239,7 +231,8 @@
           "value": true
         }
       ],
-      "entitled": true
+      "entitled": true,
+      "upgrades": []
     },
     {
       "key": "support_sla_hours",
@@ -255,7 +248,8 @@
           "value": 24
         }
       ],
-      "entitled": true
+      "entitled": true,
+      "upgrades": []
     },
     {
       "key": "ai_credits",
@@ -275,7 +269,8 @@
       "remaining": 300,
       "resetsAt": "2026-10-18T21:30:19.974Z",
       "entitled": true,
-      "held": 0
+      "held": 0,
+      "upgrades": []
     },
     {
       "key": "sso",
@@ -291,7 +286,8 @@
           "value": true
         }
       ],
-      "entitled": true
+      "entitled": true,
+      "upgrades": []
     },
     {
       "key": "ai_credits_pack",
@@ -321,7 +317,8 @@
       "used": 3,
       "held": 1,
       "remaining": "unlimited",
-      "resetsAt": null
+      "resetsAt": null,
+      "upgrades": []
     }
   ],
   "banked": {
@@ -333,44 +330,45 @@
         "id": "n034cZCEdkcfitBJnglELre",
         "key": "pro_basic",
         "name": "Pro basic",
-        "kind": "plan"
+        "kind": "plan",
+        "description": "",
+        "default": false
       },
       "product": {
         "key": "main",
         "name": "Main"
       },
-      "move": "move",
+      "move": "upgrade",
       "from": {
         "id": "n034cZCEdkcfitBL3jmQ6jy",
         "key": "pro",
         "name": "Pro"
       },
-      "direction": "down",
-      "mode": "self-serve",
-      "selfServe": true,
-      "disabledReason": null,
       "when": "end",
       "impact": [
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Priority support"
         },
         {
-          "kind": "Changes",
+          "kind": "changes",
           "text": "Support SLA from 24 to 48 hours"
         },
         {
-          "kind": "Changes",
+          "kind": "changes",
           "text": "AI credits from 300 to 200 credits"
         },
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Single sign-on"
         }
       ],
       "skus": [
         {
-          "period": "Monthly",
+          "period": {
+            "key": "monthly",
+            "label": "Monthly"
+          },
           "connector": "stripe",
           "ids": {
             "price": "price_1"
@@ -383,6 +381,14 @@
             "tax": "inclusive"
           }
         }
+      ],
+      "action": "buy",
+      "reason": null,
+      "periods": [
+        {
+          "key": "monthly",
+          "label": "Monthly"
+        }
       ]
     },
     {
@@ -390,88 +396,100 @@
         "id": "n034cZCEdkcfitBIKXtknBq",
         "key": "starter",
         "name": "Starter",
-        "kind": "plan"
+        "kind": "plan",
+        "description": "",
+        "default": false
       },
       "product": {
         "key": "main",
         "name": "Main"
       },
-      "move": "move",
+      "move": "upgrade",
       "from": {
         "id": "n034cZCEdkcfitBL3jmQ6jy",
         "key": "pro",
         "name": "Pro"
       },
-      "direction": "down",
-      "mode": "self-serve",
-      "selfServe": false,
-      "disabledReason": "Starter is no longer sold",
       "when": "end",
       "impact": [
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Priority support"
         },
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Support SLA"
         },
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "AI credits"
         },
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Single sign-on"
         }
       ],
-      "skus": []
+      "skus": [],
+      "action": "unavailable",
+      "reason": "Starter is no longer sold",
+      "periods": [
+        {
+          "key": "monthly",
+          "label": "Monthly"
+        }
+      ]
     },
     {
       "plan": {
         "id": "n034cZCEdkcfitBG6SqHAJH",
         "key": "free",
         "name": "Free",
-        "kind": "plan"
+        "kind": "plan",
+        "description": "",
+        "default": false
       },
       "product": {
         "key": "main",
         "name": "Main"
       },
-      "move": "move",
+      "move": "upgrade",
       "from": {
         "id": "n034cZCEdkcfitBL3jmQ6jy",
         "key": "pro",
         "name": "Pro"
       },
-      "direction": "down",
-      "mode": "self-serve",
-      "selfServe": true,
-      "disabledReason": null,
       "when": "end",
       "impact": [
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Export to PDF"
         },
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Priority support"
         },
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Support SLA"
         },
         {
-          "kind": "Changes",
+          "kind": "changes",
           "text": "AI credits from 300 to 20 credits"
         },
         {
-          "kind": "Loses",
+          "kind": "loses",
           "text": "Single sign-on"
         }
       ],
-      "skus": []
+      "skus": [],
+      "action": "buy",
+      "reason": null,
+      "periods": [
+        {
+          "key": "monthly",
+          "label": "Monthly"
+        }
+      ]
     }
   ],
   "grants": [
@@ -483,7 +501,8 @@
       "until": "2026-11-01T00:00:00.000Z",
       "revokedAt": null,
       "reason": "Pilot",
-      "by": "admin@example.com"
+      "by": "admin@example.com",
+      "actor": null
     }
   ],
   "usage": {
@@ -690,6 +709,5 @@
       "text": "Joined Pro cohort: Launch offer",
       "at": "2026-09-18T21:30:19.974Z"
     }
-  ],
-  "selfServe": false
+  ]
 }

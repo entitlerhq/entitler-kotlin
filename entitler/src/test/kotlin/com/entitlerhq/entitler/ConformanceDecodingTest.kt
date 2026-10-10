@@ -130,7 +130,7 @@ class ConformanceDecodingTest {
                                 customer.recordUsage(
                                     Feature.Metered(call.str("feature")!!),
                                     call["amount"]!!.jsonPrimitive.long,
-                                    idempotencyKey = call.str("idempotencyKey"),
+                                    idempotencyKey = call.str("idempotencyKey") ?: "conformance",
                                 )
                             }
 
@@ -212,20 +212,21 @@ class ConformanceDecodingTest {
         val skew = expected["clockSkewSeconds"]!!.jsonPrimitive.int
         val result =
             runCatching {
-                if (keys is JsonObject) {
-                    verifySnapshot(
-                        token,
-                        json.decodeFromJsonElement(SnapshotKeys.serializer(), keys),
-                        customer,
-                        environment,
-                        issuer,
-                        now,
-                        skew,
-                    )
-                } else {
-                    val list = json.decodeFromJsonElement(ListSerializer(SnapshotKey.serializer()), keys)
-                    verifySnapshot(token, list, customer, environment, issuer, now, skew)
-                }
+                val expectation =
+                    if (keys is JsonObject) {
+                        SnapshotExpectation(
+                            json.decodeFromJsonElement(SnapshotKeys.serializer(), keys),
+                            customer,
+                            environment,
+                            issuer,
+                            now,
+                            skew,
+                        )
+                    } else {
+                        val list = json.decodeFromJsonElement(ListSerializer(SnapshotKey.serializer()), keys)
+                        SnapshotExpectation(list, customer, environment, issuer, now, skew)
+                    }
+                verifySnapshot(token, expectation)
             }
         val outcome = case["outcome"]!!.jsonObject
         when (outcome.str("kind")) {

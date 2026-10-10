@@ -36,7 +36,8 @@
       "plan": "team",
       "name": "Team",
       "move": "upgrade",
-      "salesLed": false
+      "action": "buy",
+      "reason": null
     }
   ]
 }

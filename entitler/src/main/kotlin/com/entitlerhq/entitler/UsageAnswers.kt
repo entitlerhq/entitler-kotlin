@@ -41,6 +41,7 @@ import java.time.Instant
  * @property change The change the track follows, or null.
  * @property testers True on a track for testers and in a test environment.
  * @property experiment The customer's experiment arm, or null.
+ * @property replayed True when the call repeated an earlier one with the same key, so nothing changed.
  */
 @Serializable
 public data class UsageResult(
@@ -74,52 +75,25 @@ public data class UsageResult(
     val change: String? = null,
     val testers: Boolean,
     val experiment: Experiment? = null,
-)
-
-/**
- * A usage hold, read back.
- *
- * @property id The hold's id.
- * @property customer The customer's external id.
- * @property feature The feature's key.
- * @property amount The amount held.
- * @property state Open until settled, released or expired.
- * @property expiresAt When the hold expires.
- * @property settledAmount The amount it settled, or null.
- * @property usageId The report a settle recorded, or null.
- * @property createdAt When the hold was placed.
- */
-@Serializable
-public data class UsageHold(
-    val id: String,
-    val customer: String,
-    val feature: String,
-    val amount: Long,
-    val state: HoldState,
-    val expiresAt: Instant,
-    val settledAmount: Long? = null,
-    val usageId: String? = null,
-    val createdAt: Instant,
+    val replayed: Boolean = false,
 )
 
 /**
  * One usage event for [EntitlerServer.recordUsageBatch], always recorded in observe mode.
  *
- * Pass an [idempotencyKey] derived from your own unit of work, so a retry from another process is
- * recognised; otherwise the SDK generates one, which protects only its own retries.
- *
  * @property customer The customer's external id.
  * @property feature The metered feature.
  * @property amount The amount used, from 1.
+ * @property idempotencyKey The event's key, from your own unit of work (a message or job id), so a resend
+ *   from anywhere records the event once.
  * @property occurredAt When the usage happened, or null for now.
- * @property idempotencyKey The event's key, or null for a generated one.
  */
 public data class UsageBatchEvent(
     val customer: String,
     val feature: Feature.Metered,
     val amount: Long,
+    val idempotencyKey: String,
     val occurredAt: Instant? = null,
-    val idempotencyKey: String? = null,
 )
 
 /**
@@ -142,7 +116,8 @@ public data class UsageEventError(
  * @property id The report recorded, or the one a duplicate repeats.
  * @property late True when the event's period or window had closed.
  * @property error Why it was not recorded, or null.
- * @property idempotencyKey The event's key, the caller's or the one the SDK generated.
+ * @property idempotencyKey The event's key.
+ * @property replayed True when its request replayed an earlier one, so nothing changed.
  */
 @Serializable
 public data class UsageEventResult(
@@ -152,6 +127,7 @@ public data class UsageEventResult(
     val late: Boolean,
     val error: UsageEventError? = null,
     val idempotencyKey: String? = null,
+    val replayed: Boolean = false,
 )
 
 /**
@@ -168,6 +144,7 @@ public data class UsageEventsResult(
     val recorded: Int,
     val duplicates: Int,
     val errors: Int,
+    internal val replayed: Boolean = false,
 )
 
 /**

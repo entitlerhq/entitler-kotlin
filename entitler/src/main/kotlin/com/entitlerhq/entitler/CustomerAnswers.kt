@@ -14,6 +14,7 @@ import java.time.Instant
  * @property environmentId The environment's id.
  * @property createdAt When the customer was registered.
  * @property created True when this call registered them; false when they already were.
+ * @property replayed True when the call repeated an earlier one with the same key, so nothing changed.
  */
 @Serializable
 public data class RegisteredCustomer(
@@ -22,6 +23,7 @@ public data class RegisteredCustomer(
     val environmentId: String,
     val createdAt: Instant,
     val created: Boolean,
+    val replayed: Boolean = false,
 )
 
 /**
@@ -42,6 +44,7 @@ public data class RegisteredCustomer(
  * @property metadata Your app's metadata.
  * @property track Their track.
  * @property testCustomer True for a test customer.
+ * @property replayed True when the call repeated an earlier one with the same key, so nothing changed.
  */
 @Serializable
 public data class CustomerSummary(
@@ -60,6 +63,7 @@ public data class CustomerSummary(
     val metadata: Map<String, String>,
     val track: Track,
     val testCustomer: Boolean,
+    val replayed: Boolean = false,
 )
 
 /**
@@ -81,7 +85,7 @@ public data class CustomerPage(
 /**
  * How a purchase was made.
  *
- * @property money `real` or `test`.
+ * @property money Whether it was paid with real or test money.
  * @property channel The connection it was bought through, or null.
  * @property release The catalogue release, or null.
  * @property change The change, or null.
@@ -89,17 +93,17 @@ public data class CustomerPage(
  */
 @Serializable
 public data class Purchase(
-    val money: String,
+    val money: MoneyKind,
     val channel: Channel? = null,
     val release: Long? = null,
     val change: String? = null,
-    val arm: String? = null,
+    val arm: ExperimentArm? = null,
 )
 
 /**
  * The payment provider's billing period.
  *
- * @property provider The provider, `stripe`.
+ * @property provider The provider.
  * @property startsAt When the period started.
  * @property endsAt When it ends.
  * @property trialEndsAt When the trial ends, or null.
@@ -107,7 +111,7 @@ public data class Purchase(
  */
 @Serializable
 public data class ProviderPeriod(
-    val provider: String,
+    val provider: Provider,
     val startsAt: Instant,
     val endsAt: Instant,
     val trialEndsAt: Instant? = null,
@@ -137,52 +141,19 @@ public data class HeldAddOn(
 )
 
 /**
- * A change booked for the end of the period.
- *
- * @property type `move` or `cancel`.
- * @property plan For a move, the plan it moves to.
- * @property movingTo For a cancel, the plan it moves to, or null.
- */
-@Serializable
-public data class PendingChange(
-    val type: String,
-    val plan: PlanSummary? = null,
-    val movingTo: PlanSummary? = null,
-)
-
-/**
- * A plan the vendor set in Entitler only, while the provider bills another.
- *
- * @property from The plan the provider bills.
- * @property period The period.
- * @property billedBy The connection that bills it, or null.
- * @property since When the override started.
- * @property by Who set it.
- */
-@Serializable
-public data class PlanOverride(
-    val from: PlanSummary,
-    val period: String,
-    val billedBy: Channel? = null,
-    val since: Instant,
-    val by: String,
-)
-
-/**
  * A customer's subscription in one product.
  *
  * @property product The product.
  * @property plan The plan held.
  * @property version The version held.
  * @property cohort The cohort, or null.
- * @property period The billing period.
+ * @property period How often it is billed, or null for none.
  * @property startedAt When it started.
  * @property renewsAt When it renews.
  * @property billing The provider's billing period, or null.
  * @property addOns The add-ons held.
  * @property pending A change booked for the period's end, or null.
  * @property purchase How it was bought.
- * @property override A vendor override, or null.
  */
 @Serializable
 public data class Subscription(
@@ -190,14 +161,13 @@ public data class Subscription(
     val plan: PlanSummary,
     val version: Long,
     val cohort: Long? = null,
-    val period: String,
+    val period: PlanPeriod? = null,
     val startedAt: Instant,
     val renewsAt: Instant,
     val billing: ProviderPeriod? = null,
     val addOns: List<HeldAddOn>,
-    val pending: PendingChange? = null,
+    val pending: BookedChange? = null,
     val purchase: Purchase,
-    val override: PlanOverride? = null,
 )
 
 /**
@@ -224,7 +194,8 @@ public data class ProductSubscription(
  * @property until When it ends, or null.
  * @property revokedAt When it was revoked, or null.
  * @property reason Why it was given.
- * @property by Who gave it.
+ * @property by Who gave it: the key's or person's name.
+ * @property actor The person or system that decided, as the write named it, or null.
  */
 @Serializable
 public data class Grant(
@@ -236,6 +207,7 @@ public data class Grant(
     val revokedAt: Instant? = null,
     val reason: String,
     val by: String,
+    val actor: String? = null,
 )
 
 /**
@@ -253,7 +225,6 @@ public data class Activity(
 /**
  * A customer's details: their subscription, entitlements, grants and usage.
  *
- * Subscription changes answer this too, with [selfServe] set.
  *
  * @property customer The customer.
  * @property subscription Their subscription in the first product, or null.
@@ -268,7 +239,7 @@ public data class Activity(
  * @property activity What happened to them.
  * @property asOf The instant the answer is for.
  * @property environment The environment.
- * @property selfServe For a subscription change, whether the customer could have made it themselves; else null.
+ * @property replayed True when the call repeated an earlier one with the same key, so nothing changed.
  */
 @Serializable
 public data class CustomerDetail(
@@ -285,7 +256,7 @@ public data class CustomerDetail(
     val activity: List<Activity>,
     val asOf: Instant,
     val environment: Environment,
-    val selfServe: Boolean? = null,
+    val replayed: Boolean = false,
 )
 
 /**
@@ -335,6 +306,7 @@ public data class IssuedSnapshot(
  * @property track Their track now.
  * @property source Who put them on the track, or null for All customers.
  * @property previousTrackId The track they were on, or null.
+ * @property replayed True when the call repeated an earlier one with the same key, so nothing changed.
  */
 @Serializable
 public data class CustomerTrack(
@@ -342,6 +314,7 @@ public data class CustomerTrack(
     val track: Track,
     val source: TrackSource? = null,
     val previousTrackId: String? = null,
+    val replayed: Boolean = false,
 )
 
 /**
@@ -370,7 +343,7 @@ public data class BillingDrift(
 @Serializable
 public data class ProductBilling(
     val product: String? = null,
-    val status: String? = null,
+    val status: SubscriptionStatus? = null,
     val sku: OfferedSku? = null,
     val items: Long,
     val drift: BillingDrift? = null,
@@ -379,8 +352,8 @@ public data class ProductBilling(
 /**
  * A customer's billing at their payment provider.
  *
- * @property provider `stripe`, or null when no provider bills them.
- * @property status The provider subscription's status, such as `active`, or null.
+ * @property provider The provider that bills them, or null when none does.
+ * @property status The provider subscription's status, or null.
  * @property sku The SKU billed, or null.
  * @property items How many items the subscription holds.
  * @property drift A difference between the provider and Entitler, or null.
@@ -388,8 +361,8 @@ public data class ProductBilling(
  */
 @Serializable
 public data class CustomerBilling(
-    val provider: String? = null,
-    val status: String? = null,
+    val provider: Provider? = null,
+    val status: SubscriptionStatus? = null,
     val sku: OfferedSku? = null,
     val items: Long,
     val drift: BillingDrift? = null,
@@ -397,256 +370,121 @@ public data class CustomerBilling(
 )
 
 /**
- * A page at the payment provider: a checkout or the billing portal.
+ * A page at the payment provider, such as the billing portal.
  *
- * @property provider The provider, `stripe`.
  * @property url The page to send the customer to.
  */
 @Serializable
 public data class ProviderPage(
-    val provider: String,
     val url: String,
 )
 
 /**
- * A payment provider connection, as alerts name it.
+ * The answer to [Customer.syncBilling].
  *
- * @property id The connection's id.
- * @property name The connection's name.
- * @property provider `stripe`, `apple` or `google`.
+ * @property changed True when the provider's state moved the customer to another plan or quantity.
  */
 @Serializable
-public data class ProviderConnection(
-    val id: String,
-    val name: String,
-    val provider: String,
+public data class BillingSync(
+    val changed: Boolean,
 )
 
 /**
- * What a provider sold.
+ * A plan or add-on change, made or booked: the answer to `cancel`, `undoPendingChange`, `setPlan` and
+ * `setAddOn`, and the fields of a [SubscribeStep.Done].
  *
- * @property plan The plan's key.
- * @property version The plan's version, or null.
- * @property period The period.
- * @property kind `plan` or `addon`.
  * @property product The product's key, or null.
+ * @property plan The plan or add-on the change leaves the customer on, or null when none in that product.
+ * @property quantity An add-on's quantity after the change (0 when removed), or null for a plan.
+ * @property effective [Effective.Now], or [Effective.Renewal] at [at].
+ * @property at When it takes or took effect.
+ * @property until When the customer returns to the product's default plan, or null.
+ * @property changed False when nothing changed: nothing to cancel or undo, or a plan already held.
+ * @property replayed True when the call repeated an earlier one with the same key, so nothing changed.
  */
 @Serializable
-public data class ProviderSale(
-    val plan: String,
-    val version: Long? = null,
-    val period: String,
-    val kind: String,
+public data class PlanChange(
     val product: String? = null,
+    val plan: PlanSummary? = null,
+    val quantity: Long? = null,
+    val effective: Effective,
+    val at: Instant,
+    val until: Instant? = null,
+    val changed: Boolean,
+    val replayed: Boolean = false,
 )
 
 /**
- * An item of a provider subscription.
+ * A grant made or revoked: the answer to [ServerCustomer.grant] and [ServerCustomer.revokeGrant].
  *
- * @property id The item's id.
- * @property ids The provider's ids.
- * @property quantity The quantity.
- * @property sale What it sells, or null when unknown.
+ * @property grant The grant, so a support tool keeps its id.
+ * @property replayed True when the call repeated an earlier one with the same key, so nothing changed.
  */
 @Serializable
-public data class ProviderItem(
-    val id: String,
-    val ids: Map<String, String>,
-    val quantity: Long,
-    val sale: ProviderSale? = null,
+public data class GrantChange(
+    val grant: Grant,
+    val replayed: Boolean = false,
 )
 
 /**
- * The start and end of a provider subscription's period.
+ * The next step after [Customer.subscribe]. Handle every case with an exhaustive `when`:
  *
- * @property startsAt When it started.
- * @property endsAt When it ends.
+ * ```kotlin
+ * when (val step = me.subscribe("pro", period = "monthly", returnUrl = appLink)) {
+ *     is SubscribeStep.Done -> showPlan(step.change)
+ *     is SubscribeStep.Pay -> openCustomTab(step.url)
+ *     SubscribeStep.Confirming -> showPending()
+ *     is SubscribeStep.Manage -> openStoreSubscriptions(step.billedBy)
+ *     is SubscribeStep.Unknown -> showPending()
+ * }
+ * ```
  */
-@Serializable
-public data class ProviderSubscriptionPeriod(
-    val startsAt: Instant,
-    val endsAt: Instant,
-)
+@Serializable(with = SubscribeStepSerializer::class)
+public sealed interface SubscribeStep {
+    /**
+     * The change is made, or booked for renewal.
+     *
+     * @property change The change, with `effective` and `at`.
+     */
+    public data class Done(
+        val change: PlanChange,
+    ) : SubscribeStep
+
+    /**
+     * Send the customer to [url], the provider's page (Stripe Checkout, or a confirmation such as 3-D
+     * Secure). The plan changes once they pay.
+     *
+     * @property url The page to open.
+     */
+    public data class Pay(
+        val url: String,
+    ) : SubscribeStep
+
+    /** The provider is still confirming a payment, such as a bank debit; the plan changes when it succeeds. */
+    public data object Confirming : SubscribeStep
+
+    /**
+     * A store bills the product, so the customer changes it there.
+     *
+     * @property billedBy [Provider.Apple] or [Provider.Google].
+     */
+    public data class Manage(
+        val billedBy: Provider,
+    ) : SubscribeStep
+
+    /**
+     * A next step this version does not know.
+     *
+     * @property value The raw `next` the API sent.
+     */
+    public data class Unknown(
+        val value: String,
+    ) : SubscribeStep
+}
 
 /**
- * A subscription at the payment provider.
- *
- * @property id The subscription's id.
- * @property status The provider's status.
- * @property billing Whether it bills.
- * @property period Its period, or null.
- * @property trialEndsAt When its trial ends, or null.
- * @property cancelsAt When it cancels, or null.
- * @property items Its items.
- */
-@Serializable
-public data class ProviderSubscription(
-    val id: String,
-    val status: String,
-    val billing: Boolean,
-    val period: ProviderSubscriptionPeriod? = null,
-    val trialEndsAt: Instant? = null,
-    val cancelsAt: Instant? = null,
-    val items: List<ProviderItem>,
-)
-
-/**
- * An amount of money.
- *
- * @property value The amount in the currency's smallest unit.
- * @property currency The currency code.
- */
-@Serializable
-public data class Money(
-    val value: Long,
-    val currency: String,
-)
-
-/**
- * A one-time payment at the payment provider.
- *
- * @property id The payment's id.
- * @property ids The provider's ids.
- * @property quantity The quantity.
- * @property amount The amount, or null.
- * @property status `paid`, `refunded` or `partially_refunded`.
- * @property paidAt When it was paid.
- * @property sale What it bought, or null when unknown.
- */
-@Serializable
-public data class ProviderPayment(
-    val id: String,
-    val ids: Map<String, String>,
-    val quantity: Long,
-    val amount: Money? = null,
-    val status: String,
-    val paidAt: Instant,
-    val sale: ProviderSale? = null,
-)
-
-/**
- * What a payment provider holds for a customer.
- *
- * @property subscriptions Their subscriptions.
- * @property payments Their one-time payments.
- */
-@Serializable
-public data class ProviderState(
-    val subscriptions: List<ProviderSubscription>,
-    val payments: List<ProviderPayment>,
-)
-
-/**
- * A customer's state at one provider connection.
- *
- * @property connection The connection.
- * @property readAt When Entitler read it.
- * @property state What the provider holds.
- */
-@Serializable
-public data class ProviderAccount(
-    val connection: ProviderConnection,
-    val readAt: Instant,
-    val state: ProviderState,
-)
-
-/**
- * The facts behind an alert. Which are set depends on the alert's rule.
- *
- * @property customer The customer's external id, or null.
- * @property connection The connection's id.
- * @property provider `stripe`, `apple` or `google`.
- * @property product The product's key.
- * @property plans The plans involved.
- * @property plan The plan involved.
- * @property held The plan Entitler holds, or null.
- * @property planId The plan's id.
- * @property heldId The held plan's id, or null.
- * @property ids The provider's ids.
- * @property count A count.
- * @property boughtThrough Where it was bought.
- * @property refusal Why a payment was refused.
- * @property reason A reason.
- * @property providerCustomer The provider's customer id.
- */
-@Serializable
-public data class AlertFacts(
-    val customer: String? = null,
-    val connection: String,
-    val provider: String,
-    val product: String? = null,
-    val plans: List<String>? = null,
-    val plan: String? = null,
-    val held: String? = null,
-    val planId: String? = null,
-    val heldId: String? = null,
-    val ids: String? = null,
-    val count: Long? = null,
-    val boughtThrough: String? = null,
-    val refusal: String? = null,
-    val reason: String? = null,
-    val providerCustomer: String? = null,
-)
-
-/**
- * A customer named by an alert.
- *
- * @property externalId The customer's external id.
- * @property name The customer's name.
- */
-@Serializable
-public data class AlertCustomer(
-    val externalId: String,
-    val name: String,
-)
-
-/**
- * Something about a customer's billing that needs attention.
- *
- * @property id The alert's id.
- * @property rule The rule that raised it.
- * @property title Its title.
- * @property message What to do.
- * @property facts The facts behind it.
- * @property customer The customer, or null.
- * @property connection The connection.
- * @property openedAt When it opened.
- * @property seenAt When it was last seen.
- * @property resolvedAt When it was resolved, or null.
- * @property resolvedBy `provider` or `person`, or null.
- */
-@Serializable
-public data class Alert(
-    val id: String,
-    val rule: String,
-    val title: String,
-    val message: String,
-    val facts: AlertFacts,
-    val customer: AlertCustomer? = null,
-    val connection: ProviderConnection,
-    val openedAt: Instant,
-    val seenAt: Instant,
-    val resolvedAt: Instant? = null,
-    val resolvedBy: String? = null,
-)
-
-/**
- * A customer's state at every payment provider connection, and its alerts.
- *
- * @property connections Their state at each connection.
- * @property alerts Alerts about them.
- * @property linked The connections linked to them, when the answer has them.
- */
-@Serializable
-public data class CustomerProviders(
-    val connections: List<ProviderAccount>,
-    val alerts: List<Alert>,
-    val linked: List<String>? = null,
-)
-
-/**
- * What a billing call subscribes to or adds: a plan by its key or id, or a SKU the customer bought,
- * which names its own period. Billing methods also take a plan key as a plain `String`.
+ * What [ServerCustomer.setPlan] moves the customer to: a plan by its key or id, or a SKU the customer
+ * bought, which names its own period. `setPlan` also takes a plan key as a plain `String`.
  */
 public sealed interface PlanChoice
 
@@ -668,13 +506,41 @@ public data class Plan(
  * A SKU the customer bought at a payment provider, which names its own period.
  *
  * ```kotlin
- * customer.subscribe(Sku("apple", mapOf("productId" to "pro.monthly")))
+ * customer.setPlan(Sku("apple", mapOf("productId" to "pro.monthly")), until = expiry, idempotencyKey = transaction.id)
  * ```
  *
- * @property connector The connector, such as `stripe` or `apple`.
+ * @property connector The connector, such as `stripe`, `apple` or `google`.
  * @property ids The provider's ids for the SKU.
  */
 public data class Sku(
     val connector: String,
     val ids: Map<String, String>,
 ) : PlanChoice
+
+internal object SubscribeStepSerializer : kotlinx.serialization.KSerializer<SubscribeStep> {
+    override val descriptor =
+        kotlinx.serialization.descriptors.buildClassSerialDescriptor("com.entitlerhq.entitler.SubscribeStep")
+
+    override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): SubscribeStep {
+        val input = decoder as kotlinx.serialization.json.JsonDecoder
+        val body = input.decodeJsonElement() as? kotlinx.serialization.json.JsonObject
+        val next = body?.string("next") ?: throw kotlinx.serialization.SerializationException("Expected a step with next.")
+        return when (next) {
+            "done" -> SubscribeStep.Done(input.json.decodeFromJsonElement(PlanChange.serializer(), checked(PlanChange.serializer(), body)))
+            "pay" -> SubscribeStep.Pay(body.string("url") ?: throw kotlinx.serialization.SerializationException("Expected url."))
+            "confirming" -> SubscribeStep.Confirming
+            "manage" -> SubscribeStep.Manage(input.json.decodeFromJsonElement(ProviderSerializer, checkNotNull(body["billedBy"])))
+            else -> SubscribeStep.Unknown(next)
+        }
+    }
+
+    private fun checked(
+        serializer: kotlinx.serialization.KSerializer<*>,
+        body: kotlinx.serialization.json.JsonObject,
+    ) = body.also { checkShape(serializer.descriptor, it) }
+
+    override fun serialize(
+        encoder: kotlinx.serialization.encoding.Encoder,
+        value: SubscribeStep,
+    ): Unit = throw kotlinx.serialization.SerializationException("Steps are only decoded.")
+}

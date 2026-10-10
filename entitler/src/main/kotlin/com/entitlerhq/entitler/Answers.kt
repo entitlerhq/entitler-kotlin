@@ -46,19 +46,35 @@ public data class Experiment(
 )
 
 /**
- * A plan the customer could move to for more of a feature.
+ * A plan that would entitle the customer to a feature: the same rule as the paywall's [MoveOption], so
+ * an "Upgrade" button and the paywall agree.
  *
  * @property plan The plan's key.
  * @property name The plan's name.
- * @property move The move.
- * @property salesLed True when only the vendor can make the move.
+ * @property move The kind of move.
+ * @property action [MoveAction.Buy] when the customer can make the move alone, [MoveAction.Contact] for a
+ *   sales-led move, or [MoveAction.Unavailable] with a [reason].
+ * @property reason Why the move is unavailable, a sentence for the developer, or null.
  */
 @Serializable
 public data class Upgrade(
     val plan: String,
     val name: String,
-    val move: UpgradeMove,
-    val salesLed: Boolean,
+    val move: Move,
+    val action: MoveAction,
+    val reason: String? = null,
+)
+
+/**
+ * A billing period, named by its stable [key] (sent back in writes) and its display [label].
+ *
+ * @property key The key to send in writes, such as `monthly`.
+ * @property label The label to show, such as Monthly.
+ */
+@Serializable
+public data class PlanPeriod(
+    val key: String,
+    val label: String,
 )
 
 /**
@@ -195,6 +211,8 @@ public data class MeteredCheck(
  * @property held For a metered feature, how much open holds reserve.
  * @property remaining For a metered feature, how much remains.
  * @property resetsAt For a metered feature, when the meter starts again, or null.
+ * @property upgrades The plans that would entitle the customer, empty when entitled (and in a snapshot,
+ *   since offline gating never offers a purchase).
  */
 @Serializable
 public data class Entitlement(
@@ -207,6 +225,7 @@ public data class Entitlement(
     val held: Long? = null,
     val remaining: Limit? = null,
     val resetsAt: Instant? = null,
+    val upgrades: List<Upgrade> = emptyList(),
 )
 
 /**
@@ -293,6 +312,11 @@ public data class ProductSummary(
  * @property product The plan's product, or null.
  * @property version The version held, or null.
  * @property byDefault True when the customer holds no plan yet and reads as the default plan.
+ * @property period How often it is billed, or null when Entitler sets no period.
+ * @property renewsAt When it renews, or null.
+ * @property pending The change booked for [renewsAt], or null.
+ * @property billedBy Who bills it: [Provider.Stripe], or a store whose own page manages it
+ *   ([Provider.Apple], [Provider.Google]); null when nothing bills it.
  */
 @Serializable
 public data class HeldPlan(
@@ -300,6 +324,24 @@ public data class HeldPlan(
     val product: ProductSummary? = null,
     val version: Long? = null,
     val byDefault: Boolean,
+    val period: PlanPeriod? = null,
+    val renewsAt: Instant? = null,
+    val pending: BookedChange? = null,
+    val billedBy: Provider? = null,
+)
+
+/**
+ * A change booked for a held plan's renewal.
+ *
+ * @property type [BookedChangeType.Move] to [plan], or [BookedChangeType.Cancel] moving to [movingTo].
+ * @property plan For a move, the plan it moves to.
+ * @property movingTo For a cancel, the default plan the customer moves to, or null for none.
+ */
+@Serializable
+public data class BookedChange(
+    val type: BookedChangeType,
+    val plan: PlanSummary? = null,
+    val movingTo: PlanSummary? = null,
 )
 
 /**
@@ -335,47 +377,67 @@ public data class ProviderPrice(
 /**
  * A SKU a payment provider sells a plan's period as.
  *
- * @property period The plan's period.
- * @property connector The connector, such as `stripe`.
+ * @property period The period it sells, or null for none.
+ * @property connector Where it is bought: `stripe`, `apple`, `google`, or another connector.
  * @property ids The provider's ids for the SKU.
  * @property price The provider's price, or null when unknown.
  */
 @Serializable
 public data class OfferedSku(
-    val period: String,
+    val period: PlanPeriod? = null,
     val connector: String,
     val ids: Map<String, String>,
     val price: ProviderPrice? = null,
 )
 
 /**
- * A plan the customer can move to.
+ * A plan the customer can move to, as a paywall or billing page shows it: [action] decides the button,
+ * and [skus] are the store products.
  *
  * @property plan The plan to move to.
  * @property product The plan's product, or null.
- * @property move The kind of move.
  * @property from The plan it moves from, or null.
- * @property direction Which way the move goes.
- * @property mode [Selling.SelfServe] when the customer may make the move alone, [Selling.SalesLed] when only the vendor may.
- * @property selfServe Whether the customer may make it themselves.
- * @property disabledReason Why the move is not available now, or null.
+ * @property move The kind of move.
+ * @property action [MoveAction.Buy] when the customer can make the move alone, [MoveAction.Contact] for a
+ *   sales-led move only the company can make, or [MoveAction.Unavailable] with a [reason].
+ * @property reason Why the move is unavailable, a sentence for the developer, or null.
  * @property timing When it takes effect (the API's `when`).
- * @property impact What it changes.
- * @property skus The SKUs that sell it.
+ * @property periods The plan's billing periods, from the catalogue.
+ * @property impact What it changes, line by line.
+ * @property skus The products that sell it on Stripe, the App Store and Google Play.
  */
 @Serializable
 public data class MoveOption(
-    val plan: PlanSummary,
+    val plan: OfferedPlan,
     val product: ProductSummary? = null,
-    val move: PlanMove,
     val from: PlanSummary? = null,
-    val direction: MoveDirection,
-    val mode: Selling,
-    val selfServe: Boolean,
-    val disabledReason: String? = null,
-    @SerialName("when") val timing: MoveTiming,
+    val move: Move,
+    val action: MoveAction,
+    val reason: String? = null,
+    @SerialName("when") val timing: Timing,
+    val periods: List<PlanPeriod>,
     val impact: List<Impact>,
     val skus: List<OfferedSku>,
+)
+
+/**
+ * The plan a [MoveOption] moves to.
+ *
+ * @property id The plan's public id.
+ * @property key The plan's key.
+ * @property name The plan's name.
+ * @property kind Whether it is a base plan or an add-on.
+ * @property description The plan's description.
+ * @property default True for a product's default plan.
+ */
+@Serializable
+public data class OfferedPlan(
+    val id: String,
+    val key: String,
+    val name: String,
+    val kind: PlanKind,
+    val description: String,
+    val default: Boolean,
 )
 
 /**
@@ -383,7 +445,7 @@ public data class MoveOption(
  *
  * @property customer The customer's external id.
  * @property held The plans they hold.
- * @property options The plans they can move to, each with its direction, mode, impact and SKUs.
+ * @property options The plans they can move to, each with its action, periods, impact and SKUs.
  * @property asOf The instant the answer is for.
  * @property environment The environment.
  * @property track The customer's track.
@@ -471,12 +533,12 @@ public data class ListingChannel(
 /**
  * A plan period's listings.
  *
- * @property period The period's label.
+ * @property period The period, or null for a one-time plan.
  * @property channels Where it is listed.
  */
 @Serializable
 public data class PeriodListing(
-    val period: String,
+    val period: PlanPeriod? = null,
     val channels: List<ListingChannel>,
 )
 

@@ -49,7 +49,10 @@
       },
       "listings": [
         {
-          "period": "Monthly",
+          "period": {
+            "key": "monthly",
+            "label": "Monthly"
+          },
           "channels": []
         }
       ]
@@ -80,7 +83,10 @@
       },
       "listings": [
         {
-          "period": "Monthly",
+          "period": {
+            "key": "monthly",
+            "label": "Monthly"
+          },
           "channels": [
             {
               "channel": {
@@ -137,11 +143,17 @@
       },
       "listings": [
         {
-          "period": "Monthly",
+          "period": {
+            "key": "monthly",
+            "label": "Monthly"
+          },
           "channels": []
         },
         {
-          "period": "Yearly",
+          "period": {
+            "key": "yearly",
+            "label": "Yearly"
+          },
           "channels": []
         }
       ]
@@ -177,11 +189,17 @@
       },
       "listings": [
         {
-          "period": "Monthly",
+          "period": {
+            "key": "monthly",
+            "label": "Monthly"
+          },
           "channels": []
         },
         {
-          "period": "Yearly",
+          "period": {
+            "key": "yearly",
+            "label": "Yearly"
+          },
           "channels": []
         }
       ]
@@ -218,11 +236,17 @@
       },
       "listings": [
         {
-          "period": "Monthly",
+          "period": {
+            "key": "monthly",
+            "label": "Monthly"
+          },
           "channels": []
         },
         {
-          "period": "Yearly",
+          "period": {
+            "key": "yearly",
+            "label": "Yearly"
+          },
           "channels": []
         }
       ]

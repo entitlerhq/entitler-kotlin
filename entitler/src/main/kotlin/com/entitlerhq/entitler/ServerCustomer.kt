@@ -7,23 +7,91 @@ import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.time.Instant
 import kotlin.time.Duration
 
 /**
- * A customer on the server: a [Customer] plus registration, details, tokens, tracks, self-serve
- * billing, and the vendor's actions under [vendor].
+ * A customer on the server: a [Customer] plus registration, details, tokens, tracks, reads at another
+ * instant, and the company's decisions.
  *
- * Billing methods act as the customer choosing for themselves, so they send `selfServe: true`: the
- * change must be on a self-serve path among the plans the customer can move to, or the API answers
- * `403 not_self_serve`. Changes you make on the customer's behalf live under [vendor]. A period is named
- * by its label exactly as pricing shows it, such as `Monthly`.
+ * The company's decisions ([setPlan], [setAddOn], [grant], [revokeGrant], [adjustMeter], [cancelUsage])
+ * are changes you make for a deal, a support ticket or a verified store purchase, under no self-serve
+ * rules. Each takes `actor` (1 to 200 characters naming the person or system that decided, such as a
+ * support agent's id or `hubspot`) and a `reason` of at most 200 characters, which the customer's
+ * activity shows beside the key's name. Take each write's `idempotencyKey` from the event that caused it
+ * (the webhook delivery, the ticket action), never from the object it changes.
  */
 public interface ServerCustomer : Customer {
     /** The id your app uses for the customer. */
     override val id: String
 
-    /** Changes the vendor makes on the customer's behalf, apart so they are never made by accident. */
-    public val vendor: VendorActions
+    /**
+     * Checks a metered feature as it reads at [asOf], through the cache under its own key. Needs the
+     * organisation's `as_of` capability (`409 capability_required` otherwise).
+     */
+    public suspend fun check(
+        feature: Feature.Metered,
+        asOf: Instant,
+        revalidate: Boolean = false,
+        timeout: Duration? = null,
+    ): MeteredCheck
+
+    /** Checks a feature as it reads at [asOf]; see the metered overload. */
+    public suspend fun check(
+        feature: Feature,
+        asOf: Instant,
+        revalidate: Boolean = false,
+        timeout: Duration? = null,
+    ): Check
+
+    /** Checks the feature with [key] as it reads at [asOf]; see the metered overload. */
+    public suspend fun check(
+        key: String,
+        asOf: Instant,
+        revalidate: Boolean = false,
+        timeout: Duration? = null,
+    ): Check
+
+    /** Whether the customer is entitled to [feature] at [asOf], answering [default] when the check fails. */
+    public suspend fun isEntitled(
+        feature: Feature,
+        asOf: Instant,
+        default: Boolean = false,
+        revalidate: Boolean = false,
+    ): Boolean
+
+    /** Whether the customer is entitled to the feature with [key] at [asOf], answering [default] when the check fails. */
+    public suspend fun isEntitled(
+        key: String,
+        asOf: Instant,
+        default: Boolean = false,
+        revalidate: Boolean = false,
+    ): Boolean
+
+    /**
+     * The customer's entitlements as they read at [asOf]. As-of shows the effects of time on the plans,
+     * grants and meters in place (renewals, booked moves, grant expiries, meter resets), never an unreleased
+     * change: to preview one, put a test customer on a track for testers.
+     */
+    public suspend fun entitlements(
+        asOf: Instant,
+        revalidate: Boolean = false,
+        timeout: Duration? = null,
+    ): Entitlements
+
+    /** The customer's plans as they read at [asOf]. */
+    public suspend fun plans(
+        asOf: Instant,
+        revalidate: Boolean = false,
+        timeout: Duration? = null,
+    ): CustomerPlans
+
+    /** The customer's meters and usage log as they read at [asOf]. */
+    public suspend fun usage(
+        asOf: Instant,
+        cursor: String? = null,
+        timeout: Duration? = null,
+    ): CustomerUsage
 
     /**
      * Registers the customer, or stores the details given for one who exists, `PUT /customers/{id}`.
@@ -42,9 +110,14 @@ public interface ServerCustomer : Customer {
         timeout: Duration? = null,
     ): RegisteredCustomer
 
-    /** The customer's details, with a page of their usage log from [cursor], `GET /customers/{id}`. */
+    /**
+     * The customer's details, with a page of their usage log from [cursor], `GET /customers/{id}`.
+     *
+     * @param asOf Read them as they stand at that instant.
+     */
     public suspend fun details(
         cursor: String? = null,
+        asOf: Instant? = null,
         timeout: Duration? = null,
     ): CustomerDetail
 
@@ -58,280 +131,156 @@ public interface ServerCustomer : Customer {
     ): CustomerSummary
 
     /**
-     * Deletes the customer, `DELETE /customers/{id}`. With [erase], their personal data is erased too, and
-     * the answer's `externalId` reads `erased_<uuid>` rather than the id your app used.
+     * Erases the customer, `DELETE /customers/{id}?erase=true`: the account deletion app stores require. It
+     * ends a Stripe subscription now, then erases their details, usage and events. Store subscriptions are
+     * invisible to Entitler, so cancel them through Apple or Google first. Erasing twice is safe.
      */
-    public suspend fun delete(
-        erase: Boolean = false,
+    public suspend fun erase(
         idempotencyKey: String? = null,
         timeout: Duration? = null,
-    ): CustomerSummary
+    )
 
     /**
      * Mints a customer token for an in-app client, `POST /customers/{id}/tokens`. Needs `tokens:mint`.
+     *
+     * Without [scopes] it holds `entitlements:read` only. Ask for [Scope.UsageWrite] only when the app
+     * records usage itself, and for [Scope.BillingSelf] only for people who may buy for the customer (a
+     * workspace's owners, not every member).
      *
      * @param ttl How long it lasts, in whole seconds (rounded up) from 60 to 3,600; an hour by default.
      */
     public suspend fun token(
         scopes: List<Scope>? = null,
         ttl: Duration? = null,
-        idempotencyKey: String? = null,
         timeout: Duration? = null,
     ): IssuedCustomerToken
 
-    /** Moves the customer to the track with [trackId], or back to All customers with null, `PUT /customers/{id}/track`. */
+    /**
+     * Moves the customer to the track named [track], the same in every environment, or back to All
+     * customers with null, `PUT /customers/{id}/track`. Needs `tracks:assign`, which the server key preset
+     * lacks.
+     */
     public suspend fun setTrack(
-        trackId: String?,
+        track: String?,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
     ): CustomerTrack
 
-    /** Subscribes the customer to [plan], by key or id, self-serve, `POST /customers/{id}/subscription`. */
-    public suspend fun subscribe(
-        plan: String,
-        period: String? = null,
-        timing: ChangeTiming? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Subscribes the customer to a plan or a SKU they bought (which names its own period), self-serve. */
-    public suspend fun subscribe(
-        choice: PlanChoice,
-        period: String? = null,
-        timing: ChangeTiming? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Starts a self-serve checkout for [plan], `POST /customers/{id}/checkout`: send the customer to its URL. */
-    public suspend fun checkout(
-        plan: String,
-        successUrl: String,
-        cancelUrl: String,
-        period: String? = null,
-        connection: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): ProviderPage
-
-    /** Starts a self-serve checkout for a plan or a SKU. */
-    public suspend fun checkout(
-        choice: PlanChoice,
-        successUrl: String,
-        cancelUrl: String,
-        period: String? = null,
-        connection: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): ProviderPage
-
-    /** Cancels the subscription, `DELETE /customers/{id}/subscription`. */
-    public suspend fun cancel(
-        timing: ChangeTiming? = null,
-        product: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Undoes a change booked for the period's end, `DELETE /customers/{id}/subscription/pending`. */
-    public suspend fun undoPendingChange(
-        product: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Adds the add-on [plan], self-serve, `POST /customers/{id}/subscription/add-ons`. */
-    public suspend fun addAddOn(
-        plan: String,
-        quantity: Int? = null,
-        replaces: String? = null,
-        timing: ChangeTiming? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Adds an add-on, or the add-on a SKU they bought sells, self-serve. */
-    public suspend fun addAddOn(
-        choice: PlanChoice,
-        quantity: Int? = null,
-        replaces: String? = null,
-        timing: ChangeTiming? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Changes how many of the add-on [plan] the customer holds, self-serve. */
-    public suspend fun setAddOnQuantity(
-        plan: String,
-        quantity: Int,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Removes the add-on [plan], `DELETE /customers/{id}/subscription/add-ons/{plan}`. */
-    public suspend fun removeAddOn(
-        plan: String,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Undoes an add-on change booked for the period's end. */
-    public suspend fun undoAddOnChange(
-        plan: String,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** The customer's billing at their payment provider, `GET /customers/{id}/billing`. */
+    /**
+     * The payment provider's view of the customer (status, the SKU it bills, drift), `GET
+     * /customers/{id}/billing`, for support tools. Billing pages read [plans].
+     */
     public suspend fun billing(timeout: Duration? = null): CustomerBilling
 
-    /** Opens the payment provider's billing portal, `POST /customers/{id}/billing-portal`: send the customer to its URL. */
-    public suspend fun billingPortal(
-        returnUrl: String,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): ProviderPage
-
-    /** The customer's state at every payment provider connection, `GET /customers/{id}/providers`. */
-    public suspend fun providers(timeout: Duration? = null): CustomerProviders
-}
-
-/**
- * Changes the vendor makes on a customer's behalf. The subscription and add-on methods send
- * `selfServe: false`, so the vendor may move the customer anywhere, sales-led plans included.
- */
-public interface VendorActions {
-    /** Subscribes the customer to [plan], anywhere in the catalogue. */
-    public suspend fun subscribe(
-        plan: String,
-        period: String? = null,
-        timing: ChangeTiming? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Subscribes the customer to a plan or a SKU, anywhere in the catalogue. */
-    public suspend fun subscribe(
-        choice: PlanChoice,
-        period: String? = null,
-        timing: ChangeTiming? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Moves the customer to [plan] in Entitler only, while the payment provider keeps billing the plan they held. */
-    public suspend fun override(
-        plan: String,
-        period: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Ends an override, `DELETE /customers/{id}/subscription/override`. */
-    public suspend fun undoOverride(
-        product: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Starts a checkout for [plan], anywhere in the catalogue. */
-    public suspend fun checkout(
-        plan: String,
-        successUrl: String,
-        cancelUrl: String,
-        period: String? = null,
-        connection: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): ProviderPage
-
-    /** Starts a checkout for a plan or a SKU, anywhere in the catalogue. */
-    public suspend fun checkout(
-        choice: PlanChoice,
-        successUrl: String,
-        cancelUrl: String,
-        period: String? = null,
-        connection: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): ProviderPage
-
-    /** Adds the add-on [plan], anywhere in the catalogue. */
-    public suspend fun addAddOn(
-        plan: String,
-        quantity: Int? = null,
-        replaces: String? = null,
-        timing: ChangeTiming? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Adds an add-on, or the add-on a SKU sells, anywhere in the catalogue. */
-    public suspend fun addAddOn(
-        choice: PlanChoice,
-        quantity: Int? = null,
-        replaces: String? = null,
-        timing: ChangeTiming? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Changes how many of the add-on [plan] the customer holds. */
-    public suspend fun setAddOnQuantity(
-        plan: String,
-        quantity: Int,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
     /**
-     * Grants [feature] to the customer, `POST /customers/{id}/grants`.
+     * Moves the customer to [plan], by key or id, as the company decides, `PUT /customers/{id}/plan`, under no
+     * self-serve rules. The plan they already hold, with the same period, billing and [until], changes
+     * nothing and answers `changed` false.
      *
      * ```kotlin
-     * customer.vendor.grant(Features.sso, days = 30, reason = "Trial for the pilot")
+     * customer.setPlan("enterprise", period = "yearly", billing = PlanBilling.End, actor = "hubspot", idempotencyKey = deal.eventId)
      * ```
      *
-     * @param value The value to grant: an amount from 0 to 999,999,999, or unlimited; leave it out for an on/off feature.
-     * @param days How long it lasts, 0 to 3,650; leave it out, or pass 0, for no end.
+     * @param period The period, by its key, such as `yearly`.
+     * @param timing [Timing.Now] or [Timing.End] (at renewal); the project's policy when null.
+     * @param billing [PlanBilling.Provider] (the API's default), [PlanBilling.Keep] or [PlanBilling.End].
+     * @param until When the customer returns to the product's default plan, unless a later change moves them.
+     * @param register Register the customer first if they are not registered yet.
+     */
+    public suspend fun setPlan(
+        plan: String,
+        period: String? = null,
+        timing: Timing? = null,
+        billing: PlanBilling? = null,
+        until: Instant? = null,
+        register: Boolean = false,
+        actor: String? = null,
+        reason: String? = null,
+        idempotencyKey: String? = null,
+        timeout: Duration? = null,
+    ): PlanChange
+
+    /**
+     * Moves the customer to a plan or to a SKU they bought, which names its own period. Record a store
+     * purchase only from your server, after verifying it with Apple or Google, with [until] the
+     * transaction's expiry, and again at each renewal.
+     */
+    public suspend fun setPlan(
+        choice: PlanChoice,
+        period: String? = null,
+        timing: Timing? = null,
+        billing: PlanBilling? = null,
+        until: Instant? = null,
+        register: Boolean = false,
+        actor: String? = null,
+        reason: String? = null,
+        idempotencyKey: String? = null,
+        timeout: Duration? = null,
+    ): PlanChange
+
+    /**
+     * Sets the quantity of the add-on [addOn], `PUT /customers/{id}/add-ons/{addOn}`: adds it, sets its
+     * quantity, or removes it at 0.
+     *
+     * @param quantity From 0 to 10,000.
+     */
+    public suspend fun setAddOn(
+        addOn: String,
+        quantity: Long,
+        timing: Timing? = null,
+        actor: String? = null,
+        reason: String? = null,
+        idempotencyKey: String? = null,
+        timeout: Duration? = null,
+    ): PlanChange
+
+    /**
+     * Grants the customer [feature], `POST /customers/{id}/grants`, answering the grant made so a support
+     * tool keeps its id.
+     *
+     * @param value An amount from 0 to 999,999,999 or [FeatureValue.Unlimited]; null for an on/off feature.
+     * @param days How long it lasts, from 0 to 3,650; 0 or null for no end.
      */
     public suspend fun grant(
         feature: Feature,
         value: FeatureValue? = null,
         days: Int? = null,
+        actor: String? = null,
         reason: String? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
-    ): CustomerDetail
+    ): GrantChange
 
-    /** Grants the feature with [key], as `grant(Feature)`. */
-    public suspend fun grant(
-        key: String,
-        value: FeatureValue? = null,
-        days: Int? = null,
-        reason: String? = null,
-        idempotencyKey: String? = null,
-        timeout: Duration? = null,
-    ): CustomerDetail
-
-    /** Revokes a grant, `DELETE /customers/{id}/grants/{grantId}`. */
+    /** Revokes a grant, `DELETE /customers/{id}/grants/{grantId}`, answering the revoked grant. */
     public suspend fun revokeGrant(
         grantId: String,
+        actor: String? = null,
+        reason: String? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
-    ): CustomerDetail
+    ): GrantChange
 
-    /** Sets how much of [feature] the customer has used this period, `PUT /customers/{id}/meters/{feature}`. */
-    public suspend fun setMeter(
+    /**
+     * Moves the meter of [feature], `POST /customers/{id}/meters/{feature}/adjustments`: by [by] (`-500` gives
+     * back 500 credits without racing new usage) or to [to]. Pass exactly one. The meter never goes below 0.
+     *
+     * @param idempotencyKey The adjustment's key, such as the support ticket action's id.
+     */
+    public suspend fun adjustMeter(
         feature: Feature.Metered,
-        used: Long,
-        idempotencyKey: String? = null,
+        idempotencyKey: String,
+        by: Long? = null,
+        to: Long? = null,
+        actor: String? = null,
+        reason: String? = null,
         timeout: Duration? = null,
     ): UsageResult
 
     /** Takes a recorded usage report off the meter, as a correction, `DELETE /customers/{id}/usage/{usageId}`. */
     public suspend fun cancelUsage(
         usageId: String,
+        actor: String? = null,
+        reason: String? = null,
         idempotencyKey: String? = null,
         timeout: Duration? = null,
     ): UsageResult
@@ -342,7 +291,61 @@ internal class ServerCustomerImpl(
     override val id: String,
 ) : CustomerImpl(engine, id, id),
     ServerCustomer {
-    override val vendor: VendorActions = Vendor()
+    override suspend fun check(
+        feature: Feature.Metered,
+        asOf: Instant,
+        revalidate: Boolean,
+        timeout: Duration?,
+    ): MeteredCheck = meteredCheck(feature, revalidate, timeout, asOfOf(asOf))
+
+    override suspend fun check(
+        feature: Feature,
+        asOf: Instant,
+        revalidate: Boolean,
+        timeout: Duration?,
+    ): Check = check(feature.key, revalidate, timeout, asOfOf(asOf))
+
+    override suspend fun check(
+        key: String,
+        asOf: Instant,
+        revalidate: Boolean,
+        timeout: Duration?,
+    ): Check = check(key, revalidate, timeout, asOfOf(asOf))
+
+    override suspend fun isEntitled(
+        feature: Feature,
+        asOf: Instant,
+        default: Boolean,
+        revalidate: Boolean,
+    ): Boolean = isEntitled(feature.key, default, revalidate, asOfOf(asOf))
+
+    override suspend fun isEntitled(
+        key: String,
+        asOf: Instant,
+        default: Boolean,
+        revalidate: Boolean,
+    ): Boolean = isEntitled(key, default, revalidate, asOfOf(asOf))
+
+    override suspend fun entitlements(
+        asOf: Instant,
+        revalidate: Boolean,
+        timeout: Duration?,
+    ): Entitlements = cachedRead("/entitlements", Entitlements.serializer(), revalidate, timeout, asOf = asOfOf(asOf))
+
+    override suspend fun plans(
+        asOf: Instant,
+        revalidate: Boolean,
+        timeout: Duration?,
+    ): CustomerPlans = cachedRead("/plans", CustomerPlans.serializer(), revalidate, timeout, asOf = asOfOf(asOf))
+
+    override suspend fun usage(
+        asOf: Instant,
+        cursor: String?,
+        timeout: Duration?,
+    ): CustomerUsage {
+        val instant = asOfOf(asOf)
+        return read("/usage", CustomerUsage.serializer(), timeout, listOfNotNull(cursor?.let { "cursor" to it }), instant)
+    }
 
     override suspend fun register(
         name: String?,
@@ -359,17 +362,19 @@ internal class ServerCustomerImpl(
             RegisteredCustomer.serializer(),
             idempotencyKey,
             timeout,
-            details.takeIf {
-                it.isNotEmpty()
-            },
+            details.takeIf { it.isNotEmpty() },
             visitor = checkVisitor(visitor),
         )
     }
 
     override suspend fun details(
         cursor: String?,
+        asOf: Instant?,
         timeout: Duration?,
-    ): CustomerDetail = read("", CustomerDetail.serializer(), timeout, listOfNotNull(cursor?.let { "cursor" to it }))
+    ): CustomerDetail {
+        val instant = asOf?.let(::asOfOf)
+        return read("", CustomerDetail.serializer(), timeout, listOfNotNull(cursor?.let { "cursor" to it }), instant)
+    }
 
     override suspend fun update(
         name: String?,
@@ -379,24 +384,20 @@ internal class ServerCustomerImpl(
         timeout: Duration?,
     ): CustomerSummary = write("PATCH", "", CustomerSummary.serializer(), idempotencyKey, timeout, detailsJson(name, email, metadata))
 
-    override suspend fun delete(
-        erase: Boolean,
+    override suspend fun erase(
         idempotencyKey: String?,
         timeout: Duration?,
-    ): CustomerSummary =
-        write(
-            "DELETE",
-            "",
-            CustomerSummary.serializer(),
-            idempotencyKey,
-            timeout,
-            query = if (erase) listOf("erase" to "true") else emptyList(),
-        )
+    ) {
+        val request =
+            ApiRequest("DELETE", base, listOf("erase" to "true"), idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout)
+        engine.ensureOpen()
+        engine.bump(pathId)
+        engine.send(request)
+    }
 
     override suspend fun token(
         scopes: List<Scope>?,
         ttl: Duration?,
-        idempotencyKey: String?,
         timeout: Duration?,
     ): IssuedCustomerToken {
         val body =
@@ -404,366 +405,142 @@ internal class ServerCustomerImpl(
                 scopes?.let { put("scopes", scopesJson(it)) }
                 ttl?.let { put("ttlSeconds", seconds(it)) }
             }
-        return write("POST", "/tokens", IssuedCustomerToken.serializer(), idempotencyKey, timeout, body, changesAnswers = false)
+        return write("POST", "/tokens", IssuedCustomerToken.serializer(), null, timeout, body, changesAnswers = false)
     }
 
     override suspend fun setTrack(
-        trackId: String?,
+        track: String?,
         idempotencyKey: String?,
         timeout: Duration?,
     ): CustomerTrack {
-        val body = JsonObject(mapOf("trackId" to (trackId?.let(::JsonPrimitive) ?: JsonNull)))
+        track?.let { require(it.isNotBlank()) { "Name the track by its name." } }
+        val body = JsonObject(mapOf("track" to (track?.let(::JsonPrimitive) ?: JsonNull)))
         return write("PUT", "/track", CustomerTrack.serializer(), idempotencyKey, timeout, body)
     }
 
-    override suspend fun subscribe(
-        plan: String,
-        period: String?,
-        timing: ChangeTiming?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail = subscribe(Plan(plan), period, timing, idempotencyKey, timeout)
-
-    override suspend fun subscribe(
-        choice: PlanChoice,
-        period: String?,
-        timing: ChangeTiming?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail = subscription(choiceJson(choice, period, timing, selfServe = true), idempotencyKey, timeout)
-
-    override suspend fun checkout(
-        plan: String,
-        successUrl: String,
-        cancelUrl: String,
-        period: String?,
-        connection: String?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): ProviderPage = checkout(Plan(plan), successUrl, cancelUrl, period, connection, idempotencyKey, timeout)
-
-    override suspend fun checkout(
-        choice: PlanChoice,
-        successUrl: String,
-        cancelUrl: String,
-        period: String?,
-        connection: String?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): ProviderPage =
-        checkout(
-            choiceJson(choice, period, null, selfServe = true),
-            successUrl,
-            cancelUrl,
-            connection,
-            idempotencyKey,
-            timeout,
-        )
-
-    override suspend fun cancel(
-        timing: ChangeTiming?,
-        product: String?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail =
-        write(
-            "DELETE",
-            "/subscription",
-            CustomerDetail.serializer(),
-            idempotencyKey,
-            timeout,
-            query = listOfNotNull(product?.let { "product" to it }, timing?.let { "when" to it.value }),
-        )
-
-    override suspend fun undoPendingChange(
-        product: String?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail =
-        write(
-            "DELETE",
-            "/subscription/pending",
-            CustomerDetail.serializer(),
-            idempotencyKey,
-            timeout,
-            query = productQuery(product),
-        )
-
-    override suspend fun addAddOn(
-        plan: String,
-        quantity: Int?,
-        replaces: String?,
-        timing: ChangeTiming?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail = addAddOn(Plan(plan), quantity, replaces, timing, idempotencyKey, timeout)
-
-    override suspend fun addAddOn(
-        choice: PlanChoice,
-        quantity: Int?,
-        replaces: String?,
-        timing: ChangeTiming?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail = addOn(choiceJson(choice, null, timing, selfServe = true), quantity, replaces, idempotencyKey, timeout)
-
-    override suspend fun setAddOnQuantity(
-        plan: String,
-        quantity: Int,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail = addOnQuantity(plan, quantity, selfServe = true, idempotencyKey, timeout)
-
-    override suspend fun removeAddOn(
-        plan: String,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail = write("DELETE", addOnPath(plan), CustomerDetail.serializer(), idempotencyKey, timeout)
-
-    override suspend fun undoAddOnChange(
-        plan: String,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail = write("DELETE", addOnPath(plan) + "/pending", CustomerDetail.serializer(), idempotencyKey, timeout)
-
     override suspend fun billing(timeout: Duration?): CustomerBilling = read("/billing", CustomerBilling.serializer(), timeout)
 
-    override suspend fun billingPortal(
-        returnUrl: String,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): ProviderPage =
-        write(
-            "POST",
-            "/billing-portal",
-            ProviderPage.serializer(),
-            idempotencyKey,
-            timeout,
-            buildJsonObject { put("returnUrl", returnUrl) },
-            changesAnswers = false,
-        )
-
-    override suspend fun providers(timeout: Duration?): CustomerProviders = read("/providers", CustomerProviders.serializer(), timeout)
-
-    override fun toString(): String = "ServerCustomer(id=$id)"
-
-    private suspend fun subscription(
-        body: JsonObject,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail = write("POST", "/subscription", CustomerDetail.serializer(), idempotencyKey, timeout, body)
-
-    private suspend fun checkout(
-        choice: JsonObject,
-        successUrl: String,
-        cancelUrl: String,
-        connection: String?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): ProviderPage {
-        val body =
-            JsonObject(
-                choice +
-                    buildJsonObject {
-                        put("successUrl", successUrl)
-                        put("cancelUrl", cancelUrl)
-                        connection?.let { put("connection", it) }
-                    },
-            )
-        return write("POST", "/checkout", ProviderPage.serializer(), idempotencyKey, timeout, body, changesAnswers = false)
-    }
-
-    private suspend fun addOn(
-        choice: JsonObject,
-        quantity: Int?,
-        replaces: String?,
-        idempotencyKey: String?,
-        timeout: Duration?,
-    ): CustomerDetail {
-        val extra =
-            buildJsonObject {
-                quantity?.let { put("quantity", it) }
-                replaces?.let { put("replaces", it) }
-            }
-        return write("POST", "/subscription/add-ons", CustomerDetail.serializer(), idempotencyKey, timeout, JsonObject(choice + extra))
-    }
-
-    private suspend fun addOnQuantity(
+    override suspend fun setPlan(
         plan: String,
-        quantity: Int,
-        selfServe: Boolean,
+        period: String?,
+        timing: Timing?,
+        billing: PlanBilling?,
+        until: Instant?,
+        register: Boolean,
+        actor: String?,
+        reason: String?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): CustomerDetail {
+    ): PlanChange = setPlan(Plan(plan), period, timing, billing, until, register, actor, reason, idempotencyKey, timeout)
+
+    override suspend fun setPlan(
+        choice: PlanChoice,
+        period: String?,
+        timing: Timing?,
+        billing: PlanBilling?,
+        until: Instant?,
+        register: Boolean,
+        actor: String?,
+        reason: String?,
+        idempotencyKey: String?,
+        timeout: Duration?,
+    ): PlanChange {
+        val body =
+            buildJsonObject {
+                choiceJson(choice, period)
+                timing?.let { put("when", it.value) }
+                billing?.let { put("billing", it.value) }
+                until?.let { put("until", formatInstant(it)) }
+                if (register) put("register", true)
+                decidedBy(actor, reason)
+            }
+        return write("PUT", "/plan", PlanChange.serializer(), idempotencyKey, timeout, body)
+    }
+
+    override suspend fun setAddOn(
+        addOn: String,
+        quantity: Long,
+        timing: Timing?,
+        actor: String?,
+        reason: String?,
+        idempotencyKey: String?,
+        timeout: Duration?,
+    ): PlanChange {
+        val path = "/add-ons/" + pathSegment(checkPlan(addOn))
         val body =
             buildJsonObject {
                 put("quantity", quantity)
-                put("selfServe", selfServe)
+                timing?.let { put("when", it.value) }
+                decidedBy(actor, reason)
             }
-        return write("PATCH", addOnPath(plan), CustomerDetail.serializer(), idempotencyKey, timeout, body)
+        return write("PUT", path, PlanChange.serializer(), idempotencyKey, timeout, body)
     }
 
-    private fun addOnPath(plan: String) = "/subscription/add-ons/" + pathSegment(checkPlan(plan))
-
-    private fun productQuery(product: String?) = listOfNotNull(product?.let { "product" to it })
-
-    private inner class Vendor : VendorActions {
-        override suspend fun subscribe(
-            plan: String,
-            period: String?,
-            timing: ChangeTiming?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail = subscribe(Plan(plan), period, timing, idempotencyKey, timeout)
-
-        override suspend fun subscribe(
-            choice: PlanChoice,
-            period: String?,
-            timing: ChangeTiming?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail = subscription(choiceJson(choice, period, timing, selfServe = false), idempotencyKey, timeout)
-
-        override suspend fun override(
-            plan: String,
-            period: String?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail {
-            val body = JsonObject(choiceJson(Plan(plan), period, null, selfServe = false) + ("override" to JsonPrimitive(true)))
-            return subscription(body, idempotencyKey, timeout)
-        }
-
-        override suspend fun undoOverride(
-            product: String?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail =
-            write("DELETE", "/subscription/override", CustomerDetail.serializer(), idempotencyKey, timeout, query = productQuery(product))
-
-        override suspend fun checkout(
-            plan: String,
-            successUrl: String,
-            cancelUrl: String,
-            period: String?,
-            connection: String?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): ProviderPage = checkout(Plan(plan), successUrl, cancelUrl, period, connection, idempotencyKey, timeout)
-
-        override suspend fun checkout(
-            choice: PlanChoice,
-            successUrl: String,
-            cancelUrl: String,
-            period: String?,
-            connection: String?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): ProviderPage =
-            checkout(
-                choiceJson(choice, period, null, selfServe = false),
-                successUrl,
-                cancelUrl,
-                connection,
-                idempotencyKey,
-                timeout,
-            )
-
-        override suspend fun addAddOn(
-            plan: String,
-            quantity: Int?,
-            replaces: String?,
-            timing: ChangeTiming?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail = addAddOn(Plan(plan), quantity, replaces, timing, idempotencyKey, timeout)
-
-        override suspend fun addAddOn(
-            choice: PlanChoice,
-            quantity: Int?,
-            replaces: String?,
-            timing: ChangeTiming?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail = addOn(choiceJson(choice, null, timing, selfServe = false), quantity, replaces, idempotencyKey, timeout)
-
-        override suspend fun setAddOnQuantity(
-            plan: String,
-            quantity: Int,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail = addOnQuantity(plan, quantity, selfServe = false, idempotencyKey, timeout)
-
-        override suspend fun grant(
-            feature: Feature,
-            value: FeatureValue?,
-            days: Int?,
-            reason: String?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail = grant(feature.key, value, days, reason, idempotencyKey, timeout)
-
-        override suspend fun grant(
-            key: String,
-            value: FeatureValue?,
-            days: Int?,
-            reason: String?,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail {
-            val body =
-                buildJsonObject {
-                    put("feature", checkId(key, FEATURE_REQUIRED))
-                    grantValue(value)?.let { put("value", it) }
-                    days?.let { put("days", it) }
-                    reason?.let { put("reason", it) }
-                }
-            return write("POST", "/grants", CustomerDetail.serializer(), idempotencyKey, timeout, body)
-        }
-
-        override suspend fun revokeGrant(
-            grantId: String,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): CustomerDetail =
-            write(
-                "DELETE",
-                "/grants/" + pathSegment(checkId(grantId, "Provide the id of the grant.")),
-                CustomerDetail.serializer(),
-                idempotencyKey,
-                timeout,
-            )
-
-        override suspend fun setMeter(
-            feature: Feature.Metered,
-            used: Long,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): UsageResult =
-            write(
-                "PUT",
-                "/meters/" + pathSegment(feature.key),
-                UsageResult.serializer(),
-                idempotencyKey,
-                timeout,
-                buildJsonObject {
-                    put("used", used)
-                },
-            )
-
-        override suspend fun cancelUsage(
-            usageId: String,
-            idempotencyKey: String?,
-            timeout: Duration?,
-        ): UsageResult =
-            write(
-                "DELETE",
-                "/usage/" + pathSegment(checkId(usageId, "Provide the id of the usage report.")),
-                UsageResult.serializer(),
-                idempotencyKey,
-                timeout,
-            )
+    override suspend fun grant(
+        feature: Feature,
+        value: FeatureValue?,
+        days: Int?,
+        actor: String?,
+        reason: String?,
+        idempotencyKey: String?,
+        timeout: Duration?,
+    ): GrantChange {
+        val body =
+            buildJsonObject {
+                put("feature", checkId(feature.key, FEATURE_REQUIRED))
+                grantValue(value)?.let { put("value", it) }
+                days?.let { put("days", it) }
+                decidedBy(actor, reason)
+            }
+        return write("POST", "/grants", GrantChange.serializer(), idempotencyKey, timeout, body)
     }
+
+    override suspend fun revokeGrant(
+        grantId: String,
+        actor: String?,
+        reason: String?,
+        idempotencyKey: String?,
+        timeout: Duration?,
+    ): GrantChange {
+        val path = "/grants/" + pathSegment(checkId(grantId, "Provide the id of the grant."))
+        return write("DELETE", path, GrantChange.serializer(), idempotencyKey, timeout, decidedByJson(actor, reason))
+    }
+
+    override suspend fun adjustMeter(
+        feature: Feature.Metered,
+        idempotencyKey: String,
+        by: Long?,
+        to: Long?,
+        actor: String?,
+        reason: String?,
+        timeout: Duration?,
+    ): UsageResult {
+        val byValid = by != null && to == null && by != 0L && by in -MAX_AMOUNT..MAX_AMOUNT
+        val toValid = to != null && by == null && to in 0..MAX_AMOUNT
+        require(byValid || toValid) { "Pass either by, a whole number other than 0, or to, a whole number of 0 or more." }
+        checkIdempotencyKey(idempotencyKey)
+        val path = "/meters/" + pathSegment(checkId(feature.key, FEATURE_REQUIRED)) + "/adjustments"
+        val body =
+            buildJsonObject {
+                by?.let { put("by", it) }
+                to?.let { put("to", it) }
+                decidedBy(actor, reason)
+            }
+        return write("POST", path, UsageResult.serializer(), idempotencyKey, timeout, body)
+    }
+
+    override suspend fun cancelUsage(
+        usageId: String,
+        actor: String?,
+        reason: String?,
+        idempotencyKey: String?,
+        timeout: Duration?,
+    ): UsageResult {
+        val path = "/usage/" + pathSegment(checkId(usageId, "Provide the id of the usage report."))
+        return write("DELETE", path, UsageResult.serializer(), idempotencyKey, timeout, decidedByJson(actor, reason))
+    }
+
+    override fun toString(): String = "ServerCustomer(id=$id)"
 }
 
 private fun detailsJson(
@@ -784,37 +561,38 @@ private fun grantValue(value: FeatureValue?): String? =
         FeatureValue.Unlimited -> "unlimited"
     }
 
-private fun JsonObjectBuilder.timingAndSelfServe(
-    timing: ChangeTiming?,
-    selfServe: Boolean,
+private fun JsonObjectBuilder.decidedBy(
+    actor: String?,
+    reason: String?,
 ) {
-    timing?.let { put("when", it.value) }
-    put("selfServe", selfServe)
+    actor?.let { put("actor", it) }
+    reason?.let { put("reason", it) }
 }
 
-private fun choiceJson(
+private fun decidedByJson(
+    actor: String?,
+    reason: String?,
+): JsonObject? = buildJsonObject { decidedBy(actor, reason) }.takeIf { it.isNotEmpty() }
+
+private fun JsonObjectBuilder.choiceJson(
     choice: PlanChoice,
     period: String?,
-    timing: ChangeTiming?,
-    selfServe: Boolean,
-): JsonObject =
-    buildJsonObject {
-        when (choice) {
-            is Plan -> {
-                put("plan", choice.plan)
-                period?.let { put("period", it) }
-            }
-
-            is Sku -> {
-                require(period == null) { "A SKU names its own period; leave period out." }
-                put(
-                    "sku",
-                    buildJsonObject {
-                        put("connector", choice.connector)
-                        put("ids", JsonObject(choice.ids.mapValues { (_, v) -> JsonPrimitive(v) as JsonElement }))
-                    },
-                )
-            }
+) {
+    when (choice) {
+        is Plan -> {
+            put("plan", choice.plan)
+            period?.let { put("period", it) }
         }
-        timingAndSelfServe(timing, selfServe)
+
+        is Sku -> {
+            require(period == null) { "A SKU names its own period; leave period out." }
+            put(
+                "sku",
+                buildJsonObject {
+                    put("connector", choice.connector)
+                    put("ids", JsonObject(choice.ids.mapValues { (_, v) -> JsonPrimitive(v) as JsonElement }))
+                },
+            )
+        }
     }
+}

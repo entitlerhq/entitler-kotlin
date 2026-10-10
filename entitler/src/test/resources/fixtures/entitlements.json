@@ -29,7 +29,8 @@
           "value": true
         }
       ],
-      "entitled": true
+      "entitled": true,
+      "upgrades": []
     },
     {
       "key": "priority_support",
@@ -45,7 +46,8 @@
           "value": true
         }
       ],
-      "entitled": true
+      "entitled": true,
+      "upgrades": []
     },
     {
       "key": "support_sla_hours",
@@ -61,7 +63,8 @@
           "value": 24
         }
       ],
-      "entitled": true
+      "entitled": true,
+      "upgrades": []
     },
     {
       "key": "ai_credits",
@@ -81,7 +84,8 @@
       "remaining": 300,
       "resetsAt": "2026-10-18T21:30:19.974Z",
       "entitled": true,
-      "held": 0
+      "held": 0,
+      "upgrades": []
     },
     {
       "key": "sso",
@@ -97,7 +101,8 @@
           "value": true
         }
       ],
-      "entitled": true
+      "entitled": true,
+      "upgrades": []
     },
     {
       "key": "collaboration",
@@ -112,14 +117,16 @@
             "shared_folders"
           ]
         }
-      ]
+      ],
+      "upgrades": []
     },
     {
       "key": "support_extras",
       "type": "group",
       "value": 0,
       "entitled": false,
-      "sources": []
+      "sources": [],
+      "upgrades": []
     }
   ]
 }

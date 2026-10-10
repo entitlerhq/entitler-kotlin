@@ -71,7 +71,8 @@ class ConformanceRetryTest {
                 this.random = random
                 this.maxRetries = maxRetries
                 maxRetryDelay = (maxRetryDelaySeconds * MILLIS_PER_SECOND).toLong().milliseconds
-                cache = null
+                (this as? EntitlerServerConfig)?.cache = null
+                (this as? EntitlerClientConfig)?.cache = null
             }
             val path = request.str("path")!!.split('/')
             val call: suspend (Customer) -> Unit = { customer ->
@@ -79,7 +80,11 @@ class ConformanceRetryTest {
                     customer.check(path[4])
                 } else {
                     val body = request["body"]!!.jsonObject
-                    customer.recordUsage(Feature.Metered(body.str("feature")!!), body["amount"]!!.jsonPrimitive.long)
+                    customer.recordUsage(
+                        Feature.Metered(body.str("feature")!!),
+                        body["amount"]!!.jsonPrimitive.long,
+                        idempotencyKey = "write-1",
+                    )
                 }
             }
             val error =

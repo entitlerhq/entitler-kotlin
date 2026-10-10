@@ -69,11 +69,9 @@ class RequestsTest {
             expect("GET", "$encoded/pricing", null, "customer-pricing") { customer.pricing() }
             expect("GET", "$encoded/usage", null, "usage") { customer.usage() }
             expect("GET", "$encoded/usage?cursor=c%2B1", null, "usage") { customer.usage(cursor = "c+1") }
-            expect("GET", "$encoded/usage/holds/h_1", null, "hold") { customer.hold("h_1") }
             expect("GET", encoded, null, "details") { customer.details() }
             expect("GET", "$encoded?cursor=next", null, "details") { customer.details(cursor = "next") }
             expect("GET", "$encoded/billing", null, "billing") { customer.billing() }
-            expect("GET", "$encoded/providers", null, "providers") { customer.providers() }
         }
 
     @Test
@@ -81,7 +79,7 @@ class RequestsTest {
         runTest {
             val credits = Feature.Metered("ai_credits")
             expect("POST", "$encoded/usage", """{"feature":"ai_credits","amount":5}""", "usage-result") {
-                customer.recordUsage(credits, 5)
+                customer.recordUsage(credits, 5, idempotencyKey = "job-1")
             }
             expect(
                 "POST",
@@ -92,16 +90,17 @@ class RequestsTest {
                 customer.recordUsage(
                     credits,
                     5,
+                    idempotencyKey = "job-2",
                     mode = UsageMode.Observe,
                     occurredAt = Instant.parse("2026-10-09T10:30:00.25+10:00"),
                     register = true,
                 )
             }
             expect("POST", "$encoded/usage/holds", """{"feature":"ai_credits","amount":100}""", "usage-held") {
-                customer.holdUsage(credits, 100)
+                customer.holdUsage(credits, 100, idempotencyKey = "hold-1")
             }
             expect("POST", "$encoded/usage/holds", """{"feature":"ai_credits","amount":100,"ttlSeconds":120}""", "usage-held") {
-                customer.holdUsage(credits, 100, ttl = 2.minutes)
+                customer.holdUsage(credits, 100, idempotencyKey = "hold-2", ttl = 2.minutes)
             }
             expect("POST", "$encoded/usage/holds/h_1/settle", """{"amount":40}""", "usage-settled") { customer.settleUsage("h_1", 40) }
             expect("DELETE", "$encoded/usage/holds/h_1", null, "usage-released") { customer.releaseUsage("h_1") }
@@ -120,150 +119,123 @@ class RequestsTest {
                 customer.update(name = "Ada", metadata = mapOf("team" to null, "tier" to "gold"))
             }
             expect("PATCH", encoded, "{}", "summary") { customer.update() }
-            expect("DELETE", encoded, null, "summary") { customer.delete() }
-            expect("DELETE", "$encoded?erase=true", null, "summary") { customer.delete(erase = true) }
+            expect("DELETE", "$encoded?erase=true", null, "summary") { customer.erase() }
             expect("POST", "$encoded/tokens", "{}", "token") { customer.token() }
             expect("POST", "$encoded/tokens", """{"scopes":["entitlements:read"],"ttlSeconds":300}""", "token") {
                 customer.token(scopes = listOf(Scope.EntitlementsRead), ttl = 5.minutes)
             }
-            expect("PUT", "$encoded/track", """{"trackId":"j_beta"}""", "track") { customer.setTrack("j_beta") }
-            expect("PUT", "$encoded/track", """{"trackId":null}""", "track") { customer.setTrack(null) }
+            expect("PUT", "$encoded/track", """{"track":"Beta"}""", "track") { customer.setTrack("Beta") }
+            expect("PUT", "$encoded/track", """{"track":null}""", "track") { customer.setTrack(null) }
         }
 
     @Test
-    fun `self-serve billing sends selfServe true`() =
+    fun `the customer's billing choices send the documented requests`() =
         runTest {
-            val sku = Sku("stripe", mapOf("price" to "price_1"))
-            expect("POST", "$encoded/subscription", """{"plan":"pro","selfServe":true}""", "change") { customer.subscribe("pro") }
-            expect("POST", "$encoded/subscription", """{"plan":"pro","period":"Yearly","when":"end","selfServe":true}""", "change") {
-                customer.subscribe("pro", period = "Yearly", timing = ChangeTiming.End)
-            }
+            expect("POST", "$encoded/subscription", """{"plan":"pro"}""", "step-done") { customer.subscribe("pro") }
             expect(
                 "POST",
                 "$encoded/subscription",
-                """{"sku":{"connector":"stripe","ids":{"price":"price_1"}},"selfServe":true}""",
-                "change",
+                """{"plan":"sso_addon","period":"monthly","quantity":2,"returnUrl":"https://a.example/back","register":true}""",
+                "step-pay",
             ) {
-                customer.subscribe(sku)
+                customer.subscribe("sso_addon", period = "monthly", quantity = 2, returnUrl = "https://a.example/back", register = true)
             }
-            expect(
-                "POST",
-                "$encoded/checkout",
-                """{"plan":"pro","selfServe":true,"successUrl":"https://a.example/ok","cancelUrl":"https://a.example/no"}""",
-                "provider-page",
-            ) { customer.checkout("pro", "https://a.example/ok", "https://a.example/no") }
-            expect(
-                "POST",
-                "$encoded/checkout",
-                """{"sku":{"connector":"stripe","ids":{"price":"price_1"}},"selfServe":true,""" +
-                    """"successUrl":"s","cancelUrl":"c","connection":"x"}""",
-                "provider-page",
-            ) { customer.checkout(sku, "s", "c", connection = "x") }
-            expect("DELETE", "$encoded/subscription", null, "details") { customer.cancel() }
-            expect("DELETE", "$encoded/subscription?product=main&when=end", null, "details") {
-                customer.cancel(timing = ChangeTiming.End, product = "main")
+            expect("DELETE", "$encoded/subscription", null, "plan-change") { customer.cancel() }
+            expect("DELETE", "$encoded/subscription?product=main", null, "plan-change") { customer.cancel(product = "main") }
+            expect("DELETE", "$encoded/subscription/add-ons/sso_addon", null, "plan-change") { customer.cancel(addOn = "sso_addon") }
+            expect("DELETE", "$encoded/subscription/pending", null, "plan-change") { customer.undoPendingChange() }
+            expect("DELETE", "$encoded/subscription/pending?product=main", null, "plan-change") {
+                customer.undoPendingChange(product = "main")
             }
-            expect("DELETE", "$encoded/subscription/pending", null, "details") { customer.undoPendingChange() }
-            expect("DELETE", "$encoded/subscription/pending?product=main", null, "details") { customer.undoPendingChange("main") }
-            expect("POST", "$encoded/subscription/add-ons", """{"plan":"sso_addon","selfServe":true}""", "change") {
-                customer.addAddOn("sso_addon")
+            expect("DELETE", "$encoded/subscription/add-ons/a%2Fb/pending", null, "plan-change") {
+                customer.undoPendingChange(addOn = "a/b")
             }
-            expect(
-                "POST",
-                "$encoded/subscription/add-ons",
-                """{"sku":{"connector":"stripe","ids":{"price":"price_1"}},"when":"now","selfServe":true,"quantity":2,"replaces":"old"}""",
-                "change",
-            ) { customer.addAddOn(sku, quantity = 2, replaces = "old", timing = ChangeTiming.Now) }
-            expect("PATCH", "$encoded/subscription/add-ons/sso_addon", """{"quantity":3,"selfServe":true}""", "change") {
-                customer.setAddOnQuantity("sso_addon", 3)
-            }
-            expect("DELETE", "$encoded/subscription/add-ons/sso_addon", null, "details") { customer.removeAddOn("sso_addon") }
-            expect("DELETE", "$encoded/subscription/add-ons/sso_addon/pending", null, "details") { customer.undoAddOnChange("sso_addon") }
             expect("POST", "$encoded/billing-portal", """{"returnUrl":"https://a.example"}""", "provider-page") {
                 customer.billingPortal("https://a.example")
             }
+            expect("POST", "$encoded/billing/sync", null, "billing-sync") { customer.syncBilling() }
+            val both = kotlin.test.assertFailsWith<IllegalArgumentException> { customer.cancel(addOn = "sso_addon", product = "main") }
+            assertEquals("Pass either addOn or product, not both.", both.message)
+            kotlin.test.assertFailsWith<IllegalArgumentException> { customer.undoPendingChange(addOn = "a", product = "b") }
+            kotlin.test.assertFailsWith<IllegalArgumentException> { customer.cancel(addOn = " ") }
         }
 
     @Test
-    fun `vendor actions send selfServe false`() =
+    fun `the company's plan decisions send the documented requests`() =
         runTest {
-            val vendor = customer.vendor
             val sku = Sku("apple", mapOf("productId" to "pro.monthly"))
-            expect("POST", "$encoded/subscription", """{"plan":"team","selfServe":false}""", "change") { vendor.subscribe("team") }
-            expect(
-                "POST",
-                "$encoded/subscription",
-                """{"sku":{"connector":"apple","ids":{"productId":"pro.monthly"}},"selfServe":false}""",
-                "change",
-            ) {
-                vendor.subscribe(sku)
-            }
-            expect(
-                "POST",
-                "$encoded/subscription",
-                """{"plan":"team","period":"Monthly","selfServe":false,"override":true}""",
-                "change",
-            ) {
-                vendor.override("team", period = "Monthly")
-            }
-            expect("DELETE", "$encoded/subscription/override", null, "details") { vendor.undoOverride() }
-            expect("DELETE", "$encoded/subscription/override?product=main", null, "details") { vendor.undoOverride("main") }
-            expect(
-                "POST",
-                "$encoded/checkout",
-                """{"plan":"team","period":"Monthly","selfServe":false,"successUrl":"s","cancelUrl":"c"}""",
-                "provider-page",
-            ) {
-                vendor.checkout("team", "s", "c", period = "Monthly")
-            }
-            expect(
-                "POST",
-                "$encoded/checkout",
-                """{"sku":{"connector":"apple","ids":{"productId":"pro.monthly"}},"selfServe":false,"successUrl":"s","cancelUrl":"c"}""",
-                "provider-page",
-            ) {
-                vendor.checkout(sku, "s", "c")
-            }
-            expect(
-                "POST",
-                "$encoded/subscription/add-ons",
-                """{"plan":"sso_addon","when":"end","selfServe":false,"quantity":1}""",
-                "change",
-            ) {
-                vendor.addAddOn("sso_addon", quantity = 1, timing = ChangeTiming.End)
-            }
-            expect(
-                "POST",
-                "$encoded/subscription/add-ons",
-                """{"sku":{"connector":"apple","ids":{"productId":"pro.monthly"}},"selfServe":false}""",
-                "change",
-            ) {
-                vendor.addAddOn(sku)
-            }
-            expect("PATCH", "$encoded/subscription/add-ons/sso_addon", """{"quantity":4,"selfServe":false}""", "change") {
-                vendor.setAddOnQuantity("sso_addon", 4)
-            }
-        }
-
-    @Test
-    fun `vendor grants, meters and corrections send the documented requests`() =
-        runTest {
-            val vendor = customer.vendor
-            expect("POST", "$encoded/grants", """{"feature":"sso"}""", "details") { vendor.grant(Feature.OnOff("sso")) }
-            expect("POST", "$encoded/grants", """{"feature":"team_seats","value":"10","days":30,"reason":"Pilot"}""", "details") {
-                vendor.grant(Feature.Config("team_seats"), FeatureValue.Amount(10), days = 30, reason = "Pilot")
-            }
-            expect("POST", "$encoded/grants", """{"feature":"ai_credits","value":"unlimited"}""", "details") {
-                vendor.grant("ai_credits", FeatureValue.Unlimited)
-            }
-            expect("DELETE", "$encoded/grants/g_1", null, "details") { vendor.revokeGrant("g_1") }
+            expect("PUT", "$encoded/plan", """{"plan":"team"}""", "plan-change") { customer.setPlan("team") }
             expect(
                 "PUT",
-                "$encoded/meters/ai_credits",
-                """{"used":12}""",
-                "usage-result",
-            ) { vendor.setMeter(Feature.Metered("ai_credits"), 12) }
-            expect("DELETE", "$encoded/usage/u_1", null, "usage-result") { vendor.cancelUsage("u_1") }
+                "$encoded/plan",
+                """{"plan":"enterprise","period":"yearly","when":"end","billing":"end","until":"2027-01-01T00:00:00.000Z",""" +
+                    """"register":true,"actor":"hubspot","reason":"Deal 42"}""",
+                "plan-change",
+            ) {
+                customer.setPlan(
+                    "enterprise",
+                    period = "yearly",
+                    timing = Timing.End,
+                    billing = PlanBilling.End,
+                    until = Instant.parse("2027-01-01T11:00:00+11:00"),
+                    register = true,
+                    actor = "hubspot",
+                    reason = "Deal 42",
+                )
+            }
+            expect(
+                "PUT",
+                "$encoded/plan",
+                """{"sku":{"connector":"apple","ids":{"productId":"pro.monthly"}},"billing":"keep"}""",
+                "plan-change",
+            ) { customer.setPlan(sku, billing = PlanBilling.Keep) }
+            expect("PUT", "$encoded/add-ons/extra_seats", """{"quantity":150}""", "plan-change") { customer.setAddOn("extra_seats", 150) }
+            expect("PUT", "$encoded/add-ons/extra_seats", """{"quantity":0,"when":"now","actor":"agent_7"}""", "plan-change") {
+                customer.setAddOn("extra_seats", 0, timing = Timing.Now, actor = "agent_7")
+            }
+            val refused = kotlin.test.assertFailsWith<IllegalArgumentException> { customer.setPlan(sku, period = "monthly") }
+            assertEquals("A SKU names its own period; leave period out.", refused.message)
+        }
+
+    @Test
+    fun `the company's grants, meters and corrections send the documented requests`() =
+        runTest {
+            val credits = Feature.Metered("ai_credits")
+            expect("POST", "$encoded/grants", """{"feature":"sso"}""", "grant-change") { customer.grant(Feature.OnOff("sso")) }
+            expect(
+                "POST",
+                "$encoded/grants",
+                """{"feature":"team_seats","value":"10","days":30,"actor":"agent_7","reason":"Pilot"}""",
+                "grant-change",
+            ) {
+                customer.grant(Feature.Config("team_seats"), FeatureValue.Amount(10), days = 30, actor = "agent_7", reason = "Pilot")
+            }
+            expect("POST", "$encoded/grants", """{"feature":"ai_credits","value":"unlimited"}""", "grant-change") {
+                customer.grant(credits, FeatureValue.Unlimited)
+            }
+            expect("DELETE", "$encoded/grants/g_1", null, "grant-change") { customer.revokeGrant("g_1") }
+            expect(
+                "DELETE",
+                "$encoded/grants/g_1",
+                """{"actor":"agent_7"}""",
+                "grant-change",
+            ) { customer.revokeGrant("g_1", actor = "agent_7") }
+            expect("POST", "$encoded/meters/ai_credits/adjustments", """{"by":-500,"reason":"Refund"}""", "usage-result") {
+                customer.adjustMeter(credits, idempotencyKey = "ticket-9", by = -500, reason = "Refund")
+            }
+            expect("POST", "$encoded/meters/ai_credits/adjustments", """{"to":0}""", "usage-result") {
+                customer.adjustMeter(credits, idempotencyKey = "ticket-10", to = 0)
+            }
+            expect("DELETE", "$encoded/usage/u_1", null, "usage-result") { customer.cancelUsage("u_1") }
+            val message = "Pass either by, a whole number other than 0, or to, a whole number of 0 or more."
+            for (call in listOf<suspend () -> Unit>(
+                { customer.adjustMeter(credits, idempotencyKey = "k") },
+                { customer.adjustMeter(credits, idempotencyKey = "k", by = 0) },
+                { customer.adjustMeter(credits, idempotencyKey = "k", by = 1, to = 1) },
+                { customer.adjustMeter(credits, idempotencyKey = "k", to = -1) },
+            )) {
+                assertEquals(message, kotlin.test.assertFailsWith<IllegalArgumentException> { call() }.message)
+            }
         }
 
     @Test
@@ -278,7 +250,7 @@ class RequestsTest {
             expect(
                 "POST",
                 "/customers",
-                """{"externalId":"u_9","name":"Ada","email":"a@example.com","plan":"pro","period":"Monthly","metadata":{"k":"v"}}""",
+                """{"externalId":"u_9","name":"Ada","email":"a@example.com","plan":"pro","period":"monthly","metadata":{"k":"v"}}""",
                 "details",
             ) {
                 server.customers.create(
@@ -286,7 +258,7 @@ class RequestsTest {
                     "Ada",
                     email = "a@example.com",
                     plan = "pro",
-                    period = "Monthly",
+                    period = "monthly",
                     metadata = mapOf("k" to "v"),
                 )
             }
@@ -311,6 +283,9 @@ class RequestsTest {
             assertEquals(perPage * 2, all.size)
             assertEquals("/customers?q=test", api.take().path)
             assertEquals("/customers?q=test&cursor=page2", api.take().path)
+            api.replyFixture("customers")
+            server.customers.list(cursor = "page3").toList()
+            assertEquals("/customers?cursor=page3", api.take().path)
         }
 
     @Test

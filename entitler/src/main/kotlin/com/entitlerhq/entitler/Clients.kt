@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -16,14 +17,13 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.OkHttpClient
 import java.io.Closeable
-import java.time.Instant
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Options shared by both clients, set in the factory's configuration lambda:
+ * Options every client takes, set in the factory's configuration lambda:
  *
  * ```kotlin
  * val server = EntitlerServer(System.getenv("ENTITLER_KEY")) {
@@ -32,7 +32,7 @@ import kotlin.time.Duration.Companion.seconds
  * }
  * ```
  */
-public open class EntitlerConfig internal constructor() {
+public abstract class EntitlerConfig internal constructor() {
     /** The API's base URL; trailing slashes are removed. */
     public var baseUrl: String = "https://api.entitler.dev"
 
@@ -45,29 +45,22 @@ public open class EntitlerConfig internal constructor() {
     /** The longest `Retry-After` the SDK waits for; a longer one fails at once. */
     public var maxRetryDelay: Duration = 10.seconds
 
-    /** Where answers are kept, or null to turn the answer cache off. */
-    public var cache: CacheStore? = MemoryCacheStore()
-
     /** How long a kept answer may stand in when Entitler is unreachable. */
     public var staleFor: Duration = 24.hours
 
     /**
-     * Called with each error a fallback absorbed: a stale answer, `isEntitled`'s default, a failed release,
-     * or a custom cache store's own failure. An `onError` that throws is ignored.
+     * Called with each error a fallback absorbed: a stale answer, `isEntitled`'s default, a hold's failed
+     * release or disposal, or a custom cache store's own failure. An `onError` that throws is ignored.
      */
     public var onError: ((Throwable) -> Unit)? = null
 
     /**
-     * Read the API at another instant. Needs the organisation's `as_of` capability (`409 limit_reached`
-     * otherwise); pricing is always computed now, and writes take it only in a test environment.
-     */
-    public var asOf: Instant? = null
-
-    /**
      * The OkHttp client to send requests with, to share its connection pool or add interceptors. Its own
-     * timeouts apply beside [timeout]. A client the SDK builds is released on `close()`; yours is not.
+     * timeouts apply beside [timeout]. A client the SDK builds is shut down on `close()`; yours is not.
      */
     public var httpClient: OkHttpClient? = null
+
+    internal abstract val store: CacheStore?
 
     internal var clock: () -> Long = System::currentTimeMillis
 
@@ -77,39 +70,61 @@ public open class EntitlerConfig internal constructor() {
         require(maxRetries >= 0) { "Pass maxRetries as 0 or more." }
         require(timeout.isPositive()) { "Pass timeout as a positive duration." }
         require(!maxRetryDelay.isNegative()) { "Pass maxRetryDelay as 0 or more." }
-        asOf?.let {
-            val year = runCatching { it.atOffset(java.time.ZoneOffset.UTC).year }.getOrNull()
-            require(year != null && year in MIN_YEAR..MAX_YEAR) { "Pass asOf as a valid date." }
-        }
-    }
-
-    private companion object {
-        const val MIN_YEAR = 1
-        const val MAX_YEAR = 9999
     }
 }
 
-/** Options for the in-app clients: those of [EntitlerConfig] plus [visitor]. */
+/** Options for [EntitlerServer]: those of [EntitlerConfig] plus a [cache] that may be your own store. */
+public class EntitlerServerConfig internal constructor() : EntitlerConfig() {
+    /**
+     * Where answers are kept: the in-memory store of 1,000 answers by default, a store of your own (Redis,
+     * for example) to share answers between servers, or null to turn the answer cache off.
+     */
+    public var cache: CacheStore? = MemoryCacheStore()
+
+    override val store: CacheStore? get() = cache
+}
+
+/**
+ * Options for the in-app clients: those of [EntitlerConfig] plus an in-memory [cache] and the
+ * [visitor].
+ */
 public class EntitlerClientConfig internal constructor() : EntitlerConfig() {
     /**
-     * The visitor id to send, kept from an earlier launch; null to generate one for this client's lifetime.
-     * Keep [EntitlerClient.visitor] in DataStore or SharedPreferences and pass it back here.
+     * The in-memory answer cache, 1,000 answers by default, or null to turn it off. In-app clients keep
+     * answers in memory only: a customer token changes with every refresh, so a store kept across launches
+     * would never be read again. Only snapshots survive a relaunch.
+     */
+    public var cache: MemoryCacheStore? = MemoryCacheStore()
+
+    /**
+     * The visitor id to send, kept by your app from an earlier launch; null to generate one for this
+     * client's lifetime, or to read it from [visitorSource].
      */
     public var visitor: String? = null
+
+    /**
+     * Where to read the visitor id when the app keeps it in asynchronous storage, such as DataStore. The
+     * client calls it once, before its first request, so the client is built at once.
+     */
+    public var visitorSource: (suspend () -> String)? = null
+
+    internal var testStore: CacheStore? = null
+
+    override val store: CacheStore? get() = testStore ?: cache
 }
 
 /**
  * The server client, built from a secret project key. It runs on your servers and acts on any customer.
  * Never ship a secret key in an app: anyone can read it there. Apps use [EntitlerClient].
  *
- * Thread-safe and meant to be shared: build one per process and close it on shutdown.
+ * Thread-safe: build one per process, share it, and close it on shutdown.
  *
  * ```kotlin
  * val entitler = EntitlerServer(System.getenv("ENTITLER_KEY"))
  * val customer = entitler.customer("user_123")
  * customer.register(name = "Ada", email = "ada@example.com")
  * if (customer.isEntitled(Features.exportPdf)) exportPdf()
- * customer.recordUsage(Features.aiCredits, 5)
+ * customer.recordUsage(Features.aiCredits, 5, idempotencyKey = job.id)
  * ```
  */
 public interface EntitlerServer : Closeable {
@@ -123,28 +138,37 @@ public interface EntitlerServer : Closeable {
      * Records usage events of any customers in observe mode, `POST /usage/events`, in requests of at most
      * 500 events sent in order. Needs `usage:write`.
      *
-     * It answers one result per event, in input order. A request that fails after its retries answers its
-     * events with [UsageOutcome.Error] and carries on with the next; only argument errors and cancellation
-     * escape. Resend the events answered `error` with the same keys.
+     * It answers one result per event, in input order, and never throws but for cancellation. An event the
+     * SDK refuses itself (a blank customer, an amount out of range, an invalid key) is answered
+     * [UsageOutcome.Error] and not sent. A request that fails after its retries answers its events
+     * [UsageOutcome.Error] and the next request still goes. Each request's `Idempotency-Key` derives from
+     * its events, so resending the events answered `error` is safe.
      *
      * @param register Register customers who are not registered yet.
-     * @param idempotencyKey The batch's key, 1 to 190 characters; request `n` sends it plus `:n`.
      */
     public suspend fun recordUsageBatch(
         events: List<UsageBatchEvent>,
         register: Boolean = false,
-        idempotencyKey: String? = null,
         timeout: Duration? = null,
     ): UsageEventsResult
 
-    /** Signed-out pricing, `GET /pricing`, through the cache. Needs `plans:read`. */
+    /**
+     * Signed-out pricing, `GET /pricing`, through the cache. Needs `plans:read`.
+     *
+     * @param visitor The visitor's id, from [newVisitorId], so they keep their experiment arm.
+     * @param revalidate Skip a fresh kept answer and revalidate it.
+     */
     public suspend fun pricing(
         visitor: String? = null,
+        revalidate: Boolean = false,
         timeout: Duration? = null,
     ): Pricing
 
     /** The catalogue's features, `GET /pricing/features`, through the cache. Needs `plans:read`. */
-    public suspend fun features(timeout: Duration? = null): FeatureList
+    public suspend fun features(
+        revalidate: Boolean = false,
+        timeout: Duration? = null,
+    ): FeatureList
 
     /** The scopes the key holds, `GET /keys/self`. Each call asks again. */
     public suspend fun scopes(timeout: Duration? = null): Scopes
@@ -155,34 +179,26 @@ public interface EntitlerServer : Closeable {
     /** Verifies a snapshot with no request; see the top-level [com.entitlerhq.entitler.verifySnapshot]. */
     public fun verifySnapshot(
         token: String,
-        keys: List<SnapshotKey>,
-        customer: String,
-        environment: String,
-        issuer: String = SNAPSHOT_ISSUER,
-        now: Instant = Instant.now(),
-        clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
-    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkewSeconds)
-
-    /** Verifies a snapshot against the key set from [snapshotKeys], with no request. */
-    public fun verifySnapshot(
-        token: String,
-        keys: SnapshotKeys,
-        customer: String,
-        environment: String,
-        issuer: String = SNAPSHOT_ISSUER,
-        now: Instant = Instant.now(),
-        clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
-    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkewSeconds)
+        expected: SnapshotExpectation,
+    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, expected)
 
     /** A new visitor id for your app to keep, for example in a first-party cookie. */
     public fun newVisitorId(): String = com.entitlerhq.entitler.newVisitorId()
+
+    /**
+     * Closes the client: calls in flight end with an [IllegalStateException], and every later call throws
+     * one. Closing twice is safe. An `OkHttpClient` you passed stays open.
+     */
+    override fun close()
 }
 
 /**
- * The in-app client for browsers, mobile and desktop apps, acting on the signed-in customer, [me].
+ * The in-app client for mobile, desktop and browser apps, acting on the signed-in customer, [me].
  *
  * Built from a customer token your server minted with [ServerCustomer.token], or a provider that
- * fetches one. It never takes a secret key. Thread-safe; close it when the app no longer needs it.
+ * fetches one. It never takes a secret key. Create one when the customer signs in, keep it app-scoped
+ * (ViewModels take its [Customer], never a client of their own), and close it at sign-out, so nothing
+ * kept for one person is ever answered to the next.
  *
  * ```kotlin
  * val entitler = EntitlerClient({ api.fetchEntitlerToken() })
@@ -193,8 +209,11 @@ public interface EntitlerClient : Closeable {
     /** The signed-in customer. Makes no request. */
     public val me: Customer
 
-    /** The client's visitor id, sent on every request so an experiment's arm stays the same. */
-    public val visitor: String
+    /**
+     * The client's visitor id, sent on every request so an experiment's arm stays the same: the one given,
+     * the one [EntitlerClientConfig.visitorSource] answers, or one generated for this client's lifetime.
+     */
+    public suspend fun visitor(): String
 
     /** The scopes the credential holds, `GET /keys/self`. Each call asks again. */
     public suspend fun scopes(timeout: Duration? = null): Scopes
@@ -205,44 +224,77 @@ public interface EntitlerClient : Closeable {
     /** Verifies a snapshot with no request; see the top-level [com.entitlerhq.entitler.verifySnapshot]. */
     public fun verifySnapshot(
         token: String,
-        keys: List<SnapshotKey>,
-        customer: String,
-        environment: String,
-        issuer: String = SNAPSHOT_ISSUER,
-        now: Instant = Instant.now(),
-        clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
-    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkewSeconds)
+        expected: SnapshotExpectation,
+    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, expected)
 
-    /** Verifies a snapshot against the key set from [snapshotKeys], with no request. */
-    public fun verifySnapshot(
-        token: String,
-        keys: SnapshotKeys,
-        customer: String,
-        environment: String,
-        issuer: String = SNAPSHOT_ISSUER,
-        now: Instant = Instant.now(),
-        clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
-    ): VerifiedSnapshot = com.entitlerhq.entitler.verifySnapshot(token, keys, customer, environment, issuer, now, clockSkewSeconds)
+    /**
+     * Closes the client at sign-out: calls in flight and the pending token refresh end, the in-memory cache
+     * is dropped, and every later call throws an [IllegalStateException]. Closing twice is safe. An
+     * `OkHttpClient` you passed stays open.
+     */
+    override fun close()
 }
 
 /**
- * An in-app client built from a publishable project key holding only product scopes and an identity
- * token from a sign-in provider registered on the project. It can also [register] the person.
+ * An in-app client built from a publishable key and an identity token from a sign-in provider
+ * registered on the project. It can also [register] the person.
  */
 public interface EntitlerIdentityClient : EntitlerClient {
-    /** Registers the signed-in person as a customer, `PUT /customers/me`. Needs `customers:register`. */
+    /**
+     * Registers the signed-in person as a customer, `PUT /customers/me`, answering one who exists without
+     * creating them again. Needs `customers:register`; a provider that does not let people register
+     * themselves answers `403 registration_closed`.
+     */
     public suspend fun register(
         idempotencyKey: String? = null,
         timeout: Duration? = null,
     ): RegisteredCustomer
 }
 
-/** Builds the server client from a secret project [key]. */
+/**
+ * An in-app client built from a publishable key alone, for a signed-out paywall or pricing page in an app
+ * with no backend route for it.
+ *
+ * ```kotlin
+ * val entitler = EntitlerPublishableClient(BuildConfig.ENTITLER_PUBLISHABLE_KEY)
+ * val pricing = entitler.pricing()
+ * ```
+ */
+public interface EntitlerPublishableClient : Closeable {
+    /**
+     * Signed-out pricing, `GET /pricing`, with the client's visitor, through the cache. Needs `plans:read`.
+     *
+     * @param visitor A visitor id for this request only, in place of the client's.
+     * @param revalidate Skip a fresh kept answer and revalidate it.
+     */
+    public suspend fun pricing(
+        visitor: String? = null,
+        revalidate: Boolean = false,
+        timeout: Duration? = null,
+    ): Pricing
+
+    /** The client's visitor id, as [EntitlerClient.visitor]. */
+    public suspend fun visitor(): String
+
+    /** The keys that verify snapshots, `GET /customers/snapshot-keys`. Sends no credential. */
+    public suspend fun snapshotKeys(timeout: Duration? = null): SnapshotKeys
+
+    /** Closes the client, as [EntitlerClient.close]. */
+    override fun close()
+}
+
+/** Builds the server client from a secret project [key]. A publishable key is refused. */
 @JvmOverloads
 public fun EntitlerServer(
     key: String,
-    configure: EntitlerConfig.() -> Unit = {},
-): EntitlerServer = ServerClient(requireKey(key), EntitlerConfig().apply(configure).also { it.validate() })
+    configure: EntitlerServerConfig.() -> Unit = {},
+): EntitlerServer {
+    val secret = requireKey(key)
+    require(!secret.startsWith(PUBLISHABLE_PREFIX)) {
+        "A publishable key belongs in EntitlerClient. Use a secret key from the dashboard on your server."
+    }
+    return ServerClient(secret, EntitlerServerConfig().apply(configure).also { it.validate() })
+}
 
 /** Builds an in-app client from a customer [token] your server minted. A fixed token cannot be refreshed. */
 @JvmOverloads
@@ -264,7 +316,10 @@ public fun EntitlerIdentityClient(
     key: String,
     identityToken: String,
     configure: EntitlerClientConfig.() -> Unit = {},
-): EntitlerIdentityClient = AppClient(requireKey(key), requireToken(identityToken, IDENTITY_TOKEN_REQUIRED), null, configure)
+): EntitlerIdentityClient {
+    val token = requireToken(identityToken, IDENTITY_TOKEN_REQUIRED)
+    return AppClient(requirePublishable(key), token, null, configure)
+}
 
 /** Builds an identity client from a publishable [key] and a provider that answers a fresh identity token. */
 @JvmOverloads
@@ -272,23 +327,30 @@ public fun EntitlerIdentityClient(
     key: String,
     identityToken: suspend () -> String,
     configure: EntitlerClientConfig.() -> Unit = {},
-): EntitlerIdentityClient = AppClient(requireKey(key), null, identityToken, configure)
+): EntitlerIdentityClient = AppClient(requirePublishable(key), null, identityToken, configure)
 
+/** Builds an in-app client from a publishable [key] alone, for signed-out pricing. */
+@JvmOverloads
+public fun EntitlerPublishableClient(
+    key: String,
+    configure: EntitlerClientConfig.() -> Unit = {},
+): EntitlerPublishableClient = PublishableClient(requirePublishable(key), configure)
+
+private const val PUBLISHABLE_PREFIX = "ent_pk_"
 private const val CUSTOMER_TOKEN_REQUIRED = "Provide a customer token minted by your server."
 private const val IDENTITY_TOKEN_REQUIRED = "Provide the identity token your sign-in provider issued."
 private const val BATCH_SIZE = 500
-private const val MAX_BATCH_KEY_LENGTH = 190
-
-private fun batchError(error: EntitlerException): UsageEventError =
-    when (error) {
-        is EntitlerApiException -> UsageEventError(error.code, error.message.orEmpty())
-        is EntitlerTimeoutException -> UsageEventError(ErrorCode.TimedOut, error.message.orEmpty())
-        else -> UsageEventError(ErrorCode.ConnectionFailed, error.message.orEmpty())
-    }
 
 private fun requireKey(key: String): String =
     trimCredential(key).also {
         require(it.isNotEmpty()) { "Provide an Entitler API key from the dashboard." }
+    }
+
+private fun requirePublishable(key: String): String =
+    requireKey(key).also {
+        require(it.startsWith(PUBLISHABLE_PREFIX)) {
+            "A secret key belongs on your server, in EntitlerServer. Use a publishable key (ent_pk_…) in an app."
+        }
     }
 
 private fun requireToken(
@@ -302,6 +364,7 @@ private val knownScopes =
         Scope.EntitlementsRead,
         Scope.UsageRead,
         Scope.UsageWrite,
+        Scope.BillingSelf,
         Scope.CustomersRegister,
         Scope.CustomersRead,
         Scope.CustomersWrite,
@@ -342,11 +405,26 @@ private suspend fun snapshotKeysOf(
         SnapshotKeys.serializer(),
     )
 
+private suspend fun pricingOf(
+    engine: Engine,
+    visitor: String?,
+    revalidate: Boolean,
+    timeout: Duration?,
+): Pricing =
+    engine.cached(
+        ApiRequest("GET", "/pricing", visitor = checkVisitor(visitor), timeout = timeout),
+        null,
+        Pricing.serializer(),
+        revalidate,
+    )
+
+private fun clientScope() = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
 internal class ServerClient(
     key: String,
-    config: EntitlerConfig,
+    config: EntitlerServerConfig,
 ) : EntitlerServer {
-    private val engine = Engine(config, Credentials(key, null), null)
+    private val engine = Engine(config, Credentials(key, null), null, clientScope())
 
     override val customers: ServerCustomers = Customers(engine)
 
@@ -355,64 +433,69 @@ internal class ServerClient(
     override suspend fun recordUsageBatch(
         events: List<UsageBatchEvent>,
         register: Boolean,
-        idempotencyKey: String?,
         timeout: Duration?,
     ): UsageEventsResult {
-        checkIdempotencyKey(idempotencyKey, MAX_BATCH_KEY_LENGTH)
-        val keyed =
-            events.map { event ->
-                checkAmount(event.amount)
-                checkCustomerId(event.customer)
-                event to (checkIdempotencyKey(event.idempotencyKey) ?: newIdempotencyKey())
+        engine.ensureOpen()
+        val results = arrayOfNulls<UsageEventResult>(events.size)
+        val sendable = mutableListOf<IndexedValue<UsageBatchEvent>>()
+        events.forEachIndexed { index, event ->
+            val refusal = batchRefusal(event)
+            if (refusal == null) {
+                sendable += IndexedValue(index, event)
+            } else {
+                results[index] = UsageEventResult(index, UsageOutcome.Error, null, false, refusal, event.idempotencyKey)
             }
-        val results = mutableListOf<UsageEventResult>()
-        keyed.chunked(BATCH_SIZE).forEachIndexed { chunk, slice ->
-            val body =
-                buildJsonObject {
-                    if (register) put("register", true)
-                    put("events", JsonArray(slice.map { (event, key) -> eventJson(event, key) }))
-                }
-            val requestKey = idempotencyKey?.let { "$it:$chunk" }
-            slice.map { it.first.customer }.distinct().forEach(engine::bump)
-            val answered =
-                try {
-                    engine
-                        .call(
-                            ApiRequest("POST", "/usage/events", body = body, idempotencyKey = requestKey, timeout = timeout),
-                            UsageEventsResult.serializer(),
-                        ).results
-                        .map { it.copy(index = it.index + chunk * BATCH_SIZE, idempotencyKey = slice.getOrNull(it.index)?.second) }
-                } catch (error: EntitlerException) {
-                    val failure = batchError(error)
-                    slice.mapIndexed {
-                        index,
-                        (_, key),
-                        ->
-                        UsageEventResult(chunk * BATCH_SIZE + index, UsageOutcome.Error, null, false, failure, key)
-                    }
-                }
-            results += answered
         }
+        sendable.chunked(BATCH_SIZE).forEach { slice ->
+            sendBatch(slice, register, timeout).forEachIndexed { position, result -> results[slice[position].index] = result }
+        }
+        val all = results.map { checkNotNull(it) }
         return UsageEventsResult(
-            results,
-            results.count { it.outcome == UsageOutcome.Recorded },
-            results.count { it.outcome == UsageOutcome.Duplicate },
-            results.count { it.outcome == UsageOutcome.Error },
+            all,
+            all.count { it.outcome == UsageOutcome.Recorded },
+            all.count { it.outcome == UsageOutcome.Duplicate },
+            all.count { it.outcome == UsageOutcome.Error },
         )
+    }
+
+    private suspend fun sendBatch(
+        slice: List<IndexedValue<UsageBatchEvent>>,
+        register: Boolean,
+        timeout: Duration?,
+    ): List<UsageEventResult> {
+        val events = slice.map { it.value }
+        val body =
+            buildJsonObject {
+                if (register) put("register", true)
+                put("events", JsonArray(events.map(::eventJson)))
+            }
+        events.map { it.customer }.distinct().forEach(engine::bump)
+        return try {
+            val answer =
+                engine.call(
+                    ApiRequest("POST", "/usage/events", body = body, idempotencyKey = batchKey(events, register), timeout = timeout),
+                    UsageEventsResult.serializer(),
+                )
+            slice.mapIndexed { position, (index, event) ->
+                val result = answer.results.firstOrNull { it.index == position } ?: answer.results[position]
+                result.copy(index = index, idempotencyKey = event.idempotencyKey, replayed = answer.replayed)
+            }
+        } catch (error: EntitlerException) {
+            val failure = batchError(error)
+            slice.map { (index, event) -> UsageEventResult(index, UsageOutcome.Error, null, false, failure, event.idempotencyKey) }
+        }
     }
 
     override suspend fun pricing(
         visitor: String?,
+        revalidate: Boolean,
         timeout: Duration?,
-    ): Pricing =
-        engine.cached(
-            ApiRequest("GET", "/pricing", visitor = checkVisitor(visitor), timeout = timeout),
-            null,
-            Pricing.serializer(),
-        )
+    ): Pricing = pricingOf(engine, visitor, revalidate, timeout)
 
-    override suspend fun features(timeout: Duration?): FeatureList =
-        engine.cached(ApiRequest("GET", "/pricing/features", timeout = timeout), null, FeatureList.serializer())
+    override suspend fun features(
+        revalidate: Boolean,
+        timeout: Duration?,
+    ): FeatureList = engine.cached(ApiRequest("GET", "/pricing/features", timeout = timeout), null, FeatureList.serializer(), revalidate)
 
     override suspend fun scopes(timeout: Duration?): Scopes = scopesOf(engine, timeout)
 
@@ -423,17 +506,56 @@ internal class ServerClient(
     override fun toString(): String = "EntitlerServer(baseUrl=${engine.baseUrl})"
 }
 
-private fun eventJson(
-    event: UsageBatchEvent,
-    key: String,
-): JsonObject =
+private fun batchError(error: EntitlerException): UsageEventError =
+    when (error) {
+        is EntitlerApiException -> UsageEventError(error.code, error.message.orEmpty())
+        is EntitlerTimeoutException -> UsageEventError(ErrorCode.TimedOut, error.message.orEmpty())
+        else -> UsageEventError(ErrorCode.ConnectionFailed, error.message.orEmpty())
+    }
+
+private fun batchRefusal(event: UsageBatchEvent): UsageEventError? {
+    val checks =
+        listOf(
+            ErrorCode.InvalidBody to { checkCustomerId(event.customer) },
+            ErrorCode.InvalidBody to { checkId(event.feature.key, FEATURE_REQUIRED) },
+            ErrorCode.InvalidAmount to { checkAmount(event.amount) },
+            ErrorCode.InvalidIdempotencyKey to { checkIdempotencyKey(event.idempotencyKey) },
+        )
+    for ((code, check) in checks) {
+        try {
+            check()
+        } catch (error: IllegalArgumentException) {
+            return UsageEventError(code, error.message.orEmpty())
+        }
+    }
+    return null
+}
+
+private fun eventJson(event: UsageBatchEvent): JsonObject =
     buildJsonObject {
         put("customer", event.customer)
         put("feature", event.feature.key)
         put("amount", event.amount)
         event.occurredAt?.let { put("occurredAt", formatInstant(it)) }
-        put("idempotencyKey", key)
+        put("idempotencyKey", event.idempotencyKey)
     }
+
+internal fun batchKey(
+    events: List<UsageBatchEvent>,
+    register: Boolean,
+): String {
+    val rows =
+        events.map { event ->
+            buildJsonArray {
+                add(JsonPrimitive(event.customer))
+                add(JsonPrimitive(event.feature.key))
+                add(JsonPrimitive(event.amount))
+                add(event.occurredAt?.let { JsonPrimitive(formatInstant(it)) } ?: JsonNull)
+                add(JsonPrimitive(event.idempotencyKey))
+            }
+        }
+    return "batch:" + sha256(JsonArray(listOf(JsonPrimitive("entitler-batch-v1"), JsonPrimitive(register), JsonArray(rows))).toString())
+}
 
 internal class AppClient(
     key: String?,
@@ -442,25 +564,26 @@ internal class AppClient(
     configure: EntitlerClientConfig.() -> Unit,
 ) : EntitlerIdentityClient {
     private val config = EntitlerClientConfig().apply(configure).also { it.validate() }
-    override val visitor: String = checkVisitor(config.visitor) ?: newVisitorId()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = clientScope()
+    private val visitorSource = Visitor(config.visitor, config.visitorSource)
     private val engine =
-        Engine(config, Credentials(key, TokenSource(token, provider, config.clock, config.timeout, scope)), visitor, scope)
+        Engine(config, Credentials(key, TokenSource(token, provider, config.clock, config.timeout, scope)), visitorSource, scope)
 
     override val me: Customer = CustomerImpl(engine, "me", null)
+
+    override suspend fun visitor(): String = visitorSource.get()
 
     override suspend fun register(
         idempotencyKey: String?,
         timeout: Duration?,
-    ): RegisteredCustomer =
-        engine
+    ): RegisteredCustomer {
+        engine.bump("me")
+        return engine
             .call(
                 ApiRequest("PUT", "/customers/me", idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout),
                 RegisteredCustomer.serializer(),
-            ).also {
-                engine.bump("me")
-                (me as CustomerImpl).named(it.externalId)
-            }
+            ).also { (me as CustomerImpl).named(it.externalId) }
+    }
 
     override suspend fun scopes(timeout: Duration?): Scopes = scopesOf(engine, timeout)
 
@@ -471,26 +594,51 @@ internal class AppClient(
     override fun toString(): String = "EntitlerClient(baseUrl=${engine.baseUrl}, kind=${engine.kind})"
 }
 
+internal class PublishableClient(
+    key: String,
+    configure: EntitlerClientConfig.() -> Unit,
+) : EntitlerPublishableClient {
+    private val config = EntitlerClientConfig().apply(configure).also { it.validate() }
+    private val visitorSource = Visitor(config.visitor, config.visitorSource)
+    private val engine = Engine(config, Credentials(key, null, publishable = true), visitorSource, clientScope())
+
+    override suspend fun pricing(
+        visitor: String?,
+        revalidate: Boolean,
+        timeout: Duration?,
+    ): Pricing = pricingOf(engine, visitor, revalidate, timeout)
+
+    override suspend fun visitor(): String = visitorSource.get()
+
+    override suspend fun snapshotKeys(timeout: Duration?): SnapshotKeys = snapshotKeysOf(engine, timeout)
+
+    override fun close() = engine.close()
+
+    override fun toString(): String = "EntitlerPublishableClient(baseUrl=${engine.baseUrl})"
+}
+
 /** The server's customers. */
 public interface ServerCustomers {
     /**
-     * Every customer, `GET /customers`, fetching the next page only when collection reaches it.
-     * Needs `customers:read`.
+     * Every customer, `GET /customers`, fetching each page only when collection reaches it. Needs
+     * `customers:read`.
      *
      * @param q Search by external id, name or email.
      * @param cohort A cohort, as `<plan key or id>:<n>`.
      * @param track A track's id.
      * @param includeTest Include test customers.
+     * @param cursor Start at the page this cursor names, such as a page's [CustomerPage.next].
      */
     public fun list(
         q: String? = null,
         cohort: String? = null,
         track: String? = null,
         includeTest: Boolean = false,
+        cursor: String? = null,
         timeout: Duration? = null,
     ): Flow<CustomerSummary>
 
-    /** One page of the customer list, from [cursor] (null for the first). */
+    /** One page of the customer list, from [cursor] (null for the first), with the list's `used` and `limit`. */
     public suspend fun page(
         q: String? = null,
         cohort: String? = null,
@@ -506,6 +654,7 @@ public interface ServerCustomers {
      *
      * @param id The id your app uses for the customer.
      * @param plan A plan to start them on, by key or id.
+     * @param period The plan's period, by its key, such as `monthly`.
      */
     public suspend fun create(
         id: String,
@@ -527,15 +676,16 @@ internal class Customers(
         cohort: String?,
         track: String?,
         includeTest: Boolean,
+        cursor: String?,
         timeout: Duration?,
     ): Flow<CustomerSummary> =
         flow {
-            var cursor: String? = null
+            var next: String? = cursor
             do {
-                val page = page(q, cohort, track, includeTest, cursor, timeout)
+                val page = page(q, cohort, track, includeTest, next, timeout)
                 page.items.forEach { emit(it) }
-                cursor = page.next
-            } while (cursor != null)
+                next = page.next
+            } while (next != null)
         }
 
     override suspend fun page(

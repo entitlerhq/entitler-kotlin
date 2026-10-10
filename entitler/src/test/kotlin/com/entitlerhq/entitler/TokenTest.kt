@@ -178,7 +178,7 @@ class TokenTest {
                 assertNull(request.headers["Content-Type"])
                 assertEquals("Bearer $PUBLISHABLE_KEY", request.headers["Authorization"])
                 assertEquals(identity, request.headers["Entitler-Identity-Token"])
-                assertEquals(client.visitor, request.headers["Entitler-Visitor"])
+                assertEquals(client.visitor(), request.headers["Entitler-Visitor"])
                 assertTrue(request.headers["Idempotency-Key"]!!.isNotEmpty())
             }
         }
@@ -277,7 +277,7 @@ class TokenTest {
                 api.reply(503, "")
                 api.reply(401, "")
                 api.replyFixture("usage-result")
-                client.me.recordUsage(Feature.Metered("ai_credits"), 1)
+                client.me.recordUsage(Feature.Metered("ai_credits"), 1, idempotencyKey = "k")
                 assertEquals(2, calls.get())
                 assertEquals(1, List(3) { api.take().headers["Idempotency-Key"] }.toSet().size)
             }
@@ -288,7 +288,6 @@ class TokenTest {
         runTest {
             EntitlerClient({ error("offline") }) {
                 api.setUp(this)
-                asOf = java.time.Instant.parse("2026-07-01T00:00:00Z")
             }.use { client ->
                 api.replyFixture("snapshot-keys")
                 client.snapshotKeys()

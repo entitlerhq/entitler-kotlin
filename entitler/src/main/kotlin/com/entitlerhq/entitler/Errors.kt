@@ -8,7 +8,7 @@ import kotlin.time.Duration
  *
  * ```kotlin
  * try {
- *     customer.vendor.grant(Features.sso, days = 30)
+ *     customer.grant(Features.sso, days = 30, idempotencyKey = ticket.id)
  * } catch (e: EntitlerApiException) {
  *     if (e.code == ErrorCode.ScopeRequired) log("The key needs customers:write.")
  * }
@@ -17,7 +17,25 @@ import kotlin.time.Duration
 public sealed class EntitlerException(
     message: String,
     cause: Throwable? = null,
-) : RuntimeException(message, cause)
+) : RuntimeException(message, cause) {
+    /**
+     * True when Entitler could not be reached: a connection failure, a timeout, a failing token provider,
+     * or an answer `429`, `5xx` or [ErrorCode.InvalidResponse]. An offline-capable app falls back to its
+     * snapshot when it is true.
+     */
+    public val isUnreachable: Boolean
+        get() =
+            when (this) {
+                is EntitlerConnectionException, is EntitlerTimeoutException, is EntitlerTokenException -> true
+                is EntitlerApiException -> status == TOO_MANY_REQUESTS || status >= SERVER_ERRORS || code == ErrorCode.InvalidResponse
+                else -> false
+            }
+
+    private companion object {
+        const val TOO_MANY_REQUESTS = 429
+        const val SERVER_ERRORS = 500
+    }
+}
 
 /**
  * The API answered with a status that is not 2xx, or with a 2xx answer this SDK cannot read
@@ -87,8 +105,8 @@ public class EntitlerSnapshotException(
 ) : EntitlerException(message)
 
 /**
- * `withHold` could not hold the amount, or its key replays a hold already settled, released or
- * expired, so the work never ran.
+ * `startHold` or `withHold` could not hold the amount: no allowance remains, or the customer is not
+ * entitled. The work never ran.
  *
  * @property result The hold's answer, with its outcome, refusal and meter.
  */
@@ -97,13 +115,25 @@ public class EntitlerUsageRefusedException(
 ) : EntitlerException("Entitler did not hold ${result.amount} of ${result.feature}: ${result.refusal ?: result.outcome}.")
 
 /**
- * `withHold`'s work succeeded, but settling the hold or recording the excess failed after its
- * retries. Keep the work's output and call `settleUsage(holdId, amount)` before the hold expires.
+ * A hold's key replays a hold already settled, released or expired, raised by `startHold` and
+ * `withHold`. The work the key stands for already happened: show that work's result, never an
+ * upgrade prompt.
+ *
+ * @property result The replay's answer, with its outcome.
+ */
+public class EntitlerUsageReplayedException(
+    public val result: UsageResult,
+) : EntitlerException("The hold of ${result.feature} under this key was already ${result.outcome}.")
+
+/**
+ * A hold's `finish()` (and so `withHold`, after its work succeeded) could not settle the hold or record
+ * the excess after its retries. Keep the work's output, call `settleUsage(holdId, amount)` before the hold
+ * expires, and record the excess under the hold's key plus `:excess`.
  *
  * @property holdId The hold to settle.
  * @property amount The amount to settle.
  * @property excess The amount still to record in observe mode, or null when there is none.
- * @property result The work's result.
+ * @property result `withHold`'s work result, or null from a hold's `finish()`.
  */
 public class EntitlerUsageSettlementException(
     public val holdId: String,
@@ -111,7 +141,10 @@ public class EntitlerUsageSettlementException(
     public val excess: Long?,
     public val result: Any?,
     cause: Throwable,
-) : EntitlerException("Entitler could not settle hold $holdId after the work succeeded: ${cause.message}", cause)
+) : EntitlerException("Entitler could not settle hold $holdId after the work: ${cause.message}", cause) {
+    internal fun withResult(result: Any?): EntitlerUsageSettlementException =
+        EntitlerUsageSettlementException(holdId, amount, excess, result, checkNotNull(cause))
+}
 
 /**
  * The payment a plan change waits on.

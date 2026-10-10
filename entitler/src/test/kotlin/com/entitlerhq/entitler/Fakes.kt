@@ -13,7 +13,7 @@ import kotlin.random.Random
 import kotlin.test.assertNotNull
 
 const val SERVER_KEY = "ent_test_secret_key"
-const val PUBLISHABLE_KEY = "ent_test_publishable_key"
+const val PUBLISHABLE_KEY = "ent_pk_test_publishable_key"
 
 class FakeApi : AutoCloseable {
     val server = MockWebServer().apply { start() }
@@ -28,7 +28,7 @@ class FakeApi : AutoCloseable {
         config.onError = { errors += it }
     }
 
-    fun server(extra: EntitlerConfig.() -> Unit = {}): EntitlerServer =
+    fun server(extra: EntitlerServerConfig.() -> Unit = {}): EntitlerServer =
         EntitlerServer(SERVER_KEY) {
             setUp(this)
             extra()

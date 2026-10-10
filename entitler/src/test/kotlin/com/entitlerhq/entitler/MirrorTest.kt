@@ -135,9 +135,7 @@ class MirrorTest {
         mirrors("usage-result", UsageResult.serializer())
         mirrors("usage-refused", UsageResult.serializer())
         mirrors("usage-held", UsageResult.serializer())
-        mirrors("hold", UsageHold.serializer())
         mirrors("details-full", CustomerDetail.serializer())
-        mirrors("change", CustomerDetail.serializer())
         mirrors("customers", CustomerPage.serializer())
         mirrors("summary", CustomerSummary.serializer())
         mirrors("registered", RegisteredCustomer.serializer())
@@ -147,8 +145,6 @@ class MirrorTest {
         mirrors("track", CustomerTrack.serializer())
         mirrors("billing", CustomerBilling.serializer())
         mirrors("billing-full", CustomerBilling.serializer())
-        mirrors("providers", CustomerProviders.serializer())
-        mirrors("providers-full", CustomerProviders.serializer())
         mirrors("provider-page", ProviderPage.serializer())
     }
 }
