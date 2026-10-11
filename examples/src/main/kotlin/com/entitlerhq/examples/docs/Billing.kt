@@ -5,11 +5,14 @@ import com.entitlerhq.entitler.EntitlerApiException
 import com.entitlerhq.entitler.ErrorCode
 import com.entitlerhq.entitler.FeatureValue
 import com.entitlerhq.entitler.MoveAction
+import com.entitlerhq.entitler.NoPlan
 import com.entitlerhq.entitler.PlanBilling
+import com.entitlerhq.entitler.PlanVersion
 import com.entitlerhq.entitler.Provider
 import com.entitlerhq.entitler.ServerCustomer
 import com.entitlerhq.entitler.Sku
 import com.entitlerhq.entitler.SubscribeStep
+import com.entitlerhq.entitler.Timing
 import com.entitlerhq.examples.generatedfeatures.Features
 import java.time.Instant
 
@@ -74,6 +77,16 @@ suspend fun companyDecisions(
     customer.setPlan("enterprise", period = "yearly", billing = PlanBilling.End, actor = "hubspot", idempotencyKey = "deal-$dealId")
     customer.setAddOn("extra_seats", quantity = 150, actor = "hubspot", idempotencyKey = "deal-$dealId-seats")
     customer.setPlan("team", billing = PlanBilling.Keep, until = Instant.parse("2026-12-31T00:00:00Z"), reason = "Outage credit")
+}
+
+/** Company decisions: ending a plan, the latest version and a replacing add-on. */
+suspend fun planHousekeeping(
+    customer: ServerCustomer,
+    ticketId: String,
+) {
+    customer.setPlan(NoPlan("app"), timing = Timing.End, actor = "support", idempotencyKey = "ticket-$ticketId-end")
+    customer.setPlan("pro", version = PlanVersion.Latest, actor = "migration", idempotencyKey = "ticket-$ticketId-latest")
+    customer.setAddOn("support_premium", 1, replaces = "support_standard", actor = "support", idempotencyKey = "ticket-$ticketId-support")
 }
 
 /** Company decisions: grants and meters from a support tool. */

@@ -32,7 +32,25 @@ suspend fun companyDecisions(
 ```
 
 Setting the plan the customer already holds, with the same period, billing and `until`, changes
-nothing and answers `changed` false, so a redelivered webhook is harmless.
+nothing and answers `changed` false, so a redelivered webhook is harmless, with two exceptions: it undoes
+a change booked for renewal, and with `billing` `Provider` or `End` it ends a `Keep` exception. While
+Stripe bills the product, `until` needs `billing` `End`.
+
+`NoPlan(product)` ends the customer's plan in a product: they move to its default plan, or hold no plan
+when it has none, now or at renewal (`Keep` is refused). `version = PlanVersion.Latest` moves them now
+to the newest version of the plan they hold. `setAddOn` with `replaces` swaps one add-on for another in
+one write, and naming an add-on's held quantity undoes an add-on move booked for renewal.
+
+```kotlin
+suspend fun planHousekeeping(
+    customer: ServerCustomer,
+    ticketId: String,
+) {
+    customer.setPlan(NoPlan("app"), timing = Timing.End, actor = "support", idempotencyKey = "ticket-$ticketId-end")
+    customer.setPlan("pro", version = PlanVersion.Latest, actor = "migration", idempotencyKey = "ticket-$ticketId-latest")
+    customer.setAddOn("support_premium", 1, replaces = "support_standard", actor = "support", idempotencyKey = "ticket-$ticketId-support")
+}
+```
 
 ## Grants and meters
 

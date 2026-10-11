@@ -25,6 +25,7 @@ import com.entitlerhq.entitler.MeteredCheck
 import com.entitlerhq.entitler.PlanBilling
 import com.entitlerhq.entitler.PlanChange
 import com.entitlerhq.entitler.PlanChoice
+import com.entitlerhq.entitler.PlanVersion
 import com.entitlerhq.entitler.Pricing
 import com.entitlerhq.entitler.ProviderPage
 import com.entitlerhq.entitler.RegisteredCustomer
@@ -615,6 +616,7 @@ private class Fake(
         timing: Timing?,
         billing: PlanBilling?,
         until: Instant?,
+        version: PlanVersion?,
         register: Boolean,
         actor: String?,
         reason: String?,
@@ -627,6 +629,7 @@ private class Fake(
             timing,
             billing,
             until,
+            version,
             register,
             actor,
             reason,
@@ -640,13 +643,22 @@ private class Fake(
         timing: Timing?,
         billing: PlanBilling?,
         until: Instant?,
+        version: PlanVersion?,
         register: Boolean,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,
         timeout: Duration?,
     ): PlanChange =
-        write("setPlan", "choice" to choice, "period" to period, "timing" to timing, "billing" to billing, "until" to until) {
+        write(
+            "setPlan",
+            "choice" to choice,
+            "period" to period,
+            "timing" to timing,
+            "billing" to billing,
+            "until" to until,
+            "version" to version,
+        ) {
             Answers.planChange((choice as? com.entitlerhq.entitler.Plan)?.plan, until = until)
         }
 
@@ -654,11 +666,15 @@ private class Fake(
         addOn: String,
         quantity: Long,
         sku: Sku?,
+        replaces: String?,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): PlanChange = write("setAddOn", "addOn" to addOn, "quantity" to quantity, "sku" to sku) { Answers.planChange(addOn, quantity) }
+    ): PlanChange =
+        write("setAddOn", "addOn" to addOn, "quantity" to quantity, "sku" to sku, "replaces" to replaces) {
+            Answers.planChange(addOn, quantity)
+        }
 
     override suspend fun grant(
         feature: Feature,

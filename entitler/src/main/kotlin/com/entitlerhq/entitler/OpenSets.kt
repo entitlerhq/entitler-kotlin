@@ -1120,6 +1120,32 @@ internal object PlanBillingSerializer : OpenStringSerializer<PlanBilling>(
 )
 
 /**
+ * The version of the plan held that [ServerCustomer.setPlan] moves the customer to.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = PlanVersionSerializer::class)
+public data class PlanVersion(
+    /** The raw value, as the API takes it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The newest version of the plan the customer holds, ending a grandfathered one, now. */
+        public val Latest: PlanVersion = PlanVersion("latest")
+    }
+}
+
+internal object PlanVersionSerializer : OpenStringSerializer<PlanVersion>(
+    "PlanVersion",
+    ::PlanVersion,
+    PlanVersion::value,
+)
+
+/**
  * When a plan change took or takes effect.
  *
  * An open set: a value this SDK does not know keeps its raw [value].

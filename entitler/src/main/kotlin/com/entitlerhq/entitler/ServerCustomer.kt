@@ -185,6 +185,8 @@ public interface ServerCustomer : Customer {
      * @param timing [Timing.Now] or [Timing.End] (at renewal); the project's policy when null.
      * @param billing [PlanBilling.Provider] (the API's default), [PlanBilling.Keep] or [PlanBilling.End].
      * @param until When the customer returns to the product's default plan, unless a later change moves them.
+     * While Stripe bills the product it needs [PlanBilling.End].
+     * @param version [PlanVersion.Latest] moves the customer now to the newest version of the plan they hold.
      * @param register Register the customer first if they are not registered yet.
      */
     public suspend fun setPlan(
@@ -193,6 +195,7 @@ public interface ServerCustomer : Customer {
         timing: Timing? = null,
         billing: PlanBilling? = null,
         until: Instant? = null,
+        version: PlanVersion? = null,
         register: Boolean = false,
         actor: String? = null,
         reason: String? = null,
@@ -201,9 +204,11 @@ public interface ServerCustomer : Customer {
     ): PlanChange
 
     /**
-     * Moves the customer to a plan or to a SKU they bought, which names its own period. Record a store
-     * purchase only from your server, after verifying it with Apple or Google, with [until] the
-     * transaction's expiry, and again at each renewal.
+     * Moves the customer to a plan, to a SKU they bought, which names its own period, or to [NoPlan] in a
+     * product, which ends their plan there. Record a store purchase only from your server, after verifying
+     * it with Apple or Google, with [until] the transaction's expiry, and again at each renewal. Naming the
+     * plan held undoes a change booked for renewal, and with [PlanBilling.Provider] or [PlanBilling.End]
+     * ends a [PlanBilling.Keep] exception.
      */
     public suspend fun setPlan(
         choice: PlanChoice,
@@ -211,6 +216,7 @@ public interface ServerCustomer : Customer {
         timing: Timing? = null,
         billing: PlanBilling? = null,
         until: Instant? = null,
+        version: PlanVersion? = null,
         register: Boolean = false,
         actor: String? = null,
         reason: String? = null,
@@ -230,11 +236,14 @@ public interface ServerCustomer : Customer {
      * @param sku The App Store or Google Play SKU the customer bought the add-on as, verified by your server:
      * the store is recorded as its biller and Stripe is never charged. When Stripe bills the product, the API
      * answers `409 billed_elsewhere`.
+     * @param replaces The add-on this one takes the place of, by key or id, swapped in one write as
+     * [plans] lists a `replace` move. Naming an add-on's held quantity undoes an add-on move booked for renewal.
      */
     public suspend fun setAddOn(
         addOn: String,
         quantity: Long,
         sku: Sku? = null,
+        replaces: String? = null,
         actor: String? = null,
         reason: String? = null,
         idempotencyKey: String? = null,
@@ -433,12 +442,13 @@ internal class ServerCustomerImpl(
         timing: Timing?,
         billing: PlanBilling?,
         until: Instant?,
+        version: PlanVersion?,
         register: Boolean,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): PlanChange = setPlan(Plan(plan), period, timing, billing, until, register, actor, reason, idempotencyKey, timeout)
+    ): PlanChange = setPlan(Plan(plan), period, timing, billing, until, version, register, actor, reason, idempotencyKey, timeout)
 
     override suspend fun setPlan(
         choice: PlanChoice,
@@ -446,18 +456,23 @@ internal class ServerCustomerImpl(
         timing: Timing?,
         billing: PlanBilling?,
         until: Instant?,
+        version: PlanVersion?,
         register: Boolean,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,
         timeout: Duration?,
     ): PlanChange {
+        require(choice !is NoPlan || (until == null && version == null)) {
+            "Ending a plan takes no period, until or version."
+        }
         val body =
             buildJsonObject {
                 choiceJson(choice, period)
                 timing?.let { put("when", it.value) }
                 billing?.let { put("billing", it.value) }
                 until?.let { put("until", formatInstant(it)) }
+                version?.let { put("version", it.value) }
                 if (register) put("register", true)
                 decidedBy(actor, reason)
             }
@@ -468,16 +483,19 @@ internal class ServerCustomerImpl(
         addOn: String,
         quantity: Long,
         sku: Sku?,
+        replaces: String?,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,
         timeout: Duration?,
     ): PlanChange {
         val path = "/add-ons/" + pathSegment(checkPlan(addOn))
+        replaces?.let(::checkPlan)
         val body =
             buildJsonObject {
                 put("quantity", quantity)
                 sku?.let { choiceJson(it, null) }
+                replaces?.let { put("replaces", it) }
                 decidedBy(actor, reason)
             }
         return write("PUT", path, PlanChange.serializer(), idempotencyKey, timeout, body)
@@ -589,6 +607,12 @@ private fun JsonObjectBuilder.choiceJson(
         is Plan -> {
             put("plan", choice.plan)
             period?.let { put("period", it) }
+        }
+
+        is NoPlan -> {
+            require(period == null) { "Ending a plan takes no period, until or version." }
+            put("plan", JsonNull)
+            put("product", choice.product)
         }
 
         is Sku -> {

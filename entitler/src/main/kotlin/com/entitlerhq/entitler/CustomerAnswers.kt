@@ -484,8 +484,9 @@ public sealed interface SubscribeStep {
 }
 
 /**
- * What [ServerCustomer.setPlan] moves the customer to: a plan by its key or id, or a SKU the customer
- * bought, which names its own period. `setPlan` also takes a plan key as a plain `String`.
+ * What [ServerCustomer.setPlan] moves the customer to: a plan by its key or id, a SKU the customer
+ * bought, which names its own period, or [NoPlan] in a product. `setPlan` also takes a plan key as a
+ * plain `String`.
  */
 public sealed interface PlanChoice
 
@@ -500,6 +501,25 @@ public data class Plan(
     init {
         checkPlan(plan)
         pathSegment(plan)
+    }
+}
+
+/**
+ * No plan in [product]: ends the customer's plan there, so they move to the product's default plan, or hold
+ * no plan when it has none, now or at renewal. [PlanBilling.Keep] is refused by the API, and a period,
+ * `until` or `version` never go with it.
+ *
+ * ```kotlin
+ * customer.setPlan(NoPlan("app"), timing = Timing.End, actor = "support", reason = ticket.summary)
+ * ```
+ *
+ * @property product The product's key or public id.
+ */
+public data class NoPlan(
+    val product: String,
+) : PlanChoice {
+    init {
+        require(product.isNotBlank()) { "Name the product by its key or id." }
     }
 }
 

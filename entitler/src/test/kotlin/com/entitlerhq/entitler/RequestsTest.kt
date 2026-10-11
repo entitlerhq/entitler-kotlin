@@ -204,6 +204,50 @@ class RequestsTest {
         }
 
     @Test
+    fun `ending a plan, the latest version and a replacing add-on send the documented requests`() =
+        runTest {
+            expect("PUT", "$encoded/plan", """{"plan":null,"product":"app","when":"end","billing":"end"}""", "plan-change") {
+                customer.setPlan(NoPlan("app"), timing = Timing.End, billing = PlanBilling.End)
+            }
+            expect("PUT", "$encoded/plan", """{"plan":"pro","version":"latest","actor":"migration"}""", "plan-change") {
+                customer.setPlan("pro", version = PlanVersion.Latest, actor = "migration")
+            }
+            expect("PUT", "$encoded/add-ons/support_premium", """{"quantity":1,"replaces":"support_standard"}""", "plan-change") {
+                customer.setAddOn("support_premium", 1, replaces = "support_standard")
+            }
+            val ending = "Ending a plan takes no period, until or version."
+            assertEquals(
+                ending,
+                kotlin.test.assertFailsWith<IllegalArgumentException> { customer.setPlan(NoPlan("app"), period = "monthly") }.message,
+            )
+            assertEquals(
+                ending,
+                kotlin.test
+                    .assertFailsWith<IllegalArgumentException> {
+                        customer.setPlan(NoPlan("app"), until = Instant.EPOCH)
+                    }.message,
+            )
+            assertEquals(
+                ending,
+                kotlin.test
+                    .assertFailsWith<IllegalArgumentException> {
+                        customer.setPlan(
+                            NoPlan("app"),
+                            version = PlanVersion.Latest,
+                        )
+                    }.message,
+            )
+            assertEquals(
+                "Name the product by its key or id.",
+                kotlin.test.assertFailsWith<IllegalArgumentException> { NoPlan(" ") }.message,
+            )
+            assertEquals(
+                "Name the plan by its id or its key.",
+                kotlin.test.assertFailsWith<IllegalArgumentException> { customer.setAddOn("support_premium", 1, replaces = "") }.message,
+            )
+        }
+
+    @Test
     fun `the company's grants, meters and corrections send the documented requests`() =
         runTest {
             val credits = Feature.Metered("ai_credits")
