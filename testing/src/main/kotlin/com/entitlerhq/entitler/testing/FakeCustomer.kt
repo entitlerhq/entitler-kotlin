@@ -107,7 +107,8 @@ public interface FakeCustomer : ServerCustomer {
  *   and `pricing()`, built with [Answers].
  * - Usage writes move the meters as Entitler does: a gated report past the allowance answers `refused`,
  *   holds settle and release, `cancelUsage` moves the meter back, a reused key replays, and settle and
- *   release conflicts answer the API's errors. Every write that moves a meter adds to the usage log.
+ *   release conflicts answer the API's errors. Every recorded report, settlement above 0 and meter
+ *   adjustment adds an entry to the usage log; a cancel marks its report instead.
  * - Writes it does not model answer a plain success (`subscribe` a `Done` step made now, the plan changes
  *   a [PlanChange] made now), which [FakeCustomer.answer] replaces.
  */
@@ -389,7 +390,7 @@ private class Fake(
     ): UsageResult {
         val meter = meterOf(key)
         val overBy = (meter.value as? FeatureValue.Amount)?.let { (meter.used - it.value).coerceAtLeast(0) } ?: 0
-        if (meterChange != 0L) {
+        if (meterChange != 0L || outcome == UsageOutcome.Adjusted) {
             synchronized(log) {
                 val kind = if (outcome == UsageOutcome.Adjusted) UsageEventKind.Adjust else UsageEventKind.Use
                 log +=
@@ -398,7 +399,7 @@ private class Fake(
                         key,
                         meterChange,
                         kind,
-                        null,
+                        if (kind == UsageEventKind.Adjust) meter.used else null,
                         UsageSource.Api,
                         "Test key",
                         null,
@@ -804,7 +805,7 @@ private class Fake(
                 meterOf(report.feature).used -= report.amount
                 synchronized(log) {
                     val index = log.indexOfFirst { it.id == usageId }
-                    if (index >= 0) log[index] = log[index].copy(cancelledAt = Answers.AS_OF)
+                    if (index >= 0) log[index] = log[index].copy(cancelledAt = Answers.AS_OF, actor = actor, reason = reason)
                 }
                 result(UsageOutcome.Cancelled, report.feature, report.amount, usageId = usageId).copy(meterChange = -report.amount)
             }

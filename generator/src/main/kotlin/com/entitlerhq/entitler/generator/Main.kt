@@ -168,7 +168,7 @@ private fun generate(
     val count = counted(features.features.size)
     if ("check" in options.flags) {
         if (existing == null || withoutReadFrom(existing) != withoutReadFrom(rendered)) {
-            exit(1, "$file is out of date. Run entitler generate to update it.")
+            exit(1, "$file is out of date. Run java -jar entitler-generator.jar generate to update it.")
         }
         return "$file is up to date with $count."
     }

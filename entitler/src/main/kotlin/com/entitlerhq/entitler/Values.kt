@@ -111,7 +111,7 @@ private fun decodeLimit(element: kotlinx.serialization.json.JsonElement): Limit 
 /**
  * A feature in the catalogue, named by its key.
  *
- * Generate constants for every feature with `entitler generate`, or declare one by hand:
+ * Generate constants for every feature with `java -jar entitler-generator.jar generate`, or declare one by hand:
  *
  * ```kotlin
  * val aiCredits = Feature.Metered("ai_credits")

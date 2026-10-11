@@ -165,18 +165,19 @@ class TestingTest {
             val replay = customer.recordUsage(credits, 5, idempotencyKey = "report")
             assertEquals(UsageOutcome.Duplicate to 0L, replay.outcome to replay.meterChange)
             assertEquals(11, customer.check(credits).used)
-            val cancelled = customer.cancelUsage(report.id!!)
+            assertEquals(listOf(6L, 5L), customer.usageLog().toList().map { it.amount })
+            val cancelled = customer.cancelUsage(report.id!!, actor = "agent@example.com", reason = "Refund")
             assertEquals(UsageOutcome.Cancelled to -5L, cancelled.outcome to cancelled.meterChange)
             assertEquals(6, customer.check(credits).used)
             val afterCancel = customer.recordUsage(credits, 5, idempotencyKey = "report")
             assertEquals(UsageOutcome.Cancelled to 0L, afterCancel.outcome to afterCancel.meterChange)
-            assertTrue(
-                customer
-                    .usageLog()
-                    .toList()
-                    .single { it.id == report.id }
-                    .cancelledAt != null,
-            )
+            val marked = customer.usageLog().toList().single { it.id == report.id }
+            assertTrue(marked.cancelledAt != null)
+            assertEquals("agent@example.com" to "Refund", marked.actor to marked.reason)
+            customer.adjustMeter(credits, idempotencyKey = "same", to = 6)
+            val log = customer.usageLog().toList()
+            assertEquals(listOf(6L, 5L, 0L), log.map { it.amount })
+            assertEquals(6L, log.last().setTo)
             assertEquals(404, assertFailsWith<EntitlerApiException> { customer.cancelUsage("r_missing") }.status)
         }
 
