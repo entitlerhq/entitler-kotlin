@@ -258,6 +258,8 @@ class SnapshotTest {
     @Test
     fun `instants outside years 0001 to 9999 are a snapshot error`() {
         failure(ErrorCode.SnapshotInvalid, notASnapshot) { verify(sign(claims(exp = 253_402_300_800))) }
+        failure(ErrorCode.SnapshotInvalid, notASnapshot) { verify(sign(claims(iss = "https://evil.example", exp = 253_402_300_800))) }
+        failure(ErrorCode.SnapshotInvalid, notASnapshot) { verify(sign(claims(iss = "https://evil.example", iat = -62_135_596_801))) }
     }
 
     @Test

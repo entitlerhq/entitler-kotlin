@@ -189,6 +189,17 @@ class ClientTest {
         }
 
     @Test
+    fun `a visitor id with a trailing line break is refused`() {
+        for (visitor in listOf("abcdefghijklmnop\n", "abcdefghijklmnop\r\n", "\nabcdefghijklmnop")) {
+            assertEquals(
+                "Pass visitor as an id of 16 to 64 letters, numbers, hyphens or underscores.",
+                message { EntitlerClient("token") { this.visitor = visitor } },
+            )
+            assertFailsWith<IllegalArgumentException> { checkVisitor(visitor) }
+        }
+    }
+
+    @Test
     fun `options are validated`() {
         assertEquals("Pass maxRetries as 0 or more.", message { EntitlerServer("key") { maxRetries = -1 } })
         assertEquals("Pass timeout as a positive duration.", message { EntitlerServer("key") { timeout = 0.seconds } })

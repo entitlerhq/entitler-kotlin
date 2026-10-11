@@ -273,6 +273,46 @@ class TokenTest {
         }
 
     @Test
+    fun `a failed shared refresh is never left in place, so each request asks the provider again`() =
+        runTest {
+            val calls = AtomicInteger()
+            client {
+                calls.incrementAndGet()
+                error("offline")
+            }.use { client ->
+                withContext(Dispatchers.Default) {
+                    repeat(300) { assertFailsWith<EntitlerTokenException> { client.me.check("export_pdf") } }
+                }
+                assertEquals(300, calls.get())
+            }
+        }
+
+    @Test
+    fun `a waiter cancelled during a refresh that fails leaves the next request to ask again`() =
+        runTest {
+            val calls = AtomicInteger()
+            val release = kotlinx.coroutines.CompletableDeferred<Unit>()
+            client {
+                if (calls.incrementAndGet() == 1) {
+                    release.await()
+                    error("offline")
+                }
+                customerToken()
+            }.use { client ->
+                api.replyFixture("check")
+                withContext(Dispatchers.Default) {
+                    val waiter = async { client.me.check("export_pdf") }
+                    delay(100)
+                    waiter.cancel()
+                    release.complete(Unit)
+                    delay(100)
+                    assertTrue(client.me.check("export_pdf").entitled)
+                }
+                assertEquals(2, calls.get())
+            }
+        }
+
+    @Test
     fun `a hanging provider fails after the client's timeout, and the next request asks again`() =
         runTest {
             val calls = AtomicInteger()

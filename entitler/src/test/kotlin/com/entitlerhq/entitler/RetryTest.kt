@@ -246,6 +246,32 @@ class RetryTest {
         }
 
     @Test
+    fun `an infinite timeout or maxRetryDelay and an overlong Retry-After neither overflow nor hang`() =
+        runTest {
+            api
+                .server {
+                    maxRetries = 1
+                    timeout = kotlin.time.Duration.INFINITE
+                    maxRetryDelay = kotlin.time.Duration.INFINITE
+                }.use { server ->
+                    api.server.enqueue(
+                        MockResponse
+                            .Builder()
+                            .body(fixture("check"))
+                            .headersDelay(300, TimeUnit.MILLISECONDS)
+                            .build(),
+                    )
+                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        assertTrue(server.customer("u").check("export_pdf").entitled)
+                        api.reply(429, error, "Retry-After" to "99999999999999999999999")
+                        val failure = assertFailsWith<EntitlerApiException> { server.customer("u").check("sso") }
+                        assertEquals(429, failure.status)
+                        assertTrue(failure.retryAfter!!.isInfinite())
+                    }
+                }
+        }
+
+    @Test
     fun `cancellation ends a retry wait at once`() =
         runTest {
             api.server().use { server ->

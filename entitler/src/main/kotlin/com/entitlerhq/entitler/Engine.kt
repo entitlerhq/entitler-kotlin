@@ -304,7 +304,7 @@ internal class Engine(
         if (!error.isUnreachable || error is EntitlerTokenException) throw error
         val now = clock()
         val retryAfter = ((error as? EntitlerApiException)?.retryAfter?.inWholeMilliseconds ?: 0).coerceAtLeast(OUTAGE_WINDOW_MILLIS)
-        outageUntil = now + retryAfter
+        outageUntil = if (retryAfter > Long.MAX_VALUE - now) Long.MAX_VALUE else now + retryAfter
         if (kept == null || !isYoung(kept, now)) throw error
         report(error)
         return decodeKept(kept, deserializer, stale = true)
@@ -504,7 +504,7 @@ internal class Engine(
     ): Duration {
         if (!isRetried(failure) || retries >= maxRetries) throw failure
         val retryAfter = (failure as? EntitlerApiException)?.retryAfter
-        if (retryAfter != null && retryAfter > maxRetryDelay) throw failure
+        if (retryAfter != null && (retryAfter > maxRetryDelay || retryAfter.isInfinite())) throw failure
         return retryAfter ?: backoff(retries)
     }
 
@@ -520,7 +520,7 @@ internal class Engine(
         ifNoneMatch: String?,
     ): Answer {
         val call = http.newCall(httpRequest(request, idempotencyKey, credential, ifNoneMatch))
-        call.timeout().timeout((request.timeout ?: timeout).inWholeMilliseconds.coerceAtLeast(1), TimeUnit.MILLISECONDS)
+        call.timeout().timeout(attemptMillis(request.timeout ?: timeout), TimeUnit.MILLISECONDS)
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(
@@ -658,6 +658,11 @@ private fun transportException(
     } else {
         EntitlerConnectionException("Entitler could not be reached: ${error.javaClass.simpleName}.", error, idempotencyKey)
     }
+
+private const val LONGEST_ATTEMPT_MILLIS = 365L * 24 * 60 * 60 * 1000
+
+private fun attemptMillis(timeout: Duration): Long =
+    if (timeout.isInfinite()) 0 else timeout.inWholeMilliseconds.coerceIn(1, LONGEST_ATTEMPT_MILLIS)
 
 private fun sanitised(
     error: SerializationException,

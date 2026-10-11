@@ -496,6 +496,21 @@ class CacheTest {
         }
 
     @Test
+    fun `an overlong Retry-After keeps the outage window open instead of overflowing it`() =
+        runTest {
+            api.server { maxRetries = 0 }.use { server ->
+                api.replyFixture("check", 200, etag)
+                api.reply(429, "", "Retry-After" to "99999999999999999999999")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                assertTrue(customer.check("export_pdf").stale)
+                api.now += 3_600_000
+                assertTrue(customer.check("export_pdf").stale)
+                assertEquals(2, api.server.requestCount)
+            }
+        }
+
+    @Test
     fun `a kept entry older than staleFor does not stand in`() =
         runTest {
             api
