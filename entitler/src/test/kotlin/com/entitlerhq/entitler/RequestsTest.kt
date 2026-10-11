@@ -238,7 +238,7 @@ class RequestsTest {
                     }.message,
             )
             assertEquals(
-                "Name the product by its id or its key.",
+                "Name the product by its key.",
                 kotlin.test.assertFailsWith<IllegalArgumentException> { NoPlan(" ") }.message,
             )
             assertEquals(

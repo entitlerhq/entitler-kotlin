@@ -513,13 +513,13 @@ public data class Plan(
  * customer.setPlan(NoPlan("app"), timing = Timing.End, actor = "support", reason = ticket.summary)
  * ```
  *
- * @property product The product's key or public id.
+ * @property product The product's key.
  */
 public data class NoPlan(
     val product: String,
 ) : PlanChoice {
     init {
-        require(product.isNotBlank()) { "Name the product by its id or its key." }
+        require(product.isNotBlank()) { "Name the product by its key." }
     }
 }
 
