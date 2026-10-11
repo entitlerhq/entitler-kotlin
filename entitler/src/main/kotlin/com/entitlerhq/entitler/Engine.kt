@@ -37,6 +37,7 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
@@ -140,6 +141,8 @@ internal fun retryAfterOf(
     return (instant.toEpochMilli() - now).coerceAtLeast(0).milliseconds
 }
 
+private enum class KeptUse { Stale, Fresh, Probe, Fetch }
+
 private class Directives(
     val maxAge: Long?,
     val noStore: Boolean,
@@ -206,6 +209,8 @@ internal class Engine(
 
     @Volatile private var outageUntil = 0L
 
+    private val probing = AtomicBoolean(false)
+
     @Volatile private var closed = false
 
     private val inFlight = ConcurrentHashMap.newKeySet<Job>()
@@ -268,11 +273,29 @@ internal class Engine(
         val store = cache ?: return call(request, deserializer)
         val credential = if (request.anonymous) null else guarded { credentials.current() }
         val kept = storeGet(store, cacheKey(request, credential))
-        val now = clock()
-        val keptStale = kept != null && now < outageUntil && isYoung(kept, now)
-        val fresh = !revalidate && isFresh(kept, now, customer)
-        if (kept != null && (keptStale || fresh)) return decodeKept(kept, deserializer, keptStale)
-        return fetchThrough(store, request, customer, credential, kept, deserializer)
+        val use = keptUse(kept, clock(), customer, revalidate)
+        if (use == KeptUse.Stale || use == KeptUse.Fresh) return decodeKept(checkNotNull(kept), deserializer, use == KeptUse.Stale)
+        try {
+            return fetchThrough(store, request, customer, credential, kept, deserializer)
+        } finally {
+            if (use == KeptUse.Probe) probing.set(false)
+        }
+    }
+
+    private fun keptUse(
+        kept: CacheEntry?,
+        now: Long,
+        customer: String?,
+        revalidate: Boolean,
+    ): KeptUse {
+        val young = kept != null && isYoung(kept, now)
+        val outage = outageUntil
+        return when {
+            young && now < outage -> KeptUse.Stale
+            kept != null && !revalidate && isFresh(kept, now, customer) -> KeptUse.Fresh
+            young && outage != 0L -> if (probing.compareAndSet(false, true)) KeptUse.Probe else KeptUse.Stale
+            else -> KeptUse.Fetch
+        }
     }
 
     private suspend fun <T> fetchThrough(
@@ -310,7 +333,10 @@ internal class Engine(
     ): T {
         if (!error.isUnreachable || error is EntitlerTokenException) throw error
         val now = clock()
-        val retryAfter = ((error as? EntitlerApiException)?.retryAfter?.inWholeMilliseconds ?: 0).coerceAtLeast(OUTAGE_WINDOW_MILLIS)
+        val retryAfter =
+            ((error as? EntitlerApiException)?.retryAfter?.inWholeMilliseconds ?: 0)
+                .coerceAtLeast(OUTAGE_WINDOW_MILLIS)
+                .coerceAtMost(staleFor.inWholeMilliseconds)
         outageUntil = if (retryAfter > Long.MAX_VALUE - now) Long.MAX_VALUE else now + retryAfter
         if (kept == null || !isYoung(kept, now)) throw error
         report(error)
@@ -463,6 +489,7 @@ internal class Engine(
                     val answer = attempt(request, idempotencyKey, credential, ifNoneMatch)
                     when {
                         isSuccess(answer, ifNoneMatch) -> {
+                            outageUntil = 0
                             return answer
                         }
 
