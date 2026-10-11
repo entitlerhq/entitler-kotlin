@@ -406,18 +406,20 @@ class CacheTest {
     @Test
     fun `requests bypass an injected client's HTTP cache`() =
         runTest {
-            val http = OkHttpClient.Builder().cache(Cache(directory, 1_000_000)).build()
-            api
-                .server {
-                    httpClient = http
-                    cache = null
-                }.use { server ->
-                    repeat(2) { api.replyFixture("check", 200, "Cache-Control" to "public, max-age=600") }
-                    server.customer("u").check("export_pdf")
-                    server.customer("u").check("export_pdf")
-                    assertEquals(2, api.server.requestCount)
-                    assertEquals("no-cache", api.take().headers["Cache-Control"])
-                }
+            Cache(directory, 1_000_000).use { httpCache ->
+                val http = OkHttpClient.Builder().cache(httpCache).build()
+                api
+                    .server {
+                        httpClient = http
+                        cache = null
+                    }.use { server ->
+                        repeat(2) { api.replyFixture("check", 200, "Cache-Control" to "public, max-age=600") }
+                        server.customer("u").check("export_pdf")
+                        server.customer("u").check("export_pdf")
+                        assertEquals(2, api.server.requestCount)
+                        assertEquals("no-cache", api.take().headers["Cache-Control"])
+                    }
+            }
         }
 
     @Test
