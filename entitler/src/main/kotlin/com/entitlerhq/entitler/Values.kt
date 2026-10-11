@@ -166,3 +166,5 @@ public sealed class Feature {
 }
 
 internal const val FEATURE_REQUIRED = "Name the feature by its key."
+
+internal const val PRODUCT_REQUIRED = "Name the product by its key."

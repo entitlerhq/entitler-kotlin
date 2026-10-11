@@ -11,10 +11,12 @@ import com.entitlerhq.entitler.PlanBilling
 import com.entitlerhq.entitler.Scope
 import com.entitlerhq.entitler.SubscribeStep
 import com.entitlerhq.entitler.UsageBatchEvent
+import com.entitlerhq.entitler.UsageEventKind
 import com.entitlerhq.entitler.UsageEventResult
 import com.entitlerhq.entitler.UsageMode
 import com.entitlerhq.entitler.UsageOutcome
 import com.entitlerhq.entitler.UsageRefusal
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -93,6 +95,10 @@ class TestingTest {
             )
             assertEquals(UsageOutcome.Adjusted, customer.adjustMeter(credits, idempotencyKey = "d", to = 0).outcome)
             assertEquals(0, customer.check(credits).used)
+            val log = customer.usageLog().toList()
+            assertEquals(listOf(2L, 5L, -104L), log.map { it.amount })
+            assertEquals(listOf(UsageEventKind.Use, UsageEventKind.Use, UsageEventKind.Adjust), log.map { it.kind })
+            assertEquals(log, customer.detailsLog().toList())
         }
 
     @Test
@@ -115,6 +121,22 @@ class TestingTest {
             assertFailsWith<IllegalStateException> { customer.withHold(credits, 10, "fails") { error("failed") } }
             customer.startHold(credits, 10, idempotencyKey = "closed").use { it.used = 4 }
             assertEquals(24, customer.check(credits).used)
+        }
+
+    @Test
+    fun `a hold records usage past the held amount as excess, and an identical settle answers duplicate`() =
+        runTest {
+            val customer = fakeCustomer("ai_credits" to metered(value = 100))
+            val hold = customer.startHold(credits, 10, idempotencyKey = "reply")
+            hold.used = 14
+            assertEquals(UsageOutcome.Settled, hold.finish().outcome)
+            assertEquals(14, customer.check(credits).used)
+            val excess = customer.writes.last()
+            assertEquals("recordUsage", excess.method)
+            assertEquals("reply:excess", excess.arguments["idempotencyKey"])
+            assertEquals(UsageMode.Observe, excess.arguments["mode"])
+            assertEquals(UsageOutcome.Duplicate, customer.settleUsage(hold.id, 10).outcome)
+            assertEquals(14, customer.check(credits).used)
         }
 
     @Test

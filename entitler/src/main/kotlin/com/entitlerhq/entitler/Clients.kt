@@ -483,7 +483,9 @@ internal class ServerClient(
                     UsageEventsResult.serializer(),
                 )
             slice.mapIndexed { position, (index, event) ->
-                val result = answer.results.firstOrNull { it.index == position } ?: answer.results[position]
+                val result =
+                    answer.results.firstOrNull { it.index == position } ?: answer.results.getOrNull(position)
+                        ?: UsageEventResult(position, UsageOutcome.Error, null, false, missingResult, null)
                 result.copy(index = index, idempotencyKey = event.idempotencyKey, replayed = answer.replayed)
             }
         } catch (error: EntitlerException) {
@@ -545,6 +547,8 @@ private fun eventJson(event: UsageBatchEvent): JsonObject =
         event.occurredAt?.let { put("occurredAt", formatInstant(it)) }
         put("idempotencyKey", event.idempotencyKey)
     }
+
+private val missingResult = UsageEventError(ErrorCode.InvalidResponse, "Entitler sent an answer this SDK cannot read.")
 
 internal fun batchKey(
     events: List<UsageBatchEvent>,

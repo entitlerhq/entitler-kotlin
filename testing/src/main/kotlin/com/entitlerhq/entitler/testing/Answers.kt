@@ -44,6 +44,7 @@ import com.entitlerhq.entitler.SubscribeStep
 import com.entitlerhq.entitler.Track
 import com.entitlerhq.entitler.Upgrade
 import com.entitlerhq.entitler.UsageEvent
+import com.entitlerhq.entitler.UsageEventKind
 import com.entitlerhq.entitler.UsageEventResult
 import com.entitlerhq.entitler.UsageEventsResult
 import com.entitlerhq.entitler.UsageLog
@@ -284,6 +285,18 @@ public object Answers {
 
     /** The catalogue's feature list. */
     public fun featureList(features: List<FeatureListing> = emptyList()): FeatureList = FeatureList(features, ENVIRONMENT, TRACK, 1, null)
+
+    /** An entry of a usage log: a report of [amount], or an adjustment when [kind] says so. */
+    public fun usageEvent(
+        feature: String = "ai_credits",
+        amount: Long = 1,
+        kind: UsageEventKind = UsageEventKind.Use,
+        id: String = "u_1",
+        by: String? = "Test key",
+        actor: String? = null,
+        reason: String? = null,
+        cancelledAt: Instant? = null,
+    ): UsageEvent = UsageEvent(id, feature, amount, kind, null, UsageSource.Api, by, actor, reason, AS_OF, cancelledAt)
 
     /** A customer's meters and a page of their usage log. */
     public fun customerUsage(

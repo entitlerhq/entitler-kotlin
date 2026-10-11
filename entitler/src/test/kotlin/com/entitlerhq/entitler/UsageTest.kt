@@ -396,6 +396,19 @@ class UsageTest {
         }
 
     @Test
+    fun `a batch answer with fewer results than events answers the missing ones with invalid_response`() =
+        runTest {
+            val one = """{"index":0,"outcome":"recorded","id":"u1","late":false,"error":null}"""
+            api.reply(200, """{"results":[$one],"recorded":1,"duplicates":0,"errors":0}""")
+            val events = listOf("a", "b").map { UsageBatchEvent("u", credits, 1, idempotencyKey = it) }
+            val answer = server.recordUsageBatch(events)
+            assertEquals(UsageOutcome.Recorded, answer.results[0].outcome)
+            assertEquals(UsageOutcome.Error, answer.results[1].outcome)
+            assertEquals(ErrorCode.InvalidResponse, answer.results[1].error?.code)
+            assertEquals(1, answer.errors)
+        }
+
+    @Test
     fun `a failed batch request answers its events with error and the next request still goes`() =
         runTest {
             val events = (0 until 600).map { UsageBatchEvent("c", credits, 1, "e$it") }

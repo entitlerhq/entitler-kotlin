@@ -156,7 +156,9 @@ public data class UsageEventsResult(
  * @property kind The kind of entry.
  * @property setTo For a meter set, the value the meter was set to; else null.
  * @property source Which kind of credential reported it.
- * @property actor Who made a dashboard change, or null.
+ * @property by The name of the key or person that recorded it, or null.
+ * @property actor The person or system that decided an adjustment, or the cancel of a report, or null.
+ * @property reason Why the adjustment, or the cancel of a report, was made, or null.
  * @property at When it was recorded.
  * @property cancelledAt When the report was cancelled, or null while it stands.
  */
@@ -166,11 +168,13 @@ public data class UsageEvent(
     val feature: String,
     val amount: Long,
     val kind: UsageEventKind,
-    val setTo: Long? = null,
+    val setTo: Long?,
     val source: UsageSource,
-    val actor: String? = null,
+    val by: String?,
+    val actor: String?,
+    val reason: String?,
     val at: Instant,
-    val cancelledAt: Instant? = null,
+    val cancelledAt: Instant?,
 )
 
 /**

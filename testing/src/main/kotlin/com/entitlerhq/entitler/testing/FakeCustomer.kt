@@ -35,12 +35,14 @@ import com.entitlerhq.entitler.Sku
 import com.entitlerhq.entitler.SubscribeStep
 import com.entitlerhq.entitler.Timing
 import com.entitlerhq.entitler.UsageEvent
+import com.entitlerhq.entitler.UsageEventKind
 import com.entitlerhq.entitler.UsageMode
 import com.entitlerhq.entitler.UsageOutcome
 import com.entitlerhq.entitler.UsageRefusal
 import com.entitlerhq.entitler.UsageResult
+import com.entitlerhq.entitler.UsageSource
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.asFlow
 import java.time.Instant
 import kotlin.time.Duration
 
@@ -147,6 +149,7 @@ private class OpenHold(
     val feature: String,
     val amount: Long,
     var state: UsageOutcome = UsageOutcome.Held,
+    var settled: Long? = null,
 )
 
 @Suppress("TooManyFunctions", "LargeClass")
@@ -350,7 +353,22 @@ private class Fake(
         timeout: Duration?,
     ): CustomerUsage = usage(cursor, timeout)
 
-    override fun usageLog(timeout: Duration?): Flow<UsageEvent> = emptyFlow()
+    override fun usageLog(
+        cursor: String?,
+        timeout: Duration?,
+    ): Flow<UsageEvent> = synchronized(log) { log.toList() }.asFlow()
+
+    override fun usageLog(
+        asOf: Instant,
+        cursor: String?,
+        timeout: Duration?,
+    ): Flow<UsageEvent> = usageLog(cursor, timeout)
+
+    override fun detailsLog(
+        cursor: String?,
+        asOf: Instant?,
+        timeout: Duration?,
+    ): Flow<UsageEvent> = usageLog(cursor, timeout)
 
     private fun result(
         outcome: UsageOutcome,
@@ -363,6 +381,25 @@ private class Fake(
     ): UsageResult {
         val meter = meterOf(key)
         val overBy = (meter.value as? FeatureValue.Amount)?.let { (meter.used - it.value).coerceAtLeast(0) } ?: 0
+        if (meterChange != 0L) {
+            synchronized(log) {
+                val kind = if (outcome == UsageOutcome.Adjusted) UsageEventKind.Adjust else UsageEventKind.Use
+                log +=
+                    UsageEvent(
+                        "u_${log.size + 1}",
+                        key,
+                        meterChange,
+                        kind,
+                        null,
+                        UsageSource.Api,
+                        "Test key",
+                        null,
+                        null,
+                        Answers.AS_OF,
+                        null,
+                    )
+            }
+        }
         return Answers.usageResult(
             outcome = outcome,
             feature = key,
@@ -459,7 +496,7 @@ private class Fake(
     ): Hold {
         val held = holdUsage(feature, amount, idempotencyKey, ttl, timeout)
         return when (held.outcome) {
-            UsageOutcome.Held, UsageOutcome.Duplicate -> FakeHold(this, held)
+            UsageOutcome.Held, UsageOutcome.Duplicate -> FakeHold(this, held, feature, idempotencyKey)
             UsageOutcome.Settled, UsageOutcome.Released -> throw EntitlerUsageReplayedException(held)
             else -> throw EntitlerUsageRefusedException(held)
         }
@@ -498,11 +535,15 @@ private class Fake(
             synchronized(replays) {
                 val hold = openHold(holdId)
                 val meter = meterOf(hold.feature)
+                if (hold.state == UsageOutcome.Settled && hold.settled == amount) {
+                    return@synchronized result(UsageOutcome.Duplicate, hold.feature, amount, holdId = holdId)
+                }
                 if (hold.state != UsageOutcome.Held) {
                     throw EntitlerApiException(CONFLICT, ErrorCode.HoldSettled, "The hold was already ${hold.state}.")
                 }
                 require(amount in 0..hold.amount) { "Pass amount as a whole number from 0 to the held amount." }
                 hold.state = UsageOutcome.Settled
+                hold.settled = amount
                 meter.held -= hold.amount
                 meter.used += amount
                 result(UsageOutcome.Settled, hold.feature, amount, holdId = holdId, meterChange = amount)
@@ -752,6 +793,8 @@ private class Fake(
 private class FakeHold(
     private val customer: Fake,
     override val result: UsageResult,
+    private val feature: Feature.Metered,
+    private val key: String,
 ) : Hold {
     override val id: String = checkNotNull(result.holdId)
     override val amount: Long = result.amount
@@ -767,12 +810,18 @@ private class FakeHold(
 
     private suspend fun act(action: suspend () -> UsageResult): UsageResult = first ?: action().also { first = it }
 
-    override suspend fun finish(): UsageResult = act { customer.settleUsage(id, minOf(used ?: amount, amount)) }
+    override suspend fun finish(): UsageResult = act { settle(used ?: amount) }
+
+    private suspend fun settle(total: Long): UsageResult {
+        val settled = customer.settleUsage(id, minOf(total, amount))
+        if (total > amount) customer.recordUsage(feature, total - amount, idempotencyKey = "$key:excess", mode = UsageMode.Observe)
+        return settled
+    }
 
     override suspend fun release(): UsageResult = act { customer.releaseUsage(id) }
 
     suspend fun dispose() {
-        act { used?.let { customer.settleUsage(id, minOf(it, amount)) } ?: customer.releaseUsage(id) }
+        act { used?.let { settle(it) } ?: customer.releaseUsage(id) }
     }
 
     override fun close() {

@@ -158,6 +158,12 @@ class RequestsTest {
             assertEquals("Pass either addOn or product, not both.", both.message)
             kotlin.test.assertFailsWith<IllegalArgumentException> { customer.undoPendingChange(addOn = "a", product = "b") }
             kotlin.test.assertFailsWith<IllegalArgumentException> { customer.cancel(addOn = " ") }
+            val blankProduct = "Name the product by its key."
+            assertEquals(blankProduct, kotlin.test.assertFailsWith<IllegalArgumentException> { customer.cancel(product = "  ") }.message)
+            assertEquals(
+                blankProduct,
+                kotlin.test.assertFailsWith<IllegalArgumentException> { customer.undoPendingChange(product = "") }.message,
+            )
         }
 
     @Test
@@ -364,5 +370,45 @@ class RequestsTest {
             assertEquals(perPage * 2, entries.size)
             assertEquals("$encoded/usage", api.take().path)
             assertEquals("$encoded/usage?cursor=p2", api.take().path)
+        }
+
+    private fun withNext(
+        fixture: String,
+        field: String,
+        next: String,
+    ): String {
+        val body = fixtureJson(fixture).toMutableMap()
+        val log = (body[field] as kotlinx.serialization.json.JsonObject).toMutableMap()
+        log["next"] = kotlinx.serialization.json.JsonPrimitive(next)
+        body[field] = kotlinx.serialization.json.JsonObject(log)
+        return kotlinx.serialization.json
+            .JsonObject(body)
+            .toString()
+    }
+
+    @Test
+    fun `the usage log starts at a cursor, reads at an instant, and the log in details iterates the same way`() =
+        runTest {
+            api.replyFixture("usage")
+            customer.usageLog(cursor = "p7").toList()
+            assertEquals("$encoded/usage?cursor=p7", api.take().path)
+
+            api.replyFixture("usage")
+            customer.usageLog(asOf = Instant.parse("2026-09-01T00:00:00Z")).toList()
+            assertEquals("2026-09-01T00:00:00.000Z", api.take().headers["Entitler-As-Of"])
+
+            api.reply(body = withNext("details", "usage", "d2"))
+            api.replyFixture("details")
+            val perPage =
+                (
+                    (
+                        fixtureJson(
+                            "details",
+                        )["usage"] as kotlinx.serialization.json.JsonObject
+                    )["items"] as kotlinx.serialization.json.JsonArray
+                ).size
+            assertEquals(perPage * 2, customer.detailsLog().toList().size)
+            assertEquals(encoded, api.take().path)
+            assertEquals("$encoded?cursor=d2", api.take().path)
         }
 }

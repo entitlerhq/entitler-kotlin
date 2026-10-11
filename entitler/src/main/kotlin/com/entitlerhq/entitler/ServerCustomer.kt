@@ -1,5 +1,6 @@
 package com.entitlerhq.entitler
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -92,6 +93,25 @@ public interface ServerCustomer : Customer {
         cursor: String? = null,
         timeout: Duration? = null,
     ): CustomerUsage
+
+    /** Every entry of the customer's usage log as it reads at [asOf], from [cursor], page by page as collected. */
+    public fun usageLog(
+        asOf: Instant,
+        cursor: String? = null,
+        timeout: Duration? = null,
+    ): Flow<UsageEvent>
+
+    /**
+     * Every entry of the usage log in [details], from [cursor], fetching `GET /customers/{id}?cursor=…` only when
+     * collection reaches each page.
+     *
+     * @param asOf Read it as it stands at that instant.
+     */
+    public fun detailsLog(
+        cursor: String? = null,
+        asOf: Instant? = null,
+        timeout: Duration? = null,
+    ): Flow<UsageEvent>
 
     /**
      * Registers the customer, or stores the details given for one who exists, `PUT /customers/{id}`.
@@ -382,6 +402,18 @@ internal class ServerCustomerImpl(
             visitor = checkVisitor(visitor),
         )
     }
+
+    override fun usageLog(
+        asOf: Instant,
+        cursor: String?,
+        timeout: Duration?,
+    ): Flow<UsageEvent> = pagedLog(cursor) { usage(asOf, it, timeout).log }
+
+    override fun detailsLog(
+        cursor: String?,
+        asOf: Instant?,
+        timeout: Duration?,
+    ): Flow<UsageEvent> = pagedLog(cursor) { details(it, asOf, timeout).usage }
 
     override suspend fun details(
         cursor: String?,

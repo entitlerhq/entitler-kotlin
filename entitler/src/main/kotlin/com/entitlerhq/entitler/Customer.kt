@@ -116,8 +116,14 @@ public interface Customer {
         timeout: Duration? = null,
     ): CustomerUsage
 
-    /** Every entry of the customer's usage log, fetching each page only when collection reaches it. */
-    public fun usageLog(timeout: Duration? = null): Flow<UsageEvent>
+    /**
+     * Every entry of the customer's usage log from [cursor] (the first page when null), fetching each page
+     * only when collection reaches it.
+     */
+    public fun usageLog(
+        cursor: String? = null,
+        timeout: Duration? = null,
+    ): Flow<UsageEvent>
 
     /**
      * Records usage of a metered feature, `POST /customers/{id}/usage`. A refusal is an answer, not an
@@ -634,15 +640,10 @@ internal open class CustomerImpl(
         timeout: Duration?,
     ): CustomerUsage = read("/usage", CustomerUsage.serializer(), timeout, listOfNotNull(cursor?.let { "cursor" to it }))
 
-    override fun usageLog(timeout: Duration?): Flow<UsageEvent> =
-        flow {
-            var cursor: String? = null
-            do {
-                val log = usage(cursor, timeout).log
-                log.items.forEach { emit(it) }
-                cursor = log.next
-            } while (cursor != null)
-        }
+    override fun usageLog(
+        cursor: String?,
+        timeout: Duration?,
+    ): Flow<UsageEvent> = pagedLog(cursor) { usage(it, timeout).log }
 
     override suspend fun recordUsage(
         feature: Feature.Metered,
@@ -790,7 +791,7 @@ internal open class CustomerImpl(
         return if (addOn != null) {
             "/subscription/add-ons/" + pathSegment(checkPlan(addOn)) + suffix to emptyList()
         } else {
-            "/subscription$suffix" to listOfNotNull(product?.let { "product" to it })
+            "/subscription$suffix" to listOfNotNull(product?.let { "product" to checkId(it, PRODUCT_REQUIRED) })
         }
     }
 
@@ -827,3 +828,16 @@ internal open class CustomerImpl(
 
     override fun toString(): String = "Customer(id=$id)"
 }
+
+internal fun pagedLog(
+    from: String?,
+    page: suspend (String?) -> UsageLog,
+): Flow<UsageEvent> =
+    flow {
+        var cursor = from
+        do {
+            val log = page(cursor)
+            log.items.forEach { emit(it) }
+            cursor = log.next
+        } while (cursor != null)
+    }
