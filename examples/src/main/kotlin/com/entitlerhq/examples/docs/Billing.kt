@@ -124,6 +124,21 @@ suspend fun recordPlayPurchase(
     )
 }
 
+/** Store purchases: recording a verified add-on bought in a store. */
+suspend fun recordStoreAddOn(
+    customer: ServerCustomer,
+    purchase: VerifiedPurchase,
+    seats: Long,
+) {
+    customer.setAddOn(
+        "extra_seats",
+        seats,
+        sku = Sku("apple", mapOf("productId" to purchase.productId)),
+        actor = "app-store",
+        idempotencyKey = "apple-${purchase.transactionId}",
+    )
+}
+
 /** Store purchases: a refund or a revoked purchase. */
 suspend fun storeRefund(
     customer: ServerCustomer,

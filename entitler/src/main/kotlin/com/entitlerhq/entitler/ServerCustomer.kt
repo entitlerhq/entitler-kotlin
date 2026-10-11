@@ -222,11 +222,19 @@ public interface ServerCustomer : Customer {
      * Sets the quantity of the add-on [addOn], `PUT /customers/{id}/add-ons/{addOn}`: adds it, sets its
      * quantity, or removes it at 0. The change always takes effect now.
      *
+     * ```kotlin
+     * customer.setAddOn("extra_seats", 5, sku = Sku("apple", mapOf("productId" to "seats.five")), idempotencyKey = transaction.id)
+     * ```
+     *
      * @param quantity From 0 to 10,000.
+     * @param sku The App Store or Google Play SKU the customer bought the add-on as, verified by your server:
+     * the store is recorded as its biller and Stripe is never charged. When Stripe bills the product, the API
+     * answers `409 billed_elsewhere`.
      */
     public suspend fun setAddOn(
         addOn: String,
         quantity: Long,
+        sku: Sku? = null,
         actor: String? = null,
         reason: String? = null,
         idempotencyKey: String? = null,
@@ -459,6 +467,7 @@ internal class ServerCustomerImpl(
     override suspend fun setAddOn(
         addOn: String,
         quantity: Long,
+        sku: Sku?,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,
@@ -468,6 +477,7 @@ internal class ServerCustomerImpl(
         val body =
             buildJsonObject {
                 put("quantity", quantity)
+                sku?.let { choiceJson(it, null) }
                 decidedBy(actor, reason)
             }
         return write("PUT", path, PlanChange.serializer(), idempotencyKey, timeout, body)

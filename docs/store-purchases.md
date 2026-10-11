@@ -53,6 +53,28 @@ suspend fun recordApplePurchase(
 
 4. App Store Server Notifications for a renewal (`DID_RENEW`) repeat steps 2 and 3.
 
+## Add-ons
+
+An add-on bought in a store is recorded the same way, with `setAddOn` and the store's SKU for it. The
+store is recorded as the add-on's biller and Stripe is never charged; when Stripe bills the product, the
+API answers `409 billed_elsewhere`. The change takes effect now.
+
+```kotlin
+suspend fun recordStoreAddOn(
+    customer: ServerCustomer,
+    purchase: VerifiedPurchase,
+    seats: Long,
+) {
+    customer.setAddOn(
+        "extra_seats",
+        seats,
+        sku = Sku("apple", mapOf("productId" to purchase.productId)),
+        actor = "app-store",
+        idempotencyKey = "apple-${purchase.transactionId}",
+    )
+}
+```
+
 ## Expiry and refunds
 
 Because each purchase carries `until`, a missed store notification ends the plan at the expiry

@@ -86,4 +86,4 @@ most likely to handle:
 | `billingPortal` | `not_found` (no provider has billed the customer), `scope_required`, `capability_required` |
 | `syncBilling` | `scope_required`, `capability_required` |
 | `setPlan` | `billed_elsewhere` (a store SKU where Stripe bills the product), `payment_required` (with `payment.status`), `not_found` (no such plan or SKU) |
-| `setAddOn`, `grant`, `revokeGrant`, `adjustMeter` | `customer_not_found`, `feature_not_found`, `not_found`, `scope_required` |
+| `setAddOn`, `grant`, `revokeGrant`, `adjustMeter` | `billed_elsewhere` (`setAddOn` with a store SKU where Stripe bills the product), `customer_not_found`, `feature_not_found`, `not_found`, `scope_required` |

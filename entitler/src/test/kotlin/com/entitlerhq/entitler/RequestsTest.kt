@@ -193,6 +193,12 @@ class RequestsTest {
             expect("PUT", "$encoded/add-ons/extra_seats", """{"quantity":0,"actor":"agent_7"}""", "plan-change") {
                 customer.setAddOn("extra_seats", 0, actor = "agent_7")
             }
+            expect(
+                "PUT",
+                "$encoded/add-ons/extra_seats",
+                """{"quantity":5,"sku":{"connector":"google","ids":{"productId":"seats.five"}},"actor":"google-play"}""",
+                "plan-change",
+            ) { customer.setAddOn("extra_seats", 5, sku = Sku("google", mapOf("productId" to "seats.five")), actor = "google-play") }
             val refused = kotlin.test.assertFailsWith<IllegalArgumentException> { customer.setPlan(sku, period = "monthly") }
             assertEquals("A SKU names its own period; leave period out.", refused.message)
         }

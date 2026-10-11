@@ -30,6 +30,7 @@ import com.entitlerhq.entitler.ProviderPage
 import com.entitlerhq.entitler.RegisteredCustomer
 import com.entitlerhq.entitler.Scope
 import com.entitlerhq.entitler.ServerCustomer
+import com.entitlerhq.entitler.Sku
 import com.entitlerhq.entitler.SubscribeStep
 import com.entitlerhq.entitler.Timing
 import com.entitlerhq.entitler.UsageEvent
@@ -652,11 +653,12 @@ private class Fake(
     override suspend fun setAddOn(
         addOn: String,
         quantity: Long,
+        sku: Sku?,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,
         timeout: Duration?,
-    ): PlanChange = write("setAddOn", "addOn" to addOn, "quantity" to quantity) { Answers.planChange(addOn, quantity) }
+    ): PlanChange = write("setAddOn", "addOn" to addOn, "quantity" to quantity, "sku" to sku) { Answers.planChange(addOn, quantity) }
 
     override suspend fun grant(
         feature: Feature,
