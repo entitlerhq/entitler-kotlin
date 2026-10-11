@@ -123,7 +123,9 @@ suspend fun billingReturn(customer: Customer) {
 
 `cancel` and `undoPendingChange` act on the customer's plan, or on the add-on `addOn` names; pass
 `product` when the customer holds plans in several products, never both. Each answers a `PlanChange`
-whose `changed` is false when there was nothing to do.
+whose `changed` is false when there was nothing to do. `undoPendingChange` cannot undo a `Billing`
+change, which only the company books: it answers `403 not_self_serve`, and your server undoes it with
+`setPlan` (see [company decisions](company-decisions.md)).
 
 ```kotlin
 suspend fun cancelAndUndo(customer: Customer) {
@@ -137,14 +139,15 @@ suspend fun cancelAndUndo(customer: Customer) {
 ## The billing portal
 
 `billingPortal` opens the provider's page for payment details and invoices. It changes no plan and
-always needs `returnUrl`. A customer the provider has never billed answers `404 not_found`:
+always needs `returnUrl`. A customer the provider has never billed answers `404 not_found`, and an
+environment with no payment provider connection answers `409 stale`:
 
 ```kotlin
 suspend fun portal(customer: Customer): String? =
     try {
         customer.billingPortal(returnUrl = "https://example.com/account").url
     } catch (error: EntitlerApiException) {
-        if (error.code != ErrorCode.NotFound) throw error
+        if (error.code != ErrorCode.NotFound && error.code != ErrorCode.Stale) throw error
         null
     }
 ```

@@ -83,7 +83,7 @@ most likely to handle:
 | --- | --- |
 | `subscribe` | `not_self_serve`, `return_url_required`, `payment_required` (a declined payment), `scope_required` (in-app without `billing:self`), `capability_required` (in-app without the customer portal) |
 | `cancel`, `undoPendingChange` | `not_self_serve`, `scope_required`, `capability_required` |
-| `billingPortal` | `not_found` (no provider has billed the customer), `scope_required`, `capability_required` |
+| `billingPortal` | `not_found` (no provider has billed the customer), `stale` (no payment provider connection), `scope_required`, `capability_required` |
 | `syncBilling` | `scope_required`, `capability_required` |
 | `setPlan` | `billed_elsewhere` (a store SKU where Stripe bills the product), `payment_required` (with `payment.status`), `not_found` (no such plan or SKU) |
 | `setAddOn`, `grant`, `revokeGrant`, `adjustMeter` | `billed_elsewhere` (`setAddOn` with a store SKU where Stripe bills the product), `customer_not_found`, `feature_not_found`, `not_found`, `scope_required` |

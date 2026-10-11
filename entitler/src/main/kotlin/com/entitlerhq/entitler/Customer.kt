@@ -287,7 +287,9 @@ public interface Customer {
 
     /**
      * Undoes the change booked for renewal, on the plan or the add-on [addOn] names,
-     * `DELETE /customers/{id}/subscription/pending`. Nothing pending answers `changed` false.
+     * `DELETE /customers/{id}/subscription/pending`. Nothing pending answers `changed` false. A
+     * [BookedChange.Billing] change is booked only by the company, so this answers `403 not_self_serve` for
+     * it; the company undoes it with [ServerCustomer.setPlan].
      */
     public suspend fun undoPendingChange(
         addOn: String? = null,
@@ -298,7 +300,8 @@ public interface Customer {
 
     /**
      * Opens the provider's page for payment details and invoices, `POST /customers/{id}/billing-portal`. It
-     * changes no plan, and a customer the provider has never billed answers `404 not_found`.
+     * changes no plan. A customer the provider has never billed answers `404 not_found`, and an environment
+     * with no payment provider connection answers `409 stale`.
      *
      * @param returnUrl Where the portal sends the customer back.
      */

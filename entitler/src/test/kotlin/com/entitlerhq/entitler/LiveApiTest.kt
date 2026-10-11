@@ -308,12 +308,13 @@ class LiveApiTest {
             assertTrue(customer.cancel(addOn = "sso_addon").changed)
             assertTrue(customer.cancel().changed)
             assertTrue(customer.undoPendingChange().changed)
-            customer.cancel()
-            customer.setPlan("free")
+            assertTrue(customer.cancel().changed)
+            assertTrue(customer.undoPendingChange().changed)
+            assertEquals(Effective.Now, customer.setPlan("free", timing = Timing.Now).effective)
             assertFalse(customer.cancel().changed)
             assertFalse(customer.syncBilling().changed)
             val portal = assertFailsWith<EntitlerApiException> { customer.billingPortal("https://example.com") }
-            assertEquals(ErrorCode.NotFound, portal.code)
+            assertEquals(ErrorCode.Stale, portal.code)
         }
 
     @Test

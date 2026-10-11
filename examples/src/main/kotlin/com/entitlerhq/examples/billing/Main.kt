@@ -32,8 +32,8 @@ fun main(): Unit =
             try {
                 println("Billing portal: ${customer.billingPortal(RETURN_URL).url}")
             } catch (error: EntitlerApiException) {
-                if (error.code != ErrorCode.NotFound) throw error
-                println("No provider has billed this customer yet, so there is no billing portal.")
+                if (error.code != ErrorCode.NotFound && error.code != ErrorCode.Stale) throw error
+                println("No provider bills this customer yet, so there is no billing portal.")
             }
 
             val deal = "deal-" + UUID.randomUUID()
