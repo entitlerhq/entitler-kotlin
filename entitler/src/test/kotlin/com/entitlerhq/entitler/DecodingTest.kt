@@ -23,6 +23,29 @@ class DecodingTest {
     }
 
     @Test
+    fun `a held plan's pending change decodes as a move, a cancel, a billing change or an unknown change`() {
+        val pro = """{"id":"p_pro","key":"pro","name":"Pro"}"""
+
+        fun pending(json: String): BookedChange = decode(json, BookedChange.serializer())
+        assertEquals(BookedChange.Move(PlanSummary("p_pro", "pro", "Pro")), pending("""{"type":"move","plan":$pro}"""))
+        assertEquals(BookedChange.Cancel(PlanSummary("p_pro", "pro", "Pro")), pending("""{"type":"cancel","movingTo":$pro}"""))
+        assertEquals(BookedChange.Cancel(null), pending("""{"type":"cancel","movingTo":null}"""))
+        val billing = pending("""{"type":"billing","billing":"outside"}""")
+        assertEquals(BookedChange.Billing(BookedBilling.Outside), billing)
+        assertEquals(BookedChangeType.Billing, billing.type)
+        assertEquals(BookedBilling("partner"), (pending("""{"type":"billing","billing":"partner"}""") as BookedChange.Billing).billing)
+        val unknown = pending("""{"type":"pause","until":"2027-01-01T00:00:00Z"}""")
+        assertEquals(BookedChangeType("pause"), unknown.type)
+        assertEquals("2027-01-01T00:00:00Z", (unknown as BookedChange.Unknown).raw.string("until"))
+        for (broken in listOf("""{"type":"move"}""", """{"type":"billing","billing":1}""", """{"plan":$pro}""", "[]")) {
+            kotlin.test.assertFailsWith<kotlinx.serialization.SerializationException> { pending(broken) }
+        }
+        for (change in listOf(billing, unknown, BookedChange.Cancel(null), BookedChange.Move(PlanSummary("p_pro", "pro", "Pro")))) {
+            assertEquals(change, pending(json.encodeToString(BookedChange.serializer(), change)))
+        }
+    }
+
+    @Test
     fun `checks decode with their context`() =
         runTest {
             api.replyFixture("check-metered")

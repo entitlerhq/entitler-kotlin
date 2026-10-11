@@ -119,36 +119,83 @@ public final class com/entitlerhq/entitler/BillingSync$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
-public final class com/entitlerhq/entitler/BookedChange {
-	public static final field Companion Lcom/entitlerhq/entitler/BookedChange$Companion;
-	public fun <init> (Lcom/entitlerhq/entitler/BookedChangeType;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/PlanSummary;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/BookedChangeType;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/PlanSummary;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Lcom/entitlerhq/entitler/BookedChangeType;
-	public final fun component2 ()Lcom/entitlerhq/entitler/PlanSummary;
-	public final fun component3 ()Lcom/entitlerhq/entitler/PlanSummary;
-	public final fun copy (Lcom/entitlerhq/entitler/BookedChangeType;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/PlanSummary;)Lcom/entitlerhq/entitler/BookedChange;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/BookedChangeType;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/PlanSummary;ILjava/lang/Object;)Lcom/entitlerhq/entitler/BookedChange;
+public final class com/entitlerhq/entitler/BookedBilling {
+	public static final field Companion Lcom/entitlerhq/entitler/BookedBilling$Companion;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/BookedBilling;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/BookedBilling;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/BookedBilling;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getMovingTo ()Lcom/entitlerhq/entitler/PlanSummary;
-	public final fun getPlan ()Lcom/entitlerhq/entitler/PlanSummary;
-	public final fun getType ()Lcom/entitlerhq/entitler/BookedChangeType;
+	public final fun getValue ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
-public final synthetic class com/entitlerhq/entitler/BookedChange$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
-	public static final field INSTANCE Lcom/entitlerhq/entitler/BookedChange$$serializer;
-	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
-	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/entitlerhq/entitler/BookedChange;
-	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
-	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
-	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/entitlerhq/entitler/BookedChange;)V
-	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
-	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+public final class com/entitlerhq/entitler/BookedBilling$Companion {
+	public final fun getOutside ()Lcom/entitlerhq/entitler/BookedBilling;
+	public final fun getProvider ()Lcom/entitlerhq/entitler/BookedBilling;
+	public final fun getStore ()Lcom/entitlerhq/entitler/BookedBilling;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class com/entitlerhq/entitler/BookedChange {
+	public static final field Companion Lcom/entitlerhq/entitler/BookedChange$Companion;
+	public abstract fun getType ()Lcom/entitlerhq/entitler/BookedChangeType;
+}
+
+public final class com/entitlerhq/entitler/BookedChange$Billing : com/entitlerhq/entitler/BookedChange {
+	public fun <init> (Lcom/entitlerhq/entitler/BookedBilling;)V
+	public final fun component1 ()Lcom/entitlerhq/entitler/BookedBilling;
+	public final fun copy (Lcom/entitlerhq/entitler/BookedBilling;)Lcom/entitlerhq/entitler/BookedChange$Billing;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/BookedChange$Billing;Lcom/entitlerhq/entitler/BookedBilling;ILjava/lang/Object;)Lcom/entitlerhq/entitler/BookedChange$Billing;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBilling ()Lcom/entitlerhq/entitler/BookedBilling;
+	public fun getType ()Lcom/entitlerhq/entitler/BookedChangeType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/entitlerhq/entitler/BookedChange$Cancel : com/entitlerhq/entitler/BookedChange {
+	public fun <init> ()V
+	public fun <init> (Lcom/entitlerhq/entitler/PlanSummary;)V
+	public synthetic fun <init> (Lcom/entitlerhq/entitler/PlanSummary;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/entitlerhq/entitler/PlanSummary;
+	public final fun copy (Lcom/entitlerhq/entitler/PlanSummary;)Lcom/entitlerhq/entitler/BookedChange$Cancel;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/BookedChange$Cancel;Lcom/entitlerhq/entitler/PlanSummary;ILjava/lang/Object;)Lcom/entitlerhq/entitler/BookedChange$Cancel;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMovingTo ()Lcom/entitlerhq/entitler/PlanSummary;
+	public fun getType ()Lcom/entitlerhq/entitler/BookedChangeType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/entitlerhq/entitler/BookedChange$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/entitlerhq/entitler/BookedChange$Move : com/entitlerhq/entitler/BookedChange {
+	public fun <init> (Lcom/entitlerhq/entitler/PlanSummary;)V
+	public final fun component1 ()Lcom/entitlerhq/entitler/PlanSummary;
+	public final fun copy (Lcom/entitlerhq/entitler/PlanSummary;)Lcom/entitlerhq/entitler/BookedChange$Move;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/BookedChange$Move;Lcom/entitlerhq/entitler/PlanSummary;ILjava/lang/Object;)Lcom/entitlerhq/entitler/BookedChange$Move;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPlan ()Lcom/entitlerhq/entitler/PlanSummary;
+	public fun getType ()Lcom/entitlerhq/entitler/BookedChangeType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/entitlerhq/entitler/BookedChange$Unknown : com/entitlerhq/entitler/BookedChange {
+	public fun <init> (Lcom/entitlerhq/entitler/BookedChangeType;Lkotlinx/serialization/json/JsonObject;)V
+	public final fun component1 ()Lcom/entitlerhq/entitler/BookedChangeType;
+	public final fun component2 ()Lkotlinx/serialization/json/JsonObject;
+	public final fun copy (Lcom/entitlerhq/entitler/BookedChangeType;Lkotlinx/serialization/json/JsonObject;)Lcom/entitlerhq/entitler/BookedChange$Unknown;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/BookedChange$Unknown;Lcom/entitlerhq/entitler/BookedChangeType;Lkotlinx/serialization/json/JsonObject;ILjava/lang/Object;)Lcom/entitlerhq/entitler/BookedChange$Unknown;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRaw ()Lkotlinx/serialization/json/JsonObject;
+	public fun getType ()Lcom/entitlerhq/entitler/BookedChangeType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class com/entitlerhq/entitler/BookedChangeType {
@@ -164,6 +211,7 @@ public final class com/entitlerhq/entitler/BookedChangeType {
 }
 
 public final class com/entitlerhq/entitler/BookedChangeType$Companion {
+	public final fun getBilling ()Lcom/entitlerhq/entitler/BookedChangeType;
 	public final fun getCancel ()Lcom/entitlerhq/entitler/BookedChangeType;
 	public final fun getMove ()Lcom/entitlerhq/entitler/BookedChangeType;
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;

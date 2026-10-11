@@ -1049,6 +1049,9 @@ public data class BookedChangeType(
 
         /** A cancel, moving to the default plan. */
         public val Cancel: BookedChangeType = BookedChangeType("cancel")
+
+        /** A change of who bills the plan from renewal. */
+        public val Billing: BookedChangeType = BookedChangeType("billing")
     }
 }
 
@@ -1056,6 +1059,38 @@ internal object BookedChangeTypeSerializer : OpenStringSerializer<BookedChangeTy
     "BookedChangeType",
     ::BookedChangeType,
     BookedChangeType::value,
+)
+
+/**
+ * Who bills a plan from renewal, in a [BookedChange.Billing].
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = BookedBillingSerializer::class)
+public data class BookedBilling(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** The payment provider that bills the product. */
+        public val Provider: BookedBilling = BookedBilling("provider")
+
+        /** Nobody: the customer holds the plan outside any provider, as with an invoiced contract. */
+        public val Outside: BookedBilling = BookedBilling("outside")
+
+        /** An app store. */
+        public val Store: BookedBilling = BookedBilling("store")
+    }
+}
+
+internal object BookedBillingSerializer : OpenStringSerializer<BookedBilling>(
+    "BookedBilling",
+    ::BookedBilling,
+    BookedBilling::value,
 )
 
 /**

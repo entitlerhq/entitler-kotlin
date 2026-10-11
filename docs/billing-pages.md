@@ -40,6 +40,21 @@ suspend fun planButtons(customer: Customer) {
 }
 ```
 
+A held plan's `pending` is the change booked for its renewal, a sealed `BookedChange`: `Move` to
+another plan, `Cancel` (moving to the product's default plan, or to none), `Billing` (who bills the plan
+from renewal: the provider, nobody, as with an invoiced contract, or a store), or `Unknown`, a change
+this version of the SDK does not know, kept with its raw JSON:
+
+```kotlin
+fun renewalNote(held: HeldPlan): String? =
+    when (val pending = held.pending) {
+        is BookedChange.Move -> "Moves to ${pending.plan.name} at renewal"
+        is BookedChange.Cancel -> "Ends at renewal" + pending.movingTo?.let { ", then ${it.name}" }.orEmpty()
+        is BookedChange.Billing -> "Billed by ${pending.billing} from renewal"
+        is BookedChange.Unknown, null -> null
+    }
+```
+
 A plan or add-on is named by its key or public id. A period is named by its key (`monthly`, `yearly`),
 which stays the same when its `label` is renamed or translated. A check the customer is not entitled to
 lists `upgrades` too, the plans that would give them the feature.

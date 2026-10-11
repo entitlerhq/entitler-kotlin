@@ -1,9 +1,11 @@
 package com.entitlerhq.examples.docs
 
+import com.entitlerhq.entitler.BookedChange
 import com.entitlerhq.entitler.Customer
 import com.entitlerhq.entitler.EntitlerApiException
 import com.entitlerhq.entitler.ErrorCode
 import com.entitlerhq.entitler.FeatureValue
+import com.entitlerhq.entitler.HeldPlan
 import com.entitlerhq.entitler.MoveAction
 import com.entitlerhq.entitler.NoPlan
 import com.entitlerhq.entitler.PlanBilling
@@ -30,6 +32,15 @@ suspend fun planButtons(customer: Customer) {
         }
     }
 }
+
+/** Billing pages: the change booked for a held plan's renewal. */
+fun renewalNote(held: HeldPlan): String? =
+    when (val pending = held.pending) {
+        is BookedChange.Move -> "Moves to ${pending.plan.name} at renewal"
+        is BookedChange.Cancel -> "Ends at renewal" + pending.movingTo?.let { ", then ${it.name}" }.orEmpty()
+        is BookedChange.Billing -> "Billed by ${pending.billing} from renewal"
+        is BookedChange.Unknown, null -> null
+    }
 
 /** Billing pages: subscribe and each next step. */
 suspend fun choosePlan(

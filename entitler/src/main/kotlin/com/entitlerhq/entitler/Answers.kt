@@ -332,18 +332,138 @@ public data class HeldPlan(
 )
 
 /**
- * A change booked for a held plan's renewal.
+ * A change booked for a held plan's renewal. Handle every case with an exhaustive `when`:
  *
- * @property type [BookedChangeType.Move] to [plan], or [BookedChangeType.Cancel] moving to [movingTo].
- * @property plan For a move, the plan it moves to.
- * @property movingTo For a cancel, the default plan the customer moves to, or null for none.
+ * ```kotlin
+ * val note = when (val pending = held.pending) {
+ *     is BookedChange.Move -> "Moves to ${pending.plan.name} at renewal"
+ *     is BookedChange.Cancel -> "Ends at renewal"
+ *     is BookedChange.Billing -> "Billed ${pending.billing} from renewal"
+ *     is BookedChange.Unknown, null -> null
+ * }
+ * ```
  */
-@Serializable
-public data class BookedChange(
-    val type: BookedChangeType,
-    val plan: PlanSummary? = null,
-    val movingTo: PlanSummary? = null,
-)
+@Serializable(with = BookedChangeSerializer::class)
+public sealed interface BookedChange {
+    /** The kind of change, as the API names it. */
+    public val type: BookedChangeType
+
+    /**
+     * A move to another plan at renewal.
+     *
+     * @property plan The plan the customer moves to.
+     */
+    public data class Move(
+        val plan: PlanSummary,
+    ) : BookedChange {
+        override val type: BookedChangeType get() = BookedChangeType.Move
+    }
+
+    /**
+     * A cancel at renewal.
+     *
+     * @property movingTo The default plan the customer moves to, or null when the product has none.
+     */
+    public data class Cancel(
+        val movingTo: PlanSummary? = null,
+    ) : BookedChange {
+        override val type: BookedChangeType get() = BookedChangeType.Cancel
+    }
+
+    /**
+     * A change of who bills the plan from renewal, such as a `setPlan` with [PlanBilling.End] booked for
+     * renewal.
+     *
+     * @property billing Who bills it from renewal.
+     */
+    public data class Billing(
+        val billing: BookedBilling,
+    ) : BookedChange {
+        override val type: BookedChangeType get() = BookedChangeType.Billing
+    }
+
+    /**
+     * A change this version of the SDK does not know.
+     *
+     * @property raw The change as the API sent it.
+     */
+    public data class Unknown(
+        override val type: BookedChangeType,
+        val raw: kotlinx.serialization.json.JsonObject,
+    ) : BookedChange
+}
+
+internal object BookedChangeSerializer : kotlinx.serialization.KSerializer<BookedChange> {
+    override val descriptor =
+        kotlinx.serialization.descriptors.buildClassSerialDescriptor("com.entitlerhq.entitler.BookedChange")
+
+    override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): BookedChange {
+        val input = decoder as kotlinx.serialization.json.JsonDecoder
+        val body =
+            input.decodeJsonElement() as? kotlinx.serialization.json.JsonObject
+                ?: throw kotlinx.serialization.SerializationException("Expected a booked change.")
+        val type = body.string("type") ?: throw kotlinx.serialization.SerializationException("Expected a booked change with type.")
+        return when (type) {
+            "move" -> BookedChange.Move(field(input, body, "plan", PlanSummary.serializer()))
+            "cancel" -> BookedChange.Cancel(optional(input, body, "movingTo", PlanSummary.serializer()))
+            "billing" -> BookedChange.Billing(field(input, body, "billing", BookedBillingSerializer))
+            else -> BookedChange.Unknown(BookedChangeType(type), body)
+        }
+    }
+
+    private fun <T : Any> optional(
+        input: kotlinx.serialization.json.JsonDecoder,
+        body: kotlinx.serialization.json.JsonObject,
+        name: String,
+        serializer: kotlinx.serialization.KSerializer<T>,
+    ): T? {
+        val element = body[name]
+        if (element == null || element is kotlinx.serialization.json.JsonNull) return null
+        checkShape(serializer.descriptor, element)
+        return input.json.decodeFromJsonElement(serializer, element)
+    }
+
+    private fun <T : Any> field(
+        input: kotlinx.serialization.json.JsonDecoder,
+        body: kotlinx.serialization.json.JsonObject,
+        name: String,
+        serializer: kotlinx.serialization.KSerializer<T>,
+    ): T = optional(input, body, name, serializer) ?: throw kotlinx.serialization.SerializationException("Expected $name.")
+
+    override fun serialize(
+        encoder: kotlinx.serialization.encoding.Encoder,
+        value: BookedChange,
+    ) {
+        val output = encoder as kotlinx.serialization.json.JsonEncoder
+        val fields =
+            when (value) {
+                is BookedChange.Move -> {
+                    mapOf("plan" to output.json.encodeToJsonElement(PlanSummary.serializer(), value.plan))
+                }
+
+                is BookedChange.Cancel -> {
+                    mapOf(
+                        "movingTo" to
+                            (
+                                value.movingTo?.let { output.json.encodeToJsonElement(PlanSummary.serializer(), it) }
+                                    ?: kotlinx.serialization.json.JsonNull
+                            ),
+                    )
+                }
+
+                is BookedChange.Billing -> {
+                    mapOf("billing" to kotlinx.serialization.json.JsonPrimitive(value.billing.value))
+                }
+
+                is BookedChange.Unknown -> {
+                    value.raw - "type"
+                }
+            }
+        output.encodeJsonElement(
+            kotlinx.serialization.json.JsonObject(mapOf("type" to kotlinx.serialization.json.JsonPrimitive(value.type.value)) + fields),
+        )
+    }
+}
 
 /**
  * What a move changes for the customer.
