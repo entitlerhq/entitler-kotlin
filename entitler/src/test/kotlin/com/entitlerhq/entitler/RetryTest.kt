@@ -167,6 +167,26 @@ class RetryTest {
         }
 
     @Test
+    fun `the backoff bound never overflows, even with 64 retries`() =
+        runTest {
+            api
+                .server {
+                    maxRetries = 64
+                    random = FixedRandom(ALMOST_ONE)
+                }.use { server ->
+                    repeat(64) { api.reply(500, error) }
+                    api.replyFixture("check")
+                    val started = currentTime
+                    assertTrue(server.customer("u").check("export_pdf").entitled)
+                    val waited = currentTime - started
+                    val ceilings = listOf(500L, 1000, 2000, 4000) + List(60) { 8000L }
+                    assertTrue(waited <= ceilings.sum(), "$waited")
+                    assertTrue(waited >= ceilings.sum() * 99 / 100, "$waited")
+                    assertEquals(65, api.server.requestCount)
+                }
+        }
+
+    @Test
     fun `connection failures are retried and then raised as connection errors`() =
         runTest {
             api.server { maxRetries = 1 }.use { server ->

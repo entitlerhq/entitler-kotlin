@@ -431,6 +431,9 @@ private class Fake(
         amount: Long,
     ): Boolean = (meter.value as? FeatureValue.Amount)?.let { meter.used + meter.held + amount <= it.value } ?: true
 
+    private fun refusalOf(meter: Held.Meter): UsageRefusal =
+        if (isEntitled(meter.value)) UsageRefusal.OverAllowance else UsageRefusal.NotEntitled
+
     private fun replayOr(
         key: String,
         record: () -> UsageResult,
@@ -462,7 +465,7 @@ private class Fake(
                 val meter = meterOf(feature.key)
                 val observe = mode == UsageMode.Observe
                 if (!observe && !fits(meter, amount)) {
-                    result(UsageOutcome.Refused, feature.key, amount, refusal = UsageRefusal.OverAllowance)
+                    result(UsageOutcome.Refused, feature.key, amount, refusal = refusalOf(meter))
                 } else {
                     meter.used += amount
                     val usageId = "r_${reports.size + 1}"
@@ -491,7 +494,7 @@ private class Fake(
         replayOr(idempotencyKey) {
             val meter = meterOf(key)
             if (!fits(meter, amount)) {
-                result(UsageOutcome.Refused, key, amount, refusal = UsageRefusal.OverAllowance)
+                result(UsageOutcome.Refused, key, amount, refusal = refusalOf(meter))
             } else {
                 meter.held += amount
                 val holdId = "h_${holds.size + 1}"

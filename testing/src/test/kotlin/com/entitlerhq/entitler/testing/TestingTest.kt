@@ -140,6 +140,22 @@ class TestingTest {
         }
 
     @Test
+    fun `a gated report or hold is refused not_entitled at a value of 0, and over_allowance past the allowance`() =
+        runTest {
+            val none = fakeCustomer("ai_credits" to metered(value = 0))
+            assertEquals(UsageRefusal.NotEntitled, none.recordUsage(credits, 1, idempotencyKey = "a").refusal)
+            assertEquals(UsageRefusal.NotEntitled, none.holdUsage(credits, 1, idempotencyKey = "b").refusal)
+            assertEquals(
+                UsageRefusal.NotEntitled,
+                assertFailsWith<EntitlerUsageRefusedException> { none.startHold(credits, 1, "c") }.result.refusal,
+            )
+            val some = fakeCustomer("ai_credits" to metered(value = 10, used = 8))
+            assertEquals(UsageRefusal.OverAllowance, some.recordUsage(credits, 3, idempotencyKey = "a").refusal)
+            assertEquals(UsageRefusal.OverAllowance, some.holdUsage(credits, 3, idempotencyKey = "b").refusal)
+            assertEquals(UsageOutcome.Recorded, none.recordUsage(credits, 1, idempotencyKey = "d", mode = UsageMode.Observe).outcome)
+        }
+
+    @Test
     fun `settle, release, replay and cancel answer as the API does`() =
         runTest {
             val customer = fakeCustomer("ai_credits" to metered(value = 100))
