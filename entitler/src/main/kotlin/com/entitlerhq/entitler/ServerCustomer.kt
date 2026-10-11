@@ -220,14 +220,13 @@ public interface ServerCustomer : Customer {
 
     /**
      * Sets the quantity of the add-on [addOn], `PUT /customers/{id}/add-ons/{addOn}`: adds it, sets its
-     * quantity, or removes it at 0.
+     * quantity, or removes it at 0. The change always takes effect now.
      *
      * @param quantity From 0 to 10,000.
      */
     public suspend fun setAddOn(
         addOn: String,
         quantity: Long,
-        timing: Timing? = null,
         actor: String? = null,
         reason: String? = null,
         idempotencyKey: String? = null,
@@ -460,7 +459,6 @@ internal class ServerCustomerImpl(
     override suspend fun setAddOn(
         addOn: String,
         quantity: Long,
-        timing: Timing?,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,
@@ -470,7 +468,6 @@ internal class ServerCustomerImpl(
         val body =
             buildJsonObject {
                 put("quantity", quantity)
-                timing?.let { put("when", it.value) }
                 decidedBy(actor, reason)
             }
         return write("PUT", path, PlanChange.serializer(), idempotencyKey, timeout, body)

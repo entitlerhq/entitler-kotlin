@@ -652,7 +652,6 @@ private class Fake(
     override suspend fun setAddOn(
         addOn: String,
         quantity: Long,
-        timing: Timing?,
         actor: String?,
         reason: String?,
         idempotencyKey: String?,

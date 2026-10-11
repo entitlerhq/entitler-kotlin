@@ -190,8 +190,8 @@ class RequestsTest {
                 "plan-change",
             ) { customer.setPlan(sku, billing = PlanBilling.Keep) }
             expect("PUT", "$encoded/add-ons/extra_seats", """{"quantity":150}""", "plan-change") { customer.setAddOn("extra_seats", 150) }
-            expect("PUT", "$encoded/add-ons/extra_seats", """{"quantity":0,"when":"now","actor":"agent_7"}""", "plan-change") {
-                customer.setAddOn("extra_seats", 0, timing = Timing.Now, actor = "agent_7")
+            expect("PUT", "$encoded/add-ons/extra_seats", """{"quantity":0,"actor":"agent_7"}""", "plan-change") {
+                customer.setAddOn("extra_seats", 0, actor = "agent_7")
             }
             val refused = kotlin.test.assertFailsWith<IllegalArgumentException> { customer.setPlan(sku, period = "monthly") }
             assertEquals("A SKU names its own period; leave period out.", refused.message)

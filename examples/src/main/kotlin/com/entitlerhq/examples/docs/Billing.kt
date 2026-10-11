@@ -10,7 +10,6 @@ import com.entitlerhq.entitler.Provider
 import com.entitlerhq.entitler.ServerCustomer
 import com.entitlerhq.entitler.Sku
 import com.entitlerhq.entitler.SubscribeStep
-import com.entitlerhq.entitler.Timing
 import com.entitlerhq.examples.generatedfeatures.Features
 import java.time.Instant
 
@@ -73,7 +72,7 @@ suspend fun companyDecisions(
     dealId: String,
 ) {
     customer.setPlan("enterprise", period = "yearly", billing = PlanBilling.End, actor = "hubspot", idempotencyKey = "deal-$dealId")
-    customer.setAddOn("extra_seats", quantity = 150, timing = Timing.Now, actor = "hubspot", idempotencyKey = "deal-$dealId-seats")
+    customer.setAddOn("extra_seats", quantity = 150, actor = "hubspot", idempotencyKey = "deal-$dealId-seats")
     customer.setPlan("team", billing = PlanBilling.Keep, until = Instant.parse("2026-12-31T00:00:00Z"), reason = "Outage credit")
 }
 

@@ -8,7 +8,7 @@ purchase. They follow no self-serve rules, so sales-led plans are included, and 
 ## Plans and add-ons
 
 `setPlan` moves the customer to a plan by its key or public id, or to a [store SKU](store-purchases.md).
-`timing` is `Now` or `End` (at renewal), the project's policy when left out. `billing` decides what
+On `setPlan`, `timing` is `Now` or `End` (at renewal), the project's policy when left out. `billing` decides what
 happens at the provider:
 
 - `Provider` (the default) charges the change through the provider that bills the product.
@@ -18,7 +18,7 @@ happens at the provider:
   plan outside any provider, as with an invoiced contract.
 
 `until` returns the customer to the product's default plan at that instant, unless a later `setPlan`
-moved them or set a later `until`. `setAddOn` adds an add-on, sets its quantity, or removes it at 0.
+moved them or set a later `until`. `setAddOn` adds an add-on, sets its quantity, or removes it at 0, always taking effect now.
 
 ```kotlin
 suspend fun companyDecisions(
@@ -26,7 +26,7 @@ suspend fun companyDecisions(
     dealId: String,
 ) {
     customer.setPlan("enterprise", period = "yearly", billing = PlanBilling.End, actor = "hubspot", idempotencyKey = "deal-$dealId")
-    customer.setAddOn("extra_seats", quantity = 150, timing = Timing.Now, actor = "hubspot", idempotencyKey = "deal-$dealId-seats")
+    customer.setAddOn("extra_seats", quantity = 150, actor = "hubspot", idempotencyKey = "deal-$dealId-seats")
     customer.setPlan("team", billing = PlanBilling.Keep, until = Instant.parse("2026-12-31T00:00:00Z"), reason = "Outage credit")
 }
 ```
