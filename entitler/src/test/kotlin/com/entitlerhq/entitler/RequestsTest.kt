@@ -215,7 +215,7 @@ class RequestsTest {
             expect("PUT", "$encoded/add-ons/support_premium", """{"quantity":1,"replaces":"support_standard"}""", "plan-change") {
                 customer.setAddOn("support_premium", 1, replaces = "support_standard")
             }
-            val ending = "Ending a plan takes no period, until or version."
+            val ending = "Pass no period, until or version when ending a plan."
             assertEquals(
                 ending,
                 kotlin.test.assertFailsWith<IllegalArgumentException> { customer.setPlan(NoPlan("app"), period = "monthly") }.message,
@@ -238,7 +238,7 @@ class RequestsTest {
                     }.message,
             )
             assertEquals(
-                "Name the product by its key or id.",
+                "Name the product by its id or its key.",
                 kotlin.test.assertFailsWith<IllegalArgumentException> { NoPlan(" ") }.message,
             )
             assertEquals(

@@ -464,7 +464,7 @@ internal class ServerCustomerImpl(
         timeout: Duration?,
     ): PlanChange {
         require(choice !is NoPlan || (until == null && version == null)) {
-            "Ending a plan takes no period, until or version."
+            "Pass no period, until or version when ending a plan."
         }
         val body =
             buildJsonObject {
@@ -610,7 +610,7 @@ private fun JsonObjectBuilder.choiceJson(
         }
 
         is NoPlan -> {
-            require(period == null) { "Ending a plan takes no period, until or version." }
+            require(period == null) { "Pass no period, until or version when ending a plan." }
             put("plan", JsonNull)
             put("product", choice.product)
         }

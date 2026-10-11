@@ -519,7 +519,7 @@ public data class NoPlan(
     val product: String,
 ) : PlanChoice {
     init {
-        require(product.isNotBlank()) { "Name the product by its key or id." }
+        require(product.isNotBlank()) { "Name the product by its id or its key." }
     }
 }
 
