@@ -43,7 +43,14 @@ The repository's only required check is `All checks passed`.
 ## Authorship and pull requests
 
 - Every commit is authored and committed by Romain Francez
-  `<1330814+romainfrancez@users.noreply.github.com>`, with no attribution trailers, generated-by lines,
+  `<1330814+romainfrancez@users.noreply.github.com>`. Set that up before the first commit with:
+
+  ```sh
+  git config user.name "Romain Francez"
+  git config user.email "1330814+romainfrancez@users.noreply.github.com"
+  ```
+
+  Commits carry no attribution trailers, generated-by lines,
   session links or model names. The repository never names the tools that wrote it, in files, commit
   messages or branch names. Check `git log --format='%an <%ae>%n%b'` before every push.
 - Never write to GitHub except by `git push`: open no pull requests and post no comments, reviews or

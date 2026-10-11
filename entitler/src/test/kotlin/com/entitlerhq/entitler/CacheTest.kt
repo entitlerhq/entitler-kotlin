@@ -112,6 +112,25 @@ class CacheTest {
         }
 
     @Test
+    fun `max-age and Age saturate however many digits they have`() =
+        runTest {
+            api.server().use { server ->
+                val huge = "9".repeat(40)
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=$huge")
+                api.replyFixture("check-full", 200, etag, "Cache-Control" to "max-age=600", "Age" to huge)
+                api.replyFixture("check-full", 200, etag, "Cache-Control" to "max-age=600")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                api.now += 365L * 24 * 3_600_000
+                customer.check("export_pdf")
+                assertEquals(1, api.server.requestCount)
+                customer.check("sso")
+                customer.check("sso")
+                assertEquals(3, api.server.requestCount)
+            }
+        }
+
+    @Test
     fun `an entry with only an ETag is revalidated every time`() =
         runTest {
             api.server().use { server ->
@@ -236,6 +255,34 @@ class CacheTest {
                 other.check("export_pdf")
                 other.check("export_pdf")
                 assertEquals(3, api.server.requestCount)
+            }
+        }
+
+    @Test
+    fun `an answer whose customer was forgotten while its read was in flight is revalidated`() =
+        runTest {
+            api.server().use { server ->
+                api.server.enqueue(
+                    MockResponse
+                        .Builder()
+                        .body(fixture("check"))
+                        .addHeader(etag.first, etag.second)
+                        .addHeader("Cache-Control", "max-age=600")
+                        .headersDelay(500, TimeUnit.MILLISECONDS)
+                        .build(),
+                )
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                val customer = server.customer("seen")
+                val engine = (customer as CustomerImpl).engine
+                withContext(Dispatchers.IO) {
+                    val read = async { customer.check("export_pdf") }
+                    kotlinx.coroutines.delay(100)
+                    engine.bump("seen")
+                    repeat(20_000) { engine.bump("u$it") }
+                    read.await()
+                }
+                customer.check("export_pdf")
+                assertEquals(2, api.server.requestCount)
             }
         }
 

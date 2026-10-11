@@ -24,6 +24,7 @@ fun main(): Unit =
             val customer = entitler.customer("metered-customer")
             customer.register(name = "Katherine Johnson")
             val message = UUID.randomUUID().toString()
+            customer.adjustMeter(aiCredits, idempotencyKey = "reset-$message", to = 0, reason = "A fresh run")
 
             try {
                 customer.startHold(aiCredits, ESTIMATE, idempotencyKey = "reply-$message").use { hold ->
@@ -43,13 +44,19 @@ fun main(): Unit =
                 println("This reply was already streamed and charged: ${replayed.result.outcome}.")
             }
 
-            val summary =
-                customer.withHold(aiCredits, ESTIMATE, idempotencyKey = "summary-$message") { hold ->
-                    val creditsUsed = Random.nextLong(1, ESTIMATE)
-                    hold.used = creditsUsed
-                    "A summary that cost $creditsUsed credits."
-                }
-            println(summary)
+            try {
+                val summary =
+                    customer.withHold(aiCredits, ESTIMATE, idempotencyKey = "summary-$message") { hold ->
+                        val creditsUsed = Random.nextLong(1, ESTIMATE)
+                        hold.used = creditsUsed
+                        "A summary that cost $creditsUsed credits."
+                    }
+                println(summary)
+            } catch (refused: EntitlerUsageRefusedException) {
+                println("Not enough credits to summarise: ${refused.result.refusal}.")
+            } catch (replayed: EntitlerUsageReplayedException) {
+                println("This summary was already made and charged: ${replayed.result.outcome}.")
+            }
 
             val streamed = customer.recordUsage(aiCredits, STREAMED, idempotencyKey = "upload-$message", mode = UsageMode.Observe)
             println("Recorded upload usage; over the allowance by ${streamed.overBy}.")

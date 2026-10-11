@@ -96,6 +96,8 @@ suspend fun withHoldExample(
         println(summary.text)
     } catch (refused: EntitlerUsageRefusedException) {
         println("Refused: ${refused.result.refusal}")
+    } catch (replayed: EntitlerUsageReplayedException) {
+        println("Already summarised: ${replayed.result.outcome}")
     }
 }
 

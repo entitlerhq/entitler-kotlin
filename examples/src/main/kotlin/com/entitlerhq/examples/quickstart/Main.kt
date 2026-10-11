@@ -12,6 +12,8 @@ fun main(): Unit =
         EntitlerServer(System.getenv("ENTITLER_KEY")).use { entitler ->
             val customer = entitler.customer("quickstart-customer")
             customer.register(name = "Ada Lovelace", email = "ada@example.com")
+            val run = UUID.randomUUID().toString()
+            customer.adjustMeter(Feature.Metered("ai_credits"), idempotencyKey = "quickstart-reset-$run", to = 0, reason = "A fresh run")
 
             if (customer.isEntitled(Feature.OnOff("export_pdf"))) {
                 println("Ada can export PDFs.")
@@ -19,7 +21,7 @@ fun main(): Unit =
                 println("Exporting PDFs needs an upgrade.")
             }
 
-            val job = "quickstart-" + UUID.randomUUID()
+            val job = "quickstart-$run"
             val result = customer.recordUsage(Feature.Metered("ai_credits"), 1, idempotencyKey = job)
             if (result.outcome == UsageOutcome.Refused) {
                 println("Out of AI credits until ${result.resetsAt}.")

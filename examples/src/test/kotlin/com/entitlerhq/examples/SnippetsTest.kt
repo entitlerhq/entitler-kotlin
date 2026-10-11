@@ -35,6 +35,18 @@ class SnippetsTest {
     }
 
     @Test
+    fun `README links are absolute GitHub URLs`() {
+        val links = Regex("""\]\(([^)]+)\)""").findAll(File(root, "README.md").readText()).map { it.groupValues[1] }.toList()
+        assertTrue(links.size > 20, "Only ${links.size} links were found.")
+        val relative = links.filterNot { it.startsWith("https://") || it.startsWith("#") }
+        assertTrue(relative.isEmpty(), "Relative links: $relative")
+        links.filter { "github.com/entitlerhq/entitler-kotlin" in it }.forEach { link ->
+            val path = link.substringAfter("/blob/main/").substringBefore('#')
+            assertTrue(File(root, path).exists(), "$link points at nothing")
+        }
+    }
+
+    @Test
     fun `docs, samples and the README name the generator exactly as users run it`() {
         val texts =
             listOf(File(root, "README.md"), File(root, "generator/Module.md")) +

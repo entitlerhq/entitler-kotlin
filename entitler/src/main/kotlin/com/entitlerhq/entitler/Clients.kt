@@ -351,7 +351,7 @@ private const val BATCH_SIZE = 500
 
 private fun requireKey(key: String): String =
     trimCredential(key).also {
-        require(it.isNotEmpty()) { "Provide an Entitler API key from the dashboard." }
+        require(it.isNotEmpty() && isHeaderSafe(it)) { "Provide an Entitler API key from the dashboard." }
     }
 
 internal fun requirePublishable(key: String): String =
@@ -364,7 +364,7 @@ internal fun requirePublishable(key: String): String =
 internal fun requireToken(
     token: String,
     message: String,
-): String = trimCredential(token).also { require(it.isNotEmpty()) { message } }
+): String = trimCredential(token).also { require(it.isNotEmpty() && isHeaderSafe(it)) { message } }
 
 private val knownScopes =
     listOf(

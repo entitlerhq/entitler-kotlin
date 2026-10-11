@@ -187,6 +187,25 @@ class RetryTest {
         }
 
     @Test
+    fun `a body that fails to decompress is a sanitised connection error`() =
+        runTest {
+            api.server { maxRetries = 0 }.use { server ->
+                api.server.enqueue(
+                    MockResponse
+                        .Builder()
+                        .addHeader("Content-Encoding", "gzip")
+                        .body("not gzip, secret_body_text")
+                        .build(),
+                )
+                val failure =
+                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        assertFailsWith<EntitlerConnectionException> { server.customer("u").check("export_pdf") }
+                    }
+                assertTrue(generateSequence<Throwable>(failure) { it.cause }.none { it.message.orEmpty().contains("secret_body_text") })
+            }
+        }
+
+    @Test
     fun `connection failures are retried and then raised as connection errors`() =
         runTest {
             api.server { maxRetries = 1 }.use { server ->

@@ -78,6 +78,28 @@ class TokenTest {
         }
 
     @Test
+    fun `a credential that cannot go in a header is refused without showing it`() =
+        runTest {
+            val unsafe = "secret\u0007part.${jwt("""{"sub":"u","exp":1900000000}""").substringAfter('.')}"
+            val fixed = assertFailsWith<IllegalArgumentException> { EntitlerIdentityClient(PUBLISHABLE_KEY, unsafe) }
+            assertFalse(fixed.message.orEmpty().contains("secret"))
+            assertFailsWith<IllegalArgumentException> { EntitlerServer("ent_test_\u00e9") }
+            EntitlerIdentityClient(PUBLISHABLE_KEY, { unsafe }) { api.setUp(this) }.use { client ->
+                val failure = assertFailsWith<EntitlerTokenException> { client.me.check("export_pdf") }
+                assertFalse(generateSequence<Throwable>(failure) { it.cause }.any { it.message.orEmpty().contains("secret") })
+            }
+            assertEquals(0, api.server.requestCount)
+        }
+
+    @Test
+    fun `internal values holding credentials never show them`() {
+        val token = customerToken()
+        val credential = Credential("ent_sk_secret", token)
+        assertFalse(credential.toString().contains("secret") || credential.toString().contains(token))
+        assertFalse(HeldToken(token, 0).toString().contains(token))
+    }
+
+    @Test
     fun `the provider is asked on first use and its token kept`() =
         runTest {
             val calls = AtomicInteger()

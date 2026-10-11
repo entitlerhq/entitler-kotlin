@@ -81,7 +81,7 @@ internal class TokenSource(
                 } ?: tokenError("The token provider did not answer within the client's timeout.")
             val token = trimCredential(answer)
             if (token.isEmpty()) tokenError("The token provider answered a blank token.")
-            if (!isReadableToken(token)) tokenError("The token provider answered a token that cannot be read.")
+            if (!isHeaderSafe(token) || !isReadableToken(token)) tokenError("The token provider answered a token that cannot be read.")
             synchronized(lock) { current = HeldToken(token, clock()) }
             return token
         } finally {
@@ -89,6 +89,8 @@ internal class TokenSource(
         }
     }
 }
+
+internal fun isHeaderSafe(credential: String): Boolean = credential.all { it in '!'..'~' }
 
 /** Trims spaces, tabs, carriage returns and line feeds, and nothing else, as section 4.3 asks. */
 internal fun trimCredential(value: String): String = value.trim { it == ' ' || it == '\t' || it == '\r' || it == '\n' }

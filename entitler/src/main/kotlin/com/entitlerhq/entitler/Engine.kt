@@ -114,12 +114,21 @@ private fun rfc850Date(now: Long): DateTimeFormatter =
 
 private val asctimeDate = DateTimeFormatter.ofPattern("EEE MMM ppd HH:mm:ss yyyy", Locale.US)
 
+private fun isDigits(text: String): Boolean = text.isNotEmpty() && text.all { it in '0'..'9' }
+
+private fun headerSeconds(text: String): Long? =
+    text
+        .takeIf(::isDigits)
+        ?.toBigInteger()
+        ?.min(Int.MAX_VALUE.toBigInteger())
+        ?.toLong()
+
 internal fun retryAfterOf(
     value: String,
     now: Long,
 ): Duration? {
     val text = value.trim()
-    if (text.isNotEmpty() && text.all { it in '0'..'9' }) {
+    if (isDigits(text)) {
         return text
             .toBigInteger()
             .min(Long.MAX_VALUE.toBigInteger())
@@ -157,8 +166,7 @@ private fun directives(cacheControl: String?): Directives {
                 .takeIf { it.startsWith("max-age=") }
                 ?.removePrefix("max-age=")
                 ?.trim('"')
-                ?.toLongOrNull()
-                ?.coerceIn(0, Int.MAX_VALUE.toLong())
+                ?.let(::headerSeconds)
         }
     return Directives(maxAge, "no-store" in parts, "no-cache" in parts)
 }
@@ -390,7 +398,7 @@ internal class Engine(
             body = kept?.body ?: answer.body,
             etag = headers["ETag"] ?: kept?.etag,
             cacheControl = headers.values("Cache-Control").takeIf { it.isNotEmpty() }?.joinToString(", ") ?: kept?.cacheControl,
-            age = headers["Age"]?.trim()?.toLongOrNull() ?: kept?.age,
+            age = headers["Age"]?.trim()?.let(::headerSeconds) ?: kept?.age,
             receivedAt = Instant.ofEpochMilli(receivedAt),
         )
     }

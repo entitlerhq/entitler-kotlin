@@ -17,6 +17,12 @@ fun main(): Unit =
         EntitlerServer(System.getenv("ENTITLER_KEY")).use { server ->
             val customer = server.customer("in-app-customer")
             customer.register(name = "Grace Hopper")
+            customer.adjustMeter(
+                Feature.Metered("ai_credits"),
+                idempotencyKey = "in-app-reset-" + UUID.randomUUID(),
+                to = 0,
+                reason = "A fresh run",
+            )
             val mint = suspend { customer.token(scopes = listOf(Scope.EntitlementsRead, Scope.UsageWrite)).token }
 
             val app = EntitlerClient(mint)

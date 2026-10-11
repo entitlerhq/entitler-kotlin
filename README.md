@@ -9,7 +9,7 @@ snapshots, so a feature check never takes your app down.
 ## Requirements and install
 
 - Kotlin/JVM, with JVM 11 or later. On a server, any JVM 11 or later.
-- Android API 21 or later, with [core library desugaring](docs/android.md) below API 26 (the SDK uses `java.time`).
+- Android API 21 or later, with [core library desugaring](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/android.md) below API 26 (the SDK uses `java.time`).
 - Runtime dependencies: OkHttp, kotlinx.serialization JSON and kotlinx.coroutines.
 
 ```kts
@@ -90,46 +90,46 @@ java -jar entitler-generator.jar generate --package com.example
 ```
 
 It writes `src/main/kotlin/EntitlerFeatures.kt` unless `--out` names another file. Its `snapshot-keys` command
-writes the keys an app pins to verify offline snapshots. See [feature constants](docs/feature-constants.md)
+writes the keys an app pins to verify offline snapshots. See [feature constants](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/feature-constants.md)
 for the Gradle task, `--check` in CI, and declaring features by hand.
 
 ## Guides
 
-- [Checking access](docs/checking-access.md)
-- [Recording usage](docs/recording-usage.md)
-- [Pricing pages and visitors](docs/pricing-and-visitors.md)
-- [Billing pages](docs/billing-pages.md)
-- [Company decisions](docs/company-decisions.md)
-- [Store purchases](docs/store-purchases.md)
-- [The in-app client](docs/in-app-client.md)
-- [Android](docs/android.md)
-- [Offline snapshots](docs/offline-snapshots.md)
-- [Reliability](docs/reliability.md)
-- [Errors](docs/errors.md)
-- [As-of](docs/as-of.md)
-- [Tracks](docs/tracks.md)
-- [Scopes](docs/scopes.md)
-- [Configuration](docs/configuration.md)
-- [Testing your app](docs/testing.md)
-- [Feature constants](docs/feature-constants.md)
-- [Ktor and Spring](docs/frameworks.md)
-- [Calling from Java](docs/java.md)
-- [Versioning and support](docs/versioning.md)
+- [Checking access](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/checking-access.md)
+- [Recording usage](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/recording-usage.md)
+- [Pricing pages and visitors](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/pricing-and-visitors.md)
+- [Billing pages](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/billing-pages.md)
+- [Company decisions](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/company-decisions.md)
+- [Store purchases](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/store-purchases.md)
+- [The in-app client](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/in-app-client.md)
+- [Android](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/android.md)
+- [Offline snapshots](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/offline-snapshots.md)
+- [Reliability](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/reliability.md)
+- [Errors](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/errors.md)
+- [As-of](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/as-of.md)
+- [Tracks](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/tracks.md)
+- [Scopes](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/scopes.md)
+- [Configuration](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/configuration.md)
+- [Testing your app](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/testing.md)
+- [Feature constants](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/feature-constants.md)
+- [Ktor and Spring](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/frameworks.md)
+- [Calling from Java](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/java.md)
+- [Versioning and support](https://github.com/entitlerhq/entitler-kotlin/blob/main/docs/versioning.md)
 
 ## Examples
 
 Each runs with `ENTITLER_KEY` set (and `ENTITLER_PUBLISHABLE_KEY` for the pricing page), for example `ENTITLER_KEY=... ./gradlew :examples:quickstart`:
 
-- [quickstart](examples/src/main/kotlin/com/entitlerhq/examples/quickstart/Main.kt): register a customer, check a feature, record usage.
-- [pricing-page](examples/src/main/kotlin/com/entitlerhq/examples/pricingpage/Main.kt): print the pricing through the publishable client and through the server with a visitor id (`:examples:pricingPage`).
-- [in-app](examples/src/main/kotlin/com/entitlerhq/examples/inapp/Main.kt): mint a customer token, use it from an in-app client and close it at sign-out (`:examples:inApp`).
-- [metered-work](examples/src/main/kotlin/com/entitlerhq/examples/meteredwork/Main.kt): a `startHold` handle around streamed work, `withHold`, and an observe-mode report (`:examples:meteredWork`).
-- [offline](examples/src/main/kotlin/com/entitlerhq/examples/offline/Main.kt): verify a snapshot offline and fall back to it when Entitler is unreachable (`:examples:offline`).
-- [billing](examples/src/main/kotlin/com/entitlerhq/examples/billing/Main.kt): a billing page, every subscribe step, the return page, the portal, an invoiced contract and a grant (`:examples:billing`).
-- [generated-features](examples/src/main/kotlin/com/entitlerhq/examples/generatedfeatures/Main.kt): generated constants in use (`:examples:generatedFeatures`).
-- [ktor](examples/src/main/kotlin/com/entitlerhq/examples/ktor/Main.kt): a Ktor route plugin that gates a feature (`:examples:ktor`).
-- [testing](examples/src/test/kotlin/com/entitlerhq/examples/testing/ExportServiceTest.kt): a unit test of gating and billing code with `fakeCustomer` (`:examples:test`).
+- [quickstart](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/main/kotlin/com/entitlerhq/examples/quickstart/Main.kt): register a customer, check a feature, record usage.
+- [pricing-page](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/main/kotlin/com/entitlerhq/examples/pricingpage/Main.kt): print the pricing through the publishable client and through the server with a visitor id (`:examples:pricingPage`).
+- [in-app](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/main/kotlin/com/entitlerhq/examples/inapp/Main.kt): mint a customer token, use it from an in-app client and close it at sign-out (`:examples:inApp`).
+- [metered-work](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/main/kotlin/com/entitlerhq/examples/meteredwork/Main.kt): a `startHold` handle around streamed work, `withHold`, and an observe-mode report (`:examples:meteredWork`).
+- [offline](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/main/kotlin/com/entitlerhq/examples/offline/Main.kt): verify a snapshot offline and fall back to it when Entitler is unreachable (`:examples:offline`).
+- [billing](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/main/kotlin/com/entitlerhq/examples/billing/Main.kt): a billing page, every subscribe step, the return page, the portal, an invoiced contract and a grant (`:examples:billing`).
+- [generated-features](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/main/kotlin/com/entitlerhq/examples/generatedfeatures/Main.kt): generated constants in use (`:examples:generatedFeatures`).
+- [ktor](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/main/kotlin/com/entitlerhq/examples/ktor/Main.kt): a Ktor route plugin that gates a feature (`:examples:ktor`).
+- [testing](https://github.com/entitlerhq/entitler-kotlin/blob/main/examples/src/test/kotlin/com/entitlerhq/examples/testing/ExportServiceTest.kt): a unit test of gating and billing code with `fakeCustomer` (`:examples:test`).
 
 ## Licence
 
-[MIT](LICENSE).
+[MIT](https://github.com/entitlerhq/entitler-kotlin/blob/main/LICENSE).
