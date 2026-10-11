@@ -195,7 +195,7 @@ class TestingTest {
             customer.usage()
             serve(Answers.body(Answers.usageResult()))
             assertEquals(UsageOutcome.Recorded, customer.recordUsage(credits, 1, "k").outcome)
-            serve(Answers.body(Answers.usageEventsResult(listOf(UsageEventResult(0, UsageOutcome.Recorded, "u", false)))))
+            serve(Answers.body(Answers.usageEventsResult(listOf(UsageEventResult(0, UsageOutcome.Recorded, "u", false, null)))))
             assertEquals(1, server.recordUsageBatch(listOf(UsageBatchEvent("user_1", credits, 1, "k"))).recorded)
         }
 

@@ -23,6 +23,52 @@ class DecodingTest {
     }
 
     @Test
+    fun `an answer missing a required field, nullable ones included, is an answer the SDK cannot read`() =
+        runTest {
+            val withoutRelease = fixtureJson("check") - "release"
+            api.reply(
+                200,
+                kotlinx.serialization.json
+                    .JsonObject(withoutRelease)
+                    .toString(),
+            )
+            assertEquals(ErrorCode.InvalidResponse, kotlin.test.assertFailsWith<EntitlerApiException> { customer.check("export_pdf") }.code)
+            val reads: List<suspend () -> Any> =
+                listOf(
+                    { server.features() },
+                    { server.pricing() },
+                    { server.snapshotKeys() },
+                    { customer.usage() },
+                    { customer.details() },
+                    { server.customers.page() },
+                    { customer.plans() },
+                    {
+                        server
+                            .recordUsageBatch(
+                                listOf(UsageBatchEvent("u", Feature.Metered("ai_credits"), 1, "k")),
+                            ).results
+                            .single()
+                            .error!!
+                            .let {
+                                throw EntitlerApiException(200, it.code, it.message)
+                            }
+                    },
+                )
+            for (read in reads) {
+                api.reply(200, "{}")
+                assertEquals(ErrorCode.InvalidResponse, kotlin.test.assertFailsWith<EntitlerApiException> { read() }.code)
+            }
+        }
+
+    @Test
+    fun `a manage step without billedBy is an answer the SDK cannot read`() =
+        runTest {
+            api.reply(200, """{"next":"manage"}""")
+            val error = kotlin.test.assertFailsWith<EntitlerApiException> { customer.subscribe("pro", idempotencyKey = "k") }
+            assertEquals(ErrorCode.InvalidResponse, error.code)
+        }
+
+    @Test
     fun `a held plan's pending change decodes as a move, a cancel, a billing change or an unknown change`() {
         val pro = """{"id":"p_pro","key":"pro","name":"Pro"}"""
 

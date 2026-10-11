@@ -400,13 +400,8 @@ internal class HoldHandle(
     }
 
     suspend fun dispose() {
-        try {
-            act { if (used == null) customer.releaseUsage(id, timeout = customer.engine.timeout) else settle() }
-        } catch (error: EntitlerException) {
-            customer.engine.report(error)
-        } catch (error: IllegalStateException) {
-            customer.engine.report(error)
-        }
+        runCatching { act { if (used == null) customer.releaseUsage(id, timeout = customer.engine.timeout) else settle() } }
+            .onFailure { if (it !is CancellationException) customer.engine.report(it) }
     }
 
     private suspend fun act(action: suspend () -> UsageResult): UsageResult {

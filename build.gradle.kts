@@ -39,7 +39,10 @@ subprojects {
 
     pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
         extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+            coreLibrariesVersion = "2.2.21"
             compilerOptions {
+                apiVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2
+                languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2
                 jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
                 allWarningsAsErrors = true
                 freeCompilerArgs.add("-Xjdk-release=11")

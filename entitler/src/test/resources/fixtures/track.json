@@ -1,5 +1,6 @@
 {
   "customer": "test_1001",
+  "environmentId": "e_test",
   "track": {
     "id": "j_beta",
     "name": "Beta"

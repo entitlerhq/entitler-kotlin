@@ -209,7 +209,9 @@ public object Answers {
             environment = ENVIRONMENT,
             track = TRACK,
             release = 1,
+            change = null,
             testers = true,
+            experiment = null,
         )
 
     /** A check of a metered [feature] with its meter. */
@@ -241,7 +243,9 @@ public object Answers {
             environment = ENVIRONMENT,
             track = TRACK,
             release = 1,
+            change = null,
             testers = true,
+            experiment = null,
         )
 
     /** One item of an entitlement list. */
@@ -261,25 +265,25 @@ public object Answers {
         items: List<Entitlement> = listOf(entitlement()),
         customer: String = "user_1",
         asOf: Instant = AS_OF,
-    ): Entitlements = Entitlements(customer, items, asOf, ENVIRONMENT, TRACK, 1, null, true)
+    ): Entitlements = Entitlements(customer, items, asOf, ENVIRONMENT, TRACK, 1, null, true, null)
 
     /** A customer's plans: the plans they hold and the plans they can move to. */
     public fun customerPlans(
-        held: List<HeldPlan> = listOf(HeldPlan(plan("free"), byDefault = true)),
+        held: List<HeldPlan> = listOf(HeldPlan(plan("free"), null, null, true, null, null, null, null)),
         options: List<MoveOption> = emptyList(),
         customer: String = "user_1",
         asOf: Instant = AS_OF,
-    ): CustomerPlans = CustomerPlans(customer, held, options, asOf, ENVIRONMENT, TRACK, 1, null, true)
+    ): CustomerPlans = CustomerPlans(customer, held, options, asOf, ENVIRONMENT, TRACK, 1, null, true, null)
 
     /** Pricing, signed out or for [customer]. */
     public fun pricing(
         plans: List<PricingPlan> = emptyList(),
         products: List<PublishedProduct> = emptyList(),
         customer: String? = null,
-    ): Pricing = Pricing(customer, plans.firstOrNull { it.default }?.key, products, plans, ENVIRONMENT, TRACK, 1, null, true)
+    ): Pricing = Pricing(customer, plans.firstOrNull { it.default }?.key, products, plans, ENVIRONMENT, TRACK, 1, null, true, null)
 
     /** The catalogue's feature list. */
-    public fun featureList(features: List<FeatureListing> = emptyList()): FeatureList = FeatureList(features, ENVIRONMENT, TRACK, 1)
+    public fun featureList(features: List<FeatureListing> = emptyList()): FeatureList = FeatureList(features, ENVIRONMENT, TRACK, 1, null)
 
     /** A customer's meters and a page of their usage log. */
     public fun customerUsage(
@@ -288,7 +292,7 @@ public object Answers {
         next: String? = null,
         customer: String = "user_1",
         asOf: Instant = AS_OF,
-    ): CustomerUsage = CustomerUsage(customer, null, features, UsageLog(log, next), asOf, ENVIRONMENT, TRACK, 1, null, true)
+    ): CustomerUsage = CustomerUsage(customer, null, features, UsageLog(log, next), asOf, ENVIRONMENT, TRACK, 1, null, true, null)
 
     /** The answer to a usage write: the metered check after it, and what happened. */
     public fun usageResult(
@@ -336,7 +340,9 @@ public object Answers {
             environment = ENVIRONMENT,
             track = TRACK,
             release = 1,
+            change = null,
             testers = true,
+            experiment = null,
         )
     }
 
@@ -383,6 +389,7 @@ public object Answers {
     ): CustomerDetail =
         CustomerDetail(
             customer = customer,
+            subscription = null,
             defaultPlan = plan("free"),
             products = emptyList(),
             addOns = emptyList(),
@@ -390,7 +397,7 @@ public object Answers {
             banked = emptyMap(),
             moveOptions = emptyList(),
             grants = grants,
-            usage = UsageLog(emptyList()),
+            usage = UsageLog(emptyList(), null),
             activity = emptyList(),
             asOf = AS_OF,
             environment = ENVIRONMENT,
@@ -429,10 +436,10 @@ public object Answers {
     public fun customerTrack(
         track: Track = TRACK,
         customer: String = "user_1",
-    ): CustomerTrack = CustomerTrack(customer, track)
+    ): CustomerTrack = CustomerTrack(customer, ENVIRONMENT.id, track, null, null)
 
     /** A customer's billing at their payment provider. */
-    public fun customerBilling(): CustomerBilling = CustomerBilling(items = 0)
+    public fun customerBilling(): CustomerBilling = CustomerBilling(null, null, null, 0, null, null)
 
     /** A page at the payment provider, such as the billing portal. */
     public fun providerPage(url: String = "https://billing.example.com/session"): ProviderPage = ProviderPage(url)

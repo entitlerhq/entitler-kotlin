@@ -62,7 +62,7 @@ public data class Upgrade(
     val name: String,
     val move: Move,
     val action: MoveAction,
-    val reason: String? = null,
+    val reason: String?,
 )
 
 /**
@@ -146,10 +146,10 @@ public data class Check(
     val asOf: Instant,
     val environment: Environment,
     val track: Track,
-    val release: Long? = null,
-    val change: String? = null,
+    val release: Long?,
+    val change: String?,
     val testers: Boolean,
-    val experiment: Experiment? = null,
+    val experiment: Experiment?,
     val stale: Boolean = false,
 )
 
@@ -192,10 +192,10 @@ public data class MeteredCheck(
     val asOf: Instant,
     val environment: Environment,
     val track: Track,
-    val release: Long? = null,
-    val change: String? = null,
+    val release: Long?,
+    val change: String?,
     val testers: Boolean,
-    val experiment: Experiment? = null,
+    val experiment: Experiment?,
     val stale: Boolean = false,
 )
 
@@ -252,12 +252,12 @@ public data class Entitlements(
     val customer: String,
     val entitlements: List<Entitlement>,
     val asOf: Instant,
-    val environment: Environment? = null,
+    val environment: Environment?,
     val track: Track,
-    val release: Long? = null,
-    val change: String? = null,
+    val release: Long?,
+    val change: String?,
     val testers: Boolean,
-    val experiment: Experiment? = null,
+    val experiment: Experiment?,
     val stale: Boolean = false,
 ) {
     /** The entitlement for [feature], or null when the list does not hold it. */
@@ -322,13 +322,13 @@ public data class ProductSummary(
 @Serializable
 public data class HeldPlan(
     val plan: PlanSummary,
-    val product: ProductSummary? = null,
-    val version: Long? = null,
+    val product: ProductSummary?,
+    val version: Long?,
     val byDefault: Boolean,
-    val period: PlanPeriod? = null,
-    val renewsAt: Instant? = null,
-    val pending: BookedChange? = null,
-    val billedBy: Provider? = null,
+    val period: PlanPeriod?,
+    val renewsAt: Instant?,
+    val pending: BookedChange?,
+    val billedBy: Provider?,
 )
 
 /**
@@ -490,7 +490,7 @@ public data class Impact(
 public data class ProviderPrice(
     val amount: Long,
     val currency: String,
-    val interval: PriceInterval? = null,
+    val interval: PriceInterval?,
     val intervalCount: Long,
     val tax: TaxBehaviour,
 )
@@ -505,7 +505,7 @@ public data class ProviderPrice(
  */
 @Serializable
 public data class OfferedSku(
-    val period: PlanPeriod? = null,
+    val period: PlanPeriod?,
     val connector: String,
     val ids: Map<String, String>,
     val price: ProviderPrice? = null,
@@ -530,11 +530,11 @@ public data class OfferedSku(
 @Serializable
 public data class MoveOption(
     val plan: OfferedPlan,
-    val product: ProductSummary? = null,
-    val from: PlanSummary? = null,
+    val product: ProductSummary?,
+    val from: PlanSummary?,
     val move: Move,
     val action: MoveAction,
-    val reason: String? = null,
+    val reason: String?,
     @SerialName("when") val timing: Timing,
     val periods: List<PlanPeriod>,
     val impact: List<Impact>,
@@ -584,10 +584,10 @@ public data class CustomerPlans(
     val asOf: Instant,
     val environment: Environment,
     val track: Track,
-    val release: Long? = null,
-    val change: String? = null,
+    val release: Long?,
+    val change: String?,
     val testers: Boolean,
-    val experiment: Experiment? = null,
+    val experiment: Experiment?,
     val stale: Boolean = false,
 )
 
@@ -602,7 +602,7 @@ public data class CustomerPlans(
 public data class PublishedProduct(
     val key: String,
     val name: String,
-    val defaultPlan: String? = null,
+    val defaultPlan: String?,
 )
 
 /**
@@ -661,7 +661,7 @@ public data class ListingChannel(
  */
 @Serializable
 public data class PeriodListing(
-    val period: PlanPeriod? = null,
+    val period: PlanPeriod?,
     val channels: List<ListingChannel>,
 )
 
@@ -690,10 +690,10 @@ public data class PricingPlan(
     val name: String,
     val description: String,
     val kind: PlanKind,
-    val product: String? = null,
+    val product: String?,
     val salesLed: Boolean,
     val status: PlanStatus,
-    val version: Long? = null,
+    val version: Long?,
     val default: Boolean,
     val periods: List<BillingPeriod>,
     val attachesTo: List<String>,
@@ -718,16 +718,16 @@ public data class PricingPlan(
  */
 @Serializable
 public data class Pricing(
-    val customer: String? = null,
-    val defaultPlan: String? = null,
+    val customer: String?,
+    val defaultPlan: String?,
     val products: List<PublishedProduct>,
     val plans: List<PricingPlan>,
     val environment: Environment,
     val track: Track,
-    val release: Long? = null,
-    val change: String? = null,
+    val release: Long?,
+    val change: String?,
     val testers: Boolean,
-    val experiment: Experiment? = null,
+    val experiment: Experiment?,
     val stale: Boolean = false,
 )
 
@@ -764,7 +764,7 @@ public data class FeatureListing(
     val type: FeatureType,
     val description: String,
     val unit: String,
-    val resetEvery: MeterWindow? = null,
+    val resetEvery: MeterWindow?,
     val archived: Boolean,
     val includes: List<String>,
 )
@@ -784,8 +784,8 @@ public data class FeatureList(
     val features: List<FeatureListing>,
     val environment: Environment,
     val track: Track,
-    val release: Long? = null,
-    val change: String? = null,
+    val release: Long?,
+    val change: String?,
     val stale: Boolean = false,
 )
 

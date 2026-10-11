@@ -329,7 +329,17 @@ private class Fake(
         val meters =
             synchronized(values) { values.filterValues { it is Held.Meter } }.map { (key, held) ->
                 val meter = meteredOf(key, held as Held.Meter)
-                FeatureUsage(key, FeatureType.Metered, meter.entitled, meter.value, meter.sources, meter.used, meter.held, meter.remaining)
+                FeatureUsage(
+                    key,
+                    FeatureType.Metered,
+                    meter.entitled,
+                    meter.value,
+                    meter.sources,
+                    meter.used,
+                    meter.held,
+                    meter.remaining,
+                    null,
+                )
             }
         return Answers.customerUsage(meters, synchronized(log) { log.toList() }, customer = id)
     }

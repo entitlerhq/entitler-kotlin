@@ -29,6 +29,17 @@ internal val json =
 
 private val typedPrimitives = setOf("kotlin.Boolean", "kotlin.Int", "kotlin.Long", "kotlin.Double")
 
+/** Refuses an answer that leaves out a field the document requires, nullable ones included. */
+private fun requireElements(
+    descriptor: SerialDescriptor,
+    fields: JsonObject,
+) {
+    for (index in 0 until descriptor.elementsCount) {
+        val name = descriptor.getElementName(index)
+        if (!descriptor.isElementOptional(index) && name !in fields) throw SerializationException("Expected $name.")
+    }
+}
+
 /**
  * Refuses a quoted boolean or number where the document has a JSON boolean or number, which tree
  * decoding would otherwise read from the string's content.
@@ -46,6 +57,7 @@ internal fun checkShape(
         when (descriptor.kind) {
             StructureKind.CLASS -> {
                 (element as? JsonObject)?.let { fields ->
+                    requireElements(descriptor, fields)
                     (0 until descriptor.elementsCount).mapNotNull { index ->
                         fields[descriptor.getElementName(index)]?.let { descriptor.getElementDescriptor(index) to it }
                     }

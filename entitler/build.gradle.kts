@@ -16,7 +16,7 @@ kotlin {
 dependencies {
     api(libs.okhttp)
     api(libs.coroutines.core)
-    implementation(libs.serialization.json)
+    api(libs.serialization.json)
 
     signature(libs.android.signature) {
         artifact {

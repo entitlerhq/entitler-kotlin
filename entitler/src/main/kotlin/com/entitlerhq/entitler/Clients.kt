@@ -66,7 +66,7 @@ public abstract class EntitlerConfig internal constructor() {
 
     internal var random: Random = Random.Default
 
-    internal fun validate() {
+    internal open fun validate() {
         require(maxRetries >= 0) { "Pass maxRetries as 0 or more." }
         require(timeout.isPositive()) { "Pass timeout as a positive duration." }
         require(!maxRetryDelay.isNegative()) { "Pass maxRetryDelay as 0 or more." }
@@ -107,6 +107,11 @@ public class EntitlerClientConfig internal constructor() : EntitlerConfig() {
      * client calls it once, before its first request, so the client is built at once.
      */
     public var visitorSource: (suspend () -> String)? = null
+
+    override fun validate() {
+        super.validate()
+        require(visitor == null || visitorSource == null) { "Pass either visitor or visitorSource, not both." }
+    }
 
     internal var testStore: CacheStore? = null
 

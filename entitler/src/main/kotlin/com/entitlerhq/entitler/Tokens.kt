@@ -3,6 +3,8 @@ package com.entitlerhq.entitler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
@@ -71,7 +73,7 @@ internal class TokenSource(
         try {
             val answer =
                 runCatching { withTimeoutOrNull(timeout) { provide() } }.getOrElse {
-                    if (it is CancellationException) throw it
+                    if (it is CancellationException) currentCoroutineContext().ensureActive()
                     tokenError("The token provider failed: ${it.javaClass.simpleName}.", it)
                 } ?: tokenError("The token provider did not answer within the client's timeout.")
             val token = trimCredential(answer)

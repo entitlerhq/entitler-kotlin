@@ -106,7 +106,7 @@ private const val MILLIS = 1000L
  * @property customer The customer the app expects.
  * @property environment The id of the environment the app expects.
  * @property issuer The issuer Entitler signs as.
- * @property now The instant to verify at.
+ * @property now The instant to verify at, or null for the system clock at each verification.
  * @property clockSkewSeconds How far the snapshot's signing instant may be ahead of [now], 0 to 300 seconds.
  */
 public data class SnapshotExpectation
@@ -116,7 +116,7 @@ public data class SnapshotExpectation
         val customer: String,
         val environment: String,
         val issuer: String = SNAPSHOT_ISSUER,
-        val now: Instant = Instant.now(),
+        val now: Instant? = null,
         val clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
     ) {
         /** The same expectation, from the key set `snapshotKeys()` answers. */
@@ -126,7 +126,7 @@ public data class SnapshotExpectation
             customer: String,
             environment: String,
             issuer: String = SNAPSHOT_ISSUER,
-            now: Instant = Instant.now(),
+            now: Instant? = null,
             clockSkewSeconds: Int = DEFAULT_CLOCK_SKEW_SECONDS,
         ) : this(keys.keys, customer, environment, issuer, now, clockSkewSeconds)
     }
@@ -177,10 +177,12 @@ public fun verifySnapshot(
                 customer = claims.sub,
                 entitlements = claims.entitlements,
                 asOf = Instant.ofEpochSecond(claims.iat),
+                environment = null,
                 track = claims.track,
                 release = claims.release,
                 change = claims.change,
                 testers = claims.testers,
+                experiment = null,
             ),
     )
 }
@@ -192,7 +194,7 @@ private fun checkClaims(
     val issuer = expected.issuer
     val customer = expected.customer
     val environment = expected.environment
-    val now = expected.now
+    val now = expected.now ?: Instant.now()
     val clockSkewSeconds = expected.clockSkewSeconds
     if (claims.iss != issuer) invalid("This snapshot was not issued by $issuer.")
     if (claims.iat * MILLIS > now.toEpochMilli() + clockSkewSeconds * MILLIS) {

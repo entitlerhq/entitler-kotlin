@@ -452,7 +452,6 @@ public final class com/entitlerhq/entitler/Customer$DefaultImpls {
 public final class com/entitlerhq/entitler/CustomerBilling {
 	public static final field Companion Lcom/entitlerhq/entitler/CustomerBilling$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/Provider;Lcom/entitlerhq/entitler/SubscriptionStatus;Lcom/entitlerhq/entitler/OfferedSku;JLcom/entitlerhq/entitler/BillingDrift;Ljava/util/List;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/Provider;Lcom/entitlerhq/entitler/SubscriptionStatus;Lcom/entitlerhq/entitler/OfferedSku;JLcom/entitlerhq/entitler/BillingDrift;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/Provider;
 	public final fun component2 ()Lcom/entitlerhq/entitler/SubscriptionStatus;
 	public final fun component3 ()Lcom/entitlerhq/entitler/OfferedSku;
@@ -565,7 +564,6 @@ public final class com/entitlerhq/entitler/CustomerKind$Companion {
 public final class com/entitlerhq/entitler/CustomerPage {
 	public static final field Companion Lcom/entitlerhq/entitler/CustomerPage$Companion;
 	public fun <init> (Ljava/util/List;Ljava/lang/String;JLcom/entitlerhq/entitler/Limit;)V
-	public synthetic fun <init> (Ljava/util/List;Ljava/lang/String;JLcom/entitlerhq/entitler/Limit;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()J
@@ -704,17 +702,19 @@ public final class com/entitlerhq/entitler/CustomerSummary$Companion {
 
 public final class com/entitlerhq/entitler/CustomerTrack {
 	public static final field Companion Lcom/entitlerhq/entitler/CustomerTrack$Companion;
-	public fun <init> (Ljava/lang/String;Lcom/entitlerhq/entitler/Track;Lcom/entitlerhq/entitler/TrackSource;Ljava/lang/String;Z)V
-	public synthetic fun <init> (Ljava/lang/String;Lcom/entitlerhq/entitler/Track;Lcom/entitlerhq/entitler/TrackSource;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Track;Lcom/entitlerhq/entitler/TrackSource;Ljava/lang/String;Z)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Track;Lcom/entitlerhq/entitler/TrackSource;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Lcom/entitlerhq/entitler/Track;
-	public final fun component3 ()Lcom/entitlerhq/entitler/TrackSource;
-	public final fun component4 ()Ljava/lang/String;
-	public final fun component5 ()Z
-	public final fun copy (Ljava/lang/String;Lcom/entitlerhq/entitler/Track;Lcom/entitlerhq/entitler/TrackSource;Ljava/lang/String;Z)Lcom/entitlerhq/entitler/CustomerTrack;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/CustomerTrack;Ljava/lang/String;Lcom/entitlerhq/entitler/Track;Lcom/entitlerhq/entitler/TrackSource;Ljava/lang/String;ZILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerTrack;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lcom/entitlerhq/entitler/Track;
+	public final fun component4 ()Lcom/entitlerhq/entitler/TrackSource;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Track;Lcom/entitlerhq/entitler/TrackSource;Ljava/lang/String;Z)Lcom/entitlerhq/entitler/CustomerTrack;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/CustomerTrack;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Track;Lcom/entitlerhq/entitler/TrackSource;Ljava/lang/String;ZILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerTrack;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCustomer ()Ljava/lang/String;
+	public final fun getEnvironmentId ()Ljava/lang/String;
 	public final fun getPreviousTrackId ()Ljava/lang/String;
 	public final fun getReplayed ()Z
 	public final fun getSource ()Lcom/entitlerhq/entitler/TrackSource;
@@ -741,7 +741,6 @@ public final class com/entitlerhq/entitler/CustomerTrack$Companion {
 public final class com/entitlerhq/entitler/CustomerUsage {
 	public static final field Companion Lcom/entitlerhq/entitler/CustomerUsage$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/time/Instant;Ljava/util/List;Lcom/entitlerhq/entitler/UsageLog;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/time/Instant;Ljava/util/List;Lcom/entitlerhq/entitler/UsageLog;Ljava/time/Instant;Lcom/entitlerhq/entitler/Environment;Lcom/entitlerhq/entitler/Track;Ljava/lang/Long;Ljava/lang/String;ZLcom/entitlerhq/entitler/Experiment;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component10 ()Z
 	public final fun component11 ()Lcom/entitlerhq/entitler/Experiment;
@@ -1419,7 +1418,6 @@ public final class com/entitlerhq/entitler/FeatureList$Companion {
 public final class com/entitlerhq/entitler/FeatureListing {
 	public static final field Companion Lcom/entitlerhq/entitler/FeatureListing$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureType;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/MeterWindow;ZLjava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureType;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/MeterWindow;ZLjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
@@ -1483,7 +1481,6 @@ public final class com/entitlerhq/entitler/FeatureType$Companion {
 public final class com/entitlerhq/entitler/FeatureUsage {
 	public static final field Companion Lcom/entitlerhq/entitler/FeatureUsage$Companion;
 	public fun <init> (Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureType;ZLcom/entitlerhq/entitler/FeatureValue;Ljava/util/List;JJLcom/entitlerhq/entitler/Limit;Ljava/time/Instant;)V
-	public synthetic fun <init> (Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureType;ZLcom/entitlerhq/entitler/FeatureValue;Ljava/util/List;JJLcom/entitlerhq/entitler/Limit;Ljava/time/Instant;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Lcom/entitlerhq/entitler/FeatureType;
 	public final fun component3 ()Z
@@ -1560,7 +1557,6 @@ public final class com/entitlerhq/entitler/FeatureValue$Unlimited : com/entitler
 public final class com/entitlerhq/entitler/Grant {
 	public static final field Companion Lcom/entitlerhq/entitler/Grant$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/time/Instant;Ljava/time/Instant;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/time/Instant;Ljava/time/Instant;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Lcom/entitlerhq/entitler/FeatureValue;
@@ -1634,7 +1630,6 @@ public final class com/entitlerhq/entitler/GrantChange$Companion {
 public final class com/entitlerhq/entitler/HeldAddOn {
 	public static final field Companion Lcom/entitlerhq/entitler/HeldAddOn$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/PlanSummary;JJZLjava/time/Instant;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/Purchase;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/PlanSummary;JJZLjava/time/Instant;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/Purchase;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/PlanSummary;
 	public final fun component2 ()J
 	public final fun component3 ()J
@@ -1674,7 +1669,6 @@ public final class com/entitlerhq/entitler/HeldAddOn$Companion {
 public final class com/entitlerhq/entitler/HeldPlan {
 	public static final field Companion Lcom/entitlerhq/entitler/HeldPlan$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/ProductSummary;Ljava/lang/Long;ZLcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Provider;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/ProductSummary;Ljava/lang/Long;ZLcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Provider;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/PlanSummary;
 	public final fun component2 ()Lcom/entitlerhq/entitler/ProductSummary;
 	public final fun component3 ()Ljava/lang/Long;
@@ -2070,7 +2064,6 @@ public final class com/entitlerhq/entitler/MoveAction$Companion {
 public final class com/entitlerhq/entitler/MoveOption {
 	public static final field Companion Lcom/entitlerhq/entitler/MoveOption$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/OfferedPlan;Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/Move;Lcom/entitlerhq/entitler/MoveAction;Ljava/lang/String;Lcom/entitlerhq/entitler/Timing;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/OfferedPlan;Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/Move;Lcom/entitlerhq/entitler/MoveAction;Ljava/lang/String;Lcom/entitlerhq/entitler/Timing;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/OfferedPlan;
 	public final fun component10 ()Ljava/util/List;
 	public final fun component2 ()Lcom/entitlerhq/entitler/ProductSummary;
@@ -2198,7 +2191,6 @@ public final class com/entitlerhq/entitler/OfferedSku$Companion {
 public final class com/entitlerhq/entitler/Payment {
 	public static final field Companion Lcom/entitlerhq/entitler/Payment$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/PaymentStatus;Ljava/lang/String;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/PaymentStatus;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/PaymentStatus;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun copy (Lcom/entitlerhq/entitler/PaymentStatus;Ljava/lang/String;)Lcom/entitlerhq/entitler/Payment;
@@ -2248,7 +2240,6 @@ public final class com/entitlerhq/entitler/PaymentStatus$Companion {
 public final class com/entitlerhq/entitler/PeriodListing {
 	public static final field Companion Lcom/entitlerhq/entitler/PeriodListing$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/PlanPeriod;Ljava/util/List;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/PlanPeriod;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/PlanPeriod;
 	public final fun component2 ()Ljava/util/List;
 	public final fun copy (Lcom/entitlerhq/entitler/PlanPeriod;Ljava/util/List;)Lcom/entitlerhq/entitler/PeriodListing;
@@ -2560,7 +2551,6 @@ public final class com/entitlerhq/entitler/Pricing$Companion {
 public final class com/entitlerhq/entitler/PricingPlan {
 	public static final field Companion Lcom/entitlerhq/entitler/PricingPlan$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/PlanKind;Ljava/lang/String;ZLcom/entitlerhq/entitler/PlanStatus;Ljava/lang/Long;ZLjava/util/List;Ljava/util/List;Ljava/util/Map;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/PlanKind;Ljava/lang/String;ZLcom/entitlerhq/entitler/PlanStatus;Ljava/lang/Long;ZLjava/util/List;Ljava/util/List;Ljava/util/Map;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component10 ()Z
 	public final fun component11 ()Ljava/util/List;
@@ -2757,7 +2747,6 @@ public final class com/entitlerhq/entitler/ProviderPage$Companion {
 public final class com/entitlerhq/entitler/ProviderPeriod {
 	public static final field Companion Lcom/entitlerhq/entitler/ProviderPeriod$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/Provider;Ljava/time/Instant;Ljava/time/Instant;Ljava/time/Instant;Ljava/time/Instant;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/Provider;Ljava/time/Instant;Ljava/time/Instant;Ljava/time/Instant;Ljava/time/Instant;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/Provider;
 	public final fun component2 ()Ljava/time/Instant;
 	public final fun component3 ()Ljava/time/Instant;
@@ -2793,7 +2782,6 @@ public final class com/entitlerhq/entitler/ProviderPeriod$Companion {
 public final class com/entitlerhq/entitler/ProviderPrice {
 	public static final field Companion Lcom/entitlerhq/entitler/ProviderPrice$Companion;
 	public fun <init> (JLjava/lang/String;Lcom/entitlerhq/entitler/PriceInterval;JLcom/entitlerhq/entitler/TaxBehaviour;)V
-	public synthetic fun <init> (JLjava/lang/String;Lcom/entitlerhq/entitler/PriceInterval;JLcom/entitlerhq/entitler/TaxBehaviour;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()J
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Lcom/entitlerhq/entitler/PriceInterval;
@@ -2829,7 +2817,6 @@ public final class com/entitlerhq/entitler/ProviderPrice$Companion {
 public final class com/entitlerhq/entitler/PublishedProduct {
 	public static final field Companion Lcom/entitlerhq/entitler/PublishedProduct$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
@@ -2861,7 +2848,6 @@ public final class com/entitlerhq/entitler/PublishedProduct$Companion {
 public final class com/entitlerhq/entitler/Purchase {
 	public static final field Companion Lcom/entitlerhq/entitler/Purchase$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/MoneyKind;Lcom/entitlerhq/entitler/Channel;Ljava/lang/Long;Ljava/lang/String;Lcom/entitlerhq/entitler/ExperimentArm;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/MoneyKind;Lcom/entitlerhq/entitler/Channel;Ljava/lang/Long;Ljava/lang/String;Lcom/entitlerhq/entitler/ExperimentArm;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/MoneyKind;
 	public final fun component2 ()Lcom/entitlerhq/entitler/Channel;
 	public final fun component3 ()Ljava/lang/Long;
@@ -3252,7 +3238,6 @@ public final class com/entitlerhq/entitler/SubscribeStep$Unknown : com/entitlerh
 public final class com/entitlerhq/entitler/Subscription {
 	public static final field Companion Lcom/entitlerhq/entitler/Subscription$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;JLjava/lang/Long;Lcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Ljava/time/Instant;Lcom/entitlerhq/entitler/ProviderPeriod;Ljava/util/List;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Purchase;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;JLjava/lang/Long;Lcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Ljava/time/Instant;Lcom/entitlerhq/entitler/ProviderPeriod;Ljava/util/List;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Purchase;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/ProductSummary;
 	public final fun component10 ()Lcom/entitlerhq/entitler/BookedChange;
 	public final fun component11 ()Lcom/entitlerhq/entitler/Purchase;
@@ -3409,7 +3394,6 @@ public final class com/entitlerhq/entitler/TrackSource$Companion {
 public final class com/entitlerhq/entitler/Upgrade {
 	public static final field Companion Lcom/entitlerhq/entitler/Upgrade$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Move;Lcom/entitlerhq/entitler/MoveAction;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/Move;Lcom/entitlerhq/entitler/MoveAction;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Lcom/entitlerhq/entitler/Move;
@@ -3630,7 +3614,6 @@ public final class com/entitlerhq/entitler/UsageEventsResult$Companion {
 public final class com/entitlerhq/entitler/UsageLog {
 	public static final field Companion Lcom/entitlerhq/entitler/UsageLog$Companion;
 	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun copy (Ljava/util/List;Ljava/lang/String;)Lcom/entitlerhq/entitler/UsageLog;

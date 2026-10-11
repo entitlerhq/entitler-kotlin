@@ -1,5 +1,8 @@
 package com.entitlerhq.entitler
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -13,6 +16,19 @@ internal class Visitor(
 
     suspend fun get(): String =
         value ?: lock.withLock {
-            value ?: checkNotNull(checkVisitor(checkNotNull(source)())).also { value = it }
+            value ?: fromSource().also { value = it }
         }
+
+    private suspend fun fromSource(): String {
+        val answer =
+            runCatching { checkNotNull(source)() }.getOrElse {
+                if (it is CancellationException) currentCoroutineContext().ensureActive()
+                throw EntitlerTokenException("The visitor source failed: ${it.javaClass.simpleName}.", it)
+            }
+        return try {
+            checkNotNull(checkVisitor(answer))
+        } catch (error: IllegalArgumentException) {
+            throw EntitlerTokenException("The visitor source answered an id that is not a visitor id.", error)
+        }
+    }
 }

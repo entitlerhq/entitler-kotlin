@@ -137,6 +137,17 @@ class SnapshotTest {
     }
 
     @Test
+    fun `an expectation without now reads the clock at each verification, not when it was built`() {
+        val built = SnapshotExpectation(listOf(key), "user_1", "e_1")
+        assertNull(built.now)
+        val clock = Instant.now()
+        val token = sign(claims(iat = clock.epochSecond - 10, exp = clock.epochSecond + 1))
+        assertEquals("user_1", verifySnapshot(token, built).customer)
+        Thread.sleep(2_100)
+        assertEquals(ErrorCode.SnapshotExpired, assertFailsWith<EntitlerSnapshotException> { verifySnapshot(token, built) }.code)
+    }
+
+    @Test
     fun `the clients verify too`() {
         val server = EntitlerServer(SERVER_KEY)
         val client = EntitlerClient(customerToken())

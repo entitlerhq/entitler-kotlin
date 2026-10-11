@@ -46,16 +46,16 @@ import java.time.Instant
 @Serializable
 public data class UsageResult(
     val outcome: UsageOutcome,
-    val refusal: UsageRefusal? = null,
-    val id: String? = null,
-    val holdId: String? = null,
+    val refusal: UsageRefusal?,
+    val id: String?,
+    val holdId: String?,
     val mode: UsageMode,
     val amount: Long,
     val meterChange: Long,
     val overBy: Long,
     val late: Boolean,
-    val occurredAt: Instant? = null,
-    val expiresAt: Instant? = null,
+    val occurredAt: Instant?,
+    val expiresAt: Instant?,
     val reportedAs: UsageSource,
     val customer: String,
     val feature: String,
@@ -71,10 +71,10 @@ public data class UsageResult(
     val asOf: Instant,
     val environment: Environment,
     val track: Track,
-    val release: Long? = null,
-    val change: String? = null,
+    val release: Long?,
+    val change: String?,
     val testers: Boolean,
-    val experiment: Experiment? = null,
+    val experiment: Experiment?,
     val replayed: Boolean = false,
 )
 
@@ -123,9 +123,9 @@ public data class UsageEventError(
 public data class UsageEventResult(
     val index: Int,
     val outcome: UsageOutcome,
-    val id: String? = null,
+    val id: String?,
     val late: Boolean,
-    val error: UsageEventError? = null,
+    val error: UsageEventError?,
     val idempotencyKey: String? = null,
     val replayed: Boolean = false,
 )
@@ -182,7 +182,7 @@ public data class UsageEvent(
 @Serializable
 public data class UsageLog(
     val items: List<UsageEvent>,
-    val next: String? = null,
+    val next: String?,
 )
 
 /**
@@ -207,8 +207,8 @@ public data class FeatureUsage(
     val sources: List<EntitlementSource>,
     val used: Long,
     val held: Long,
-    val remaining: Limit? = null,
-    val resetsAt: Instant? = null,
+    val remaining: Limit?,
+    val resetsAt: Instant?,
 )
 
 /**
@@ -229,14 +229,14 @@ public data class FeatureUsage(
 @Serializable
 public data class CustomerUsage(
     val customer: String,
-    val metersStartAgainAt: Instant? = null,
+    val metersStartAgainAt: Instant?,
     val features: List<FeatureUsage>,
     val log: UsageLog,
     val asOf: Instant,
     val environment: Environment,
     val track: Track,
-    val release: Long? = null,
-    val change: String? = null,
+    val release: Long?,
+    val change: String?,
     val testers: Boolean,
-    val experiment: Experiment? = null,
+    val experiment: Experiment?,
 )

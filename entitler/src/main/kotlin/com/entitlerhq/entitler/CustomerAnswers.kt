@@ -55,9 +55,9 @@ public data class CustomerSummary(
     val environmentId: String,
     val sample: Boolean,
     val createdAt: Instant,
-    val plan: PlanSummary? = null,
+    val plan: PlanSummary?,
     val plans: List<PlanSummary>,
-    val defaultPlan: PlanSummary? = null,
+    val defaultPlan: PlanSummary?,
     val status: String,
     val kind: CustomerKind,
     val metadata: Map<String, String>,
@@ -77,7 +77,7 @@ public data class CustomerSummary(
 @Serializable
 public data class CustomerPage(
     val items: List<CustomerSummary>,
-    val next: String? = null,
+    val next: String?,
     val used: Long,
     val limit: Limit,
 )
@@ -94,10 +94,10 @@ public data class CustomerPage(
 @Serializable
 public data class Purchase(
     val money: MoneyKind,
-    val channel: Channel? = null,
-    val release: Long? = null,
-    val change: String? = null,
-    val arm: ExperimentArm? = null,
+    val channel: Channel?,
+    val release: Long?,
+    val change: String?,
+    val arm: ExperimentArm?,
 )
 
 /**
@@ -114,8 +114,8 @@ public data class ProviderPeriod(
     val provider: Provider,
     val startsAt: Instant,
     val endsAt: Instant,
-    val trialEndsAt: Instant? = null,
-    val cancelsAt: Instant? = null,
+    val trialEndsAt: Instant?,
+    val cancelsAt: Instant?,
 )
 
 /**
@@ -136,7 +136,7 @@ public data class HeldAddOn(
     val quantity: Long,
     val countable: Boolean,
     val addedAt: Instant,
-    val movingTo: PlanSummary? = null,
+    val movingTo: PlanSummary?,
     val purchase: Purchase,
 )
 
@@ -160,13 +160,13 @@ public data class Subscription(
     val product: ProductSummary,
     val plan: PlanSummary,
     val version: Long,
-    val cohort: Long? = null,
-    val period: PlanPeriod? = null,
+    val cohort: Long?,
+    val period: PlanPeriod?,
     val startedAt: Instant,
     val renewsAt: Instant,
-    val billing: ProviderPeriod? = null,
+    val billing: ProviderPeriod?,
     val addOns: List<HeldAddOn>,
-    val pending: BookedChange? = null,
+    val pending: BookedChange?,
     val purchase: Purchase,
 )
 
@@ -204,11 +204,11 @@ public data class Grant(
     @Serializable(with = GrantValueSerializer::class)
     val value: FeatureValue,
     val from: Instant,
-    val until: Instant? = null,
-    val revokedAt: Instant? = null,
+    val until: Instant?,
+    val revokedAt: Instant?,
     val reason: String,
     val by: String,
-    val actor: String? = null,
+    val actor: String?,
 )
 
 /**
@@ -245,8 +245,8 @@ public data class Activity(
 @Serializable
 public data class CustomerDetail(
     val customer: CustomerSummary,
-    val subscription: Subscription? = null,
-    val defaultPlan: PlanSummary? = null,
+    val subscription: Subscription?,
+    val defaultPlan: PlanSummary?,
     val products: List<ProductSubscription>,
     val addOns: List<HeldAddOn>,
     val entitlements: List<Entitlement>,
@@ -304,6 +304,7 @@ public data class IssuedSnapshot(
  * A customer's track after [ServerCustomer.setTrack].
  *
  * @property customer The customer's external id.
+ * @property environmentId The id of the environment the customer is in.
  * @property track Their track now.
  * @property source Who put them on the track, or null for All customers.
  * @property previousTrackId The track they were on, or null.
@@ -312,9 +313,10 @@ public data class IssuedSnapshot(
 @Serializable
 public data class CustomerTrack(
     val customer: String,
+    val environmentId: String,
     val track: Track,
-    val source: TrackSource? = null,
-    val previousTrackId: String? = null,
+    val source: TrackSource?,
+    val previousTrackId: String?,
     val replayed: Boolean = false,
 )
 
@@ -362,12 +364,12 @@ public data class ProductBilling(
  */
 @Serializable
 public data class CustomerBilling(
-    val provider: Provider? = null,
-    val status: SubscriptionStatus? = null,
-    val sku: OfferedSku? = null,
+    val provider: Provider?,
+    val status: SubscriptionStatus?,
+    val sku: OfferedSku?,
     val items: Long,
-    val drift: BillingDrift? = null,
-    val products: List<ProductBilling>? = null,
+    val drift: BillingDrift?,
+    val products: List<ProductBilling>?,
 )
 
 /**
@@ -405,12 +407,12 @@ public data class BillingSync(
  */
 @Serializable
 public data class PlanChange(
-    val product: ProductSummary? = null,
-    val plan: PlanSummary? = null,
-    val quantity: Long? = null,
+    val product: ProductSummary?,
+    val plan: PlanSummary?,
+    val quantity: Long?,
     val effective: Effective,
     val at: Instant,
-    val until: Instant? = null,
+    val until: Instant?,
     val changed: Boolean,
     val replayed: Boolean = false,
 )
@@ -547,11 +549,26 @@ internal object SubscribeStepSerializer : kotlinx.serialization.KSerializer<Subs
         val body = input.decodeJsonElement() as? kotlinx.serialization.json.JsonObject
         val next = body?.string("next") ?: throw kotlinx.serialization.SerializationException("Expected a step with next.")
         return when (next) {
-            "done" -> SubscribeStep.Done(input.json.decodeFromJsonElement(PlanChange.serializer(), checked(PlanChange.serializer(), body)))
-            "pay" -> SubscribeStep.Pay(body.string("url") ?: throw kotlinx.serialization.SerializationException("Expected url."))
-            "confirming" -> SubscribeStep.Confirming
-            "manage" -> SubscribeStep.Manage(input.json.decodeFromJsonElement(ProviderSerializer, checkNotNull(body["billedBy"])))
-            else -> SubscribeStep.Unknown(next)
+            "done" -> {
+                SubscribeStep.Done(input.json.decodeFromJsonElement(PlanChange.serializer(), checked(PlanChange.serializer(), body)))
+            }
+
+            "pay" -> {
+                SubscribeStep.Pay(body.string("url") ?: throw kotlinx.serialization.SerializationException("Expected url."))
+            }
+
+            "confirming" -> {
+                SubscribeStep.Confirming
+            }
+
+            "manage" -> {
+                val billedBy = body["billedBy"] ?: throw kotlinx.serialization.SerializationException("Expected billedBy.")
+                SubscribeStep.Manage(input.json.decodeFromJsonElement(ProviderSerializer, billedBy))
+            }
+
+            else -> {
+                SubscribeStep.Unknown(next)
+            }
         }
     }
 

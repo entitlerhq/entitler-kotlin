@@ -10,7 +10,9 @@ import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
@@ -93,6 +95,34 @@ class ClientTest {
                 assertEquals("EntitlerPublishableClient(baseUrl=${api.baseUrl.trimEnd('/')})", client.toString())
             }
         }
+
+    @Test
+    fun `a visitor source that fails or answers an invalid id is an Entitler error that isEntitled absorbs`() =
+        runTest {
+            val failures = listOf<suspend () -> String>({ error("storage gone") }, { "short" })
+            for (source in failures) {
+                api.errors.clear()
+                api.client { visitorSource = source }.use { client ->
+                    assertFalse(client.me.isEntitled("export_pdf"))
+                    val reported = assertIs<EntitlerTokenException>(api.errors.single())
+                    assertNotNull(reported.cause)
+                    assertIs<EntitlerTokenException>(runCatching { client.me.check("export_pdf") }.exceptionOrNull())
+                }
+            }
+            assertEquals(0, api.server.requestCount)
+        }
+
+    @Test
+    fun `a visitor and a visitor source cannot both be set`() {
+        val message =
+            message {
+                EntitlerClient({ "token" }) {
+                    visitor = newVisitorId()
+                    visitorSource = { newVisitorId() }
+                }
+            }
+        assertEquals("Pass either visitor or visitorSource, not both.", message)
+    }
 
     @Test
     fun `a visitor source is called once, before the first request`() =

@@ -151,5 +151,5 @@ public class EntitlerUsageSettlementException(
 @Serializable
 public data class Payment(
     val status: PaymentStatus,
-    val url: String? = null,
+    val url: String?,
 )

@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.AfterEach
@@ -27,6 +28,18 @@ class TokenTest {
             api.setUp(this)
             cache = null
             maxRetries = 0
+        }
+
+    @Test
+    fun `a provider's own timeout is a token error that isEntitled absorbs, not a cancellation`() =
+        runTest {
+            client {
+                kotlinx.coroutines.withTimeout(1) { kotlinx.coroutines.delay(1_000) }
+                "never"
+            }.use { client ->
+                assertFalse(client.me.isEntitled("export_pdf"))
+                kotlin.test.assertIs<EntitlerTokenException>(api.errors.single())
+            }
         }
 
     @Test
@@ -155,10 +168,24 @@ class TokenTest {
         }
 
     @Test
-    fun `cancellation inside the provider is not a token error`() =
+    fun `a caller cancelled while the provider runs ends in cancellation, not a token error`() =
+        runTest {
+            val never = kotlinx.coroutines.CompletableDeferred<String>()
+            client { never.await() }.use { client ->
+                val call = launch(kotlinx.coroutines.Dispatchers.Default) { client.me.check("export_pdf") }
+                kotlinx.coroutines.delay(50)
+                call.cancel()
+                call.join()
+                assertTrue(call.isCancelled)
+                assertTrue(api.errors.isEmpty())
+            }
+        }
+
+    @Test
+    fun `a cancellation the provider raises while nobody cancelled the call is a token error`() =
         runTest {
             client { throw CancellationException("stop") }.use {
-                assertFailsWith<CancellationException> { it.me.check("export_pdf") }
+                assertFailsWith<EntitlerTokenException> { it.me.check("export_pdf") }
             }
         }
 
