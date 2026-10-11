@@ -235,6 +235,8 @@ class LiveApiTest {
             val plans = customer.plans()
             val held = plans.held.first { it.plan.key == "free" }
             assertNull(held.billedBy)
+            assertFalse(held.byDefault)
+            assertEquals("monthly", held.period?.key)
             val pro = plans.options.first { it.plan.key == "pro" }
             assertEquals(MoveAction.Buy, pro.action)
             assertEquals(listOf("monthly", "yearly"), pro.periods.map { it.key })

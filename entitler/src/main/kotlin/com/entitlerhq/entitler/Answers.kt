@@ -311,8 +311,9 @@ public data class ProductSummary(
  * @property plan The plan.
  * @property product The plan's product, or null.
  * @property version The version held, or null.
- * @property byDefault True when the customer holds no plan yet and reads as the default plan.
- * @property period How often it is billed, or null when Entitler sets no period.
+ * @property byDefault True when the customer holds no plan yet and reads as the default plan. A customer
+ * registered with `register()` holds the default plan itself, so this is false.
+ * @property period How often it is billed. Null only for a plan held by default.
  * @property renewsAt When it renews, or null.
  * @property pending The change booked for [renewsAt], or null.
  * @property billedBy Who bills it: [Provider.Stripe], or a store whose own page manages it
