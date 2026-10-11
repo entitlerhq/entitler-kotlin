@@ -174,7 +174,7 @@ class LiveApiTest {
             val observed = customer.recordUsage(credits, 30, idempotencyKey = unique("observe-"), mode = UsageMode.Observe)
             assertEquals(UsageOutcome.Recorded, observed.outcome)
             assertTrue(observed.overBy > 0)
-            val earlier = Instant.now().minusSeconds(60)
+            val earlier = recorded.occurredAt!!
             val dated = customer.recordUsage(credits, 1, idempotencyKey = unique("dated-"), mode = UsageMode.Observe, occurredAt = earlier)
             assertEquals(earlier.toEpochMilli() / 1000, dated.occurredAt!!.toEpochMilli() / 1000)
             assertTrue(customer.usageLog().toList().size >= 3)
@@ -196,7 +196,7 @@ class LiveApiTest {
             assertFalse(hold.isDuplicate)
             hold.used = 4
             assertEquals(UsageOutcome.Settled, hold.finish().outcome)
-            assertFailsWith<EntitlerUsageReplayedException> { customer.startHold(credits, 10, idempotencyKey = key) }
+            assertFailsWith<EntitlerUsageReplayedException> { customer.startHold(credits, 10, idempotencyKey = key, ttl = 2.minutes) }
             val second = customer.startHold(credits, 3, idempotencyKey = unique("hold-"))
             assertEquals(UsageOutcome.Released, second.release().outcome)
             assertEquals("done", customer.withHold(credits, 5, unique("work-")) { hold -> "done".also { hold.used = 2 } })
