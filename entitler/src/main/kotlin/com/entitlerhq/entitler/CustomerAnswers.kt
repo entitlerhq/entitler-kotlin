@@ -151,9 +151,11 @@ public data class HeldAddOn(
  * @property startedAt When it started.
  * @property renewsAt When it renews.
  * @property billing The provider's billing period, or null.
+ * @property until When the customer returns to the default plan, as [ServerCustomer.setPlan] set it, or null.
  * @property addOns The add-ons held.
  * @property pending A change booked for the period's end, or null.
  * @property purchase How it was bought.
+ * @property override The override that put them on this plan, or null.
  */
 @Serializable
 public data class Subscription(
@@ -165,9 +167,30 @@ public data class Subscription(
     val startedAt: Instant,
     val renewsAt: Instant,
     val billing: ProviderPeriod?,
+    val until: Instant?,
     val addOns: List<HeldAddOn>,
     val pending: BookedChange?,
     val purchase: Purchase,
+    val override: PlanOverride?,
+)
+
+/**
+ * A move made in Entitler only, with billing kept, as a deliberate exception: the payment provider
+ * keeps billing the plan the customer held before.
+ *
+ * @property from The plan they held before.
+ * @property period The billing period of the plan they held before, or null for none.
+ * @property billedBy The connection that kept billing them for the plan they held before, or null.
+ * @property since When the override began.
+ * @property by Who made the override.
+ */
+@Serializable
+public data class PlanOverride(
+    val from: PlanSummary,
+    val period: PlanPeriod?,
+    val billedBy: Channel?,
+    val since: Instant,
+    val by: String,
 )
 
 /**
@@ -180,8 +203,8 @@ public data class Subscription(
 @Serializable
 public data class ProductSubscription(
     val product: ProductSummary,
-    val defaultPlan: PlanSummary? = null,
-    val subscription: Subscription? = null,
+    val defaultPlan: PlanSummary?,
+    val subscription: Subscription?,
 )
 
 /**
@@ -216,11 +239,17 @@ public data class Grant(
  *
  * @property text What happened.
  * @property at When.
+ * @property by The name of the key or person that made the change, or null for one that came with time.
+ * @property actor The person or system that decided, as the write named it, or null.
+ * @property reason Why, as the write gave it, or null.
  */
 @Serializable
 public data class Activity(
     val text: String,
     val at: Instant,
+    val by: String?,
+    val actor: String?,
+    val reason: String?,
 )
 
 /**
@@ -330,7 +359,7 @@ public data class CustomerTrack(
 @Serializable
 public data class BillingDrift(
     val billedPlan: String,
-    val heldPlan: String? = null,
+    val heldPlan: String?,
     val observedAt: Instant,
 )
 
@@ -345,11 +374,11 @@ public data class BillingDrift(
  */
 @Serializable
 public data class ProductBilling(
-    val product: String? = null,
-    val status: SubscriptionStatus? = null,
-    val sku: OfferedSku? = null,
+    val product: String?,
+    val status: SubscriptionStatus?,
+    val sku: OfferedSku?,
     val items: Long,
-    val drift: BillingDrift? = null,
+    val drift: BillingDrift?,
 )
 
 /**
@@ -360,7 +389,7 @@ public data class ProductBilling(
  * @property sku The SKU billed, or null.
  * @property items How many items the subscription holds.
  * @property drift A difference between the provider and Entitler, or null.
- * @property products Billing in each product, when the answer has it.
+ * @property products Billing in each product.
  */
 @Serializable
 public data class CustomerBilling(
@@ -369,16 +398,18 @@ public data class CustomerBilling(
     val sku: OfferedSku?,
     val items: Long,
     val drift: BillingDrift?,
-    val products: List<ProductBilling>?,
+    val products: List<ProductBilling>,
 )
 
 /**
  * A page at the payment provider, such as the billing portal.
  *
+ * @property provider The provider whose page it is.
  * @property url The page to send the customer to.
  */
 @Serializable
 public data class ProviderPage(
+    val provider: Provider,
     val url: String,
 )
 

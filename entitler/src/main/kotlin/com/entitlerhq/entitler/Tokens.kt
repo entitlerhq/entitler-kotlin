@@ -76,6 +76,7 @@ internal class TokenSource(
             val answer =
                 runCatching { withTimeoutOrNull(timeout) { provide() } }.getOrElse {
                     if (it is CancellationException) currentCoroutineContext().ensureActive()
+                    if (it !is Exception) throw it
                     tokenError("The token provider failed: ${it.javaClass.simpleName}.", it)
                 } ?: tokenError("The token provider did not answer within the client's timeout.")
             val token = trimCredential(answer)

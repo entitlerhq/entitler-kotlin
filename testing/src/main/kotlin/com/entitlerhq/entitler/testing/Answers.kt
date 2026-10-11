@@ -34,6 +34,7 @@ import com.entitlerhq.entitler.PlanSummary
 import com.entitlerhq.entitler.Pricing
 import com.entitlerhq.entitler.PricingPlan
 import com.entitlerhq.entitler.ProductSummary
+import com.entitlerhq.entitler.Provider
 import com.entitlerhq.entitler.ProviderPage
 import com.entitlerhq.entitler.PublishedProduct
 import com.entitlerhq.entitler.RegisteredCustomer
@@ -452,10 +453,10 @@ public object Answers {
     ): CustomerTrack = CustomerTrack(customer, ENVIRONMENT.id, track, null, null)
 
     /** A customer's billing at their payment provider. */
-    public fun customerBilling(): CustomerBilling = CustomerBilling(null, null, null, 0, null, null)
+    public fun customerBilling(): CustomerBilling = CustomerBilling(null, null, null, 0, null, emptyList())
 
     /** A page at the payment provider, such as the billing portal. */
-    public fun providerPage(url: String = "https://billing.example.com/session"): ProviderPage = ProviderPage(url)
+    public fun providerPage(url: String = "https://billing.example.com/session"): ProviderPage = ProviderPage(Provider.Stripe, url)
 
     /** The answer to `syncBilling`. */
     public fun billingSync(changed: Boolean = false): BillingSync = BillingSync(changed)

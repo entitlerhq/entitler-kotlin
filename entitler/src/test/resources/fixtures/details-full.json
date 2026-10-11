@@ -73,6 +73,7 @@
       "trialEndsAt": null,
       "cancelsAt": "2026-11-01T00:00:00.000Z"
     },
+    "until": "2026-12-01T00:00:00.000Z",
     "addOns": [
       {
         "purchase": {
@@ -105,6 +106,20 @@
         "key": "pro_basic",
         "name": "Pro basic"
       }
+    },
+    "override": {
+      "from": {
+        "id": "p_free",
+        "key": "free",
+        "name": "Free"
+      },
+      "period": null,
+      "billedBy": {
+        "provider": "stripe",
+        "connectionId": "c_1"
+      },
+      "since": "2026-10-01T00:00:00.000Z",
+      "by": "Support key"
     }
   },
   "defaultPlan": {
@@ -149,6 +164,7 @@
         "startedAt": "2026-09-18T21:30:19.974Z",
         "renewsAt": "2026-10-18T21:30:19.974Z",
         "billing": null,
+        "until": null,
         "addOns": [
           {
             "purchase": {
@@ -170,7 +186,8 @@
             "movingTo": null
           }
         ],
-        "pending": null
+        "pending": null,
+        "override": null
       }
     }
   ],
@@ -773,19 +790,31 @@
   "activity": [
     {
       "text": "Added SSO v1",
-      "at": "2026-09-28T21:30:19.974Z"
+      "at": "2026-09-28T21:30:19.974Z",
+      "by": "Support key",
+      "actor": "agent@example.com",
+      "reason": "Goodwill"
     },
     {
       "text": "Joined SSO cohort: Version 1 signups",
-      "at": "2026-09-28T21:30:19.974Z"
+      "at": "2026-09-28T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
     },
     {
       "text": "Subscribed to Pro v1, Monthly",
-      "at": "2026-09-18T21:30:19.974Z"
+      "at": "2026-09-18T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
     },
     {
       "text": "Joined Pro cohort: Launch offer",
-      "at": "2026-09-18T21:30:19.974Z"
+      "at": "2026-09-18T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
     }
   ]
 }

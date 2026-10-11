@@ -1,3 +1,4 @@
 {
+  "provider": "stripe",
   "url": "https://checkout.stripe.com/c/pay/cs_test_1"
 }

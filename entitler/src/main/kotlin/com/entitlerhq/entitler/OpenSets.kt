@@ -756,6 +756,35 @@ internal object MeterUnitSerializer : OpenStringSerializer<MeterUnit>(
 )
 
 /**
+ * Where a meter's reset windows start.
+ *
+ * An open set: a value this SDK does not know keeps its raw [value].
+ */
+@Serializable(with = MeterAnchorSerializer::class)
+public data class MeterAnchor(
+    /** The raw value, as the API sends it. */
+    public val value: String,
+) {
+    /** The raw value. */
+    override fun toString(): String = value
+
+    /** The values this SDK knows. */
+    public companion object {
+        /** From the start of the customer's billing period, the period's end closing the last window early. */
+        public val Period: MeterAnchor = MeterAnchor("period")
+
+        /** On calendar boundaries in the project's time zone. */
+        public val Calendar: MeterAnchor = MeterAnchor("calendar")
+    }
+}
+
+internal object MeterAnchorSerializer : OpenStringSerializer<MeterAnchor>(
+    "MeterAnchor",
+    ::MeterAnchor,
+    MeterAnchor::value,
+)
+
+/**
  * How a move changes a feature for the customer.
  *
  * An open set: a value this SDK does not know keeps its raw [value].

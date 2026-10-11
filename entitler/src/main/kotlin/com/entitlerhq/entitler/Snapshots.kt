@@ -170,7 +170,7 @@ public fun verifySnapshot(
         entitlements =
             Entitlements(
                 customer = claims.sub,
-                entitlements = claims.entitlements,
+                entitlements = claims.entitlements.map(ClaimedEntitlement::entitlement),
                 asOf = Instant.ofEpochSecond(claims.iat),
                 environment = null,
                 track = claims.track,
@@ -225,10 +225,26 @@ private class Claims(
     val release: Long?,
     val change: String?,
     val testers: Boolean,
-    val entitlements: List<Entitlement>,
+    val entitlements: List<ClaimedEntitlement>,
     val iat: Long,
     val exp: Long,
 )
+
+@Serializable
+private class ClaimedEntitlement(
+    val key: String,
+    val type: FeatureType,
+    val entitled: Boolean,
+    val value: FeatureValue,
+    val sources: List<EntitlementSource>,
+    val used: Long? = null,
+    val held: Long? = null,
+    val remaining: Limit? = null,
+    @Serializable(with = InstantSerializer::class)
+    val resetsAt: Instant? = null,
+) {
+    fun entitlement(): Entitlement = Entitlement(key, type, entitled, value, sources, used, held, remaining, resetsAt, emptyList())
+}
 
 private fun snapshotClaimsOf(claims: JsonObject): Claims? =
     runCatching {

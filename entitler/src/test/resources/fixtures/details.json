@@ -64,6 +64,7 @@
     "startedAt": "2026-09-18T21:30:19.974Z",
     "renewsAt": "2026-10-18T21:30:19.974Z",
     "billing": null,
+    "until": null,
     "addOns": [
       {
         "purchase": {
@@ -85,7 +86,8 @@
         "movingTo": null
       }
     ],
-    "pending": null
+    "pending": null,
+    "override": null
   },
   "defaultPlan": {
     "id": "n034cZCEdkcfitBG6SqHAJH",
@@ -129,6 +131,7 @@
         "startedAt": "2026-09-18T21:30:19.974Z",
         "renewsAt": "2026-10-18T21:30:19.974Z",
         "billing": null,
+        "until": null,
         "addOns": [
           {
             "purchase": {
@@ -150,7 +153,8 @@
             "movingTo": null
           }
         ],
-        "pending": null
+        "pending": null,
+        "override": null
       }
     }
   ],
@@ -653,19 +657,31 @@
   "activity": [
     {
       "text": "Added SSO v1",
-      "at": "2026-09-28T21:30:19.974Z"
+      "at": "2026-09-28T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
     },
     {
       "text": "Joined SSO cohort: Version 1 signups",
-      "at": "2026-09-28T21:30:19.974Z"
+      "at": "2026-09-28T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
     },
     {
       "text": "Subscribed to Pro v1, Monthly",
-      "at": "2026-09-18T21:30:19.974Z"
+      "at": "2026-09-18T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
     },
     {
       "text": "Joined Pro cohort: Launch offer",
-      "at": "2026-09-18T21:30:19.974Z"
+      "at": "2026-09-18T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
     }
   ]
 }

@@ -1,12 +1,18 @@
 public final class com/entitlerhq/entitler/Activity {
 	public static final field Companion Lcom/entitlerhq/entitler/Activity$Companion;
-	public fun <init> (Ljava/lang/String;Ljava/time/Instant;)V
+	public fun <init> (Ljava/lang/String;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/time/Instant;
-	public final fun copy (Ljava/lang/String;Ljava/time/Instant;)Lcom/entitlerhq/entitler/Activity;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Activity;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Activity;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/entitlerhq/entitler/Activity;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Activity;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Activity;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActor ()Ljava/lang/String;
 	public final fun getAt ()Ljava/time/Instant;
+	public final fun getBy ()Ljava/lang/String;
+	public final fun getReason ()Ljava/lang/String;
 	public final fun getText ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -30,7 +36,6 @@ public final class com/entitlerhq/entitler/Activity$Companion {
 public final class com/entitlerhq/entitler/BillingDrift {
 	public static final field Companion Lcom/entitlerhq/entitler/BillingDrift$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/time/Instant;
@@ -1889,6 +1894,24 @@ public final class com/entitlerhq/entitler/MemoryCacheStore : com/entitlerhq/ent
 	public fun set-exY8QGI (Ljava/lang/String;Lcom/entitlerhq/entitler/CacheEntry;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public final class com/entitlerhq/entitler/MeterAnchor {
+	public static final field Companion Lcom/entitlerhq/entitler/MeterAnchor$Companion;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/MeterAnchor;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/MeterAnchor;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/MeterAnchor;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/entitlerhq/entitler/MeterAnchor$Companion {
+	public final fun getCalendar ()Lcom/entitlerhq/entitler/MeterAnchor;
+	public final fun getPeriod ()Lcom/entitlerhq/entitler/MeterAnchor;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
 public final class com/entitlerhq/entitler/MeterUnit {
 	public static final field Companion Lcom/entitlerhq/entitler/MeterUnit$Companion;
 	public fun <init> (Ljava/lang/String;)V
@@ -1911,12 +1934,15 @@ public final class com/entitlerhq/entitler/MeterUnit$Companion {
 
 public final class com/entitlerhq/entitler/MeterWindow {
 	public static final field Companion Lcom/entitlerhq/entitler/MeterWindow$Companion;
-	public fun <init> (ILcom/entitlerhq/entitler/MeterUnit;)V
+	public fun <init> (ILcom/entitlerhq/entitler/MeterUnit;Lcom/entitlerhq/entitler/MeterAnchor;)V
+	public synthetic fun <init> (ILcom/entitlerhq/entitler/MeterUnit;Lcom/entitlerhq/entitler/MeterAnchor;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component2 ()Lcom/entitlerhq/entitler/MeterUnit;
-	public final fun copy (ILcom/entitlerhq/entitler/MeterUnit;)Lcom/entitlerhq/entitler/MeterWindow;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/MeterWindow;ILcom/entitlerhq/entitler/MeterUnit;ILjava/lang/Object;)Lcom/entitlerhq/entitler/MeterWindow;
+	public final fun component3 ()Lcom/entitlerhq/entitler/MeterAnchor;
+	public final fun copy (ILcom/entitlerhq/entitler/MeterUnit;Lcom/entitlerhq/entitler/MeterAnchor;)Lcom/entitlerhq/entitler/MeterWindow;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/MeterWindow;ILcom/entitlerhq/entitler/MeterUnit;Lcom/entitlerhq/entitler/MeterAnchor;ILjava/lang/Object;)Lcom/entitlerhq/entitler/MeterWindow;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAnchor ()Lcom/entitlerhq/entitler/MeterAnchor;
 	public final fun getCount ()I
 	public final fun getUnit ()Lcom/entitlerhq/entitler/MeterUnit;
 	public fun hashCode ()I
@@ -2378,6 +2404,41 @@ public final class com/entitlerhq/entitler/PlanKind$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class com/entitlerhq/entitler/PlanOverride {
+	public static final field Companion Lcom/entitlerhq/entitler/PlanOverride$Companion;
+	public fun <init> (Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/PlanPeriod;Lcom/entitlerhq/entitler/Channel;Ljava/time/Instant;Ljava/lang/String;)V
+	public final fun component1 ()Lcom/entitlerhq/entitler/PlanSummary;
+	public final fun component2 ()Lcom/entitlerhq/entitler/PlanPeriod;
+	public final fun component3 ()Lcom/entitlerhq/entitler/Channel;
+	public final fun component4 ()Ljava/time/Instant;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/PlanPeriod;Lcom/entitlerhq/entitler/Channel;Ljava/time/Instant;Ljava/lang/String;)Lcom/entitlerhq/entitler/PlanOverride;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/PlanOverride;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/PlanPeriod;Lcom/entitlerhq/entitler/Channel;Ljava/time/Instant;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/PlanOverride;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBilledBy ()Lcom/entitlerhq/entitler/Channel;
+	public final fun getBy ()Ljava/lang/String;
+	public final fun getFrom ()Lcom/entitlerhq/entitler/PlanSummary;
+	public final fun getPeriod ()Lcom/entitlerhq/entitler/PlanPeriod;
+	public final fun getSince ()Ljava/time/Instant;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class com/entitlerhq/entitler/PlanOverride$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Lcom/entitlerhq/entitler/PlanOverride$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Lcom/entitlerhq/entitler/PlanOverride;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Lcom/entitlerhq/entitler/PlanOverride;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/entitlerhq/entitler/PlanOverride$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
 public final class com/entitlerhq/entitler/PlanPeriod {
 	public static final field Companion Lcom/entitlerhq/entitler/PlanPeriod$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
@@ -2604,7 +2665,6 @@ public final class com/entitlerhq/entitler/PricingPlan$Companion {
 public final class com/entitlerhq/entitler/ProductBilling {
 	public static final field Companion Lcom/entitlerhq/entitler/ProductBilling$Companion;
 	public fun <init> (Ljava/lang/String;Lcom/entitlerhq/entitler/SubscriptionStatus;Lcom/entitlerhq/entitler/OfferedSku;JLcom/entitlerhq/entitler/BillingDrift;)V
-	public synthetic fun <init> (Ljava/lang/String;Lcom/entitlerhq/entitler/SubscriptionStatus;Lcom/entitlerhq/entitler/OfferedSku;JLcom/entitlerhq/entitler/BillingDrift;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Lcom/entitlerhq/entitler/SubscriptionStatus;
 	public final fun component3 ()Lcom/entitlerhq/entitler/OfferedSku;
@@ -2640,7 +2700,6 @@ public final class com/entitlerhq/entitler/ProductBilling$Companion {
 public final class com/entitlerhq/entitler/ProductSubscription {
 	public static final field Companion Lcom/entitlerhq/entitler/ProductSubscription$Companion;
 	public fun <init> (Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/Subscription;)V
-	public synthetic fun <init> (Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;Lcom/entitlerhq/entitler/Subscription;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/ProductSummary;
 	public final fun component2 ()Lcom/entitlerhq/entitler/PlanSummary;
 	public final fun component3 ()Lcom/entitlerhq/entitler/Subscription;
@@ -2719,11 +2778,13 @@ public final class com/entitlerhq/entitler/Provider$Companion {
 
 public final class com/entitlerhq/entitler/ProviderPage {
 	public static final field Companion Lcom/entitlerhq/entitler/ProviderPage$Companion;
-	public fun <init> (Ljava/lang/String;)V
-	public final fun component1 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;)Lcom/entitlerhq/entitler/ProviderPage;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ProviderPage;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ProviderPage;
+	public fun <init> (Lcom/entitlerhq/entitler/Provider;Ljava/lang/String;)V
+	public final fun component1 ()Lcom/entitlerhq/entitler/Provider;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Lcom/entitlerhq/entitler/Provider;Ljava/lang/String;)Lcom/entitlerhq/entitler/ProviderPage;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/ProviderPage;Lcom/entitlerhq/entitler/Provider;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ProviderPage;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getProvider ()Lcom/entitlerhq/entitler/Provider;
 	public final fun getUrl ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -3243,10 +3304,12 @@ public final class com/entitlerhq/entitler/SubscribeStep$Unknown : com/entitlerh
 
 public final class com/entitlerhq/entitler/Subscription {
 	public static final field Companion Lcom/entitlerhq/entitler/Subscription$Companion;
-	public fun <init> (Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;JLjava/lang/Long;Lcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Ljava/time/Instant;Lcom/entitlerhq/entitler/ProviderPeriod;Ljava/util/List;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Purchase;)V
+	public fun <init> (Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;JLjava/lang/Long;Lcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Ljava/time/Instant;Lcom/entitlerhq/entitler/ProviderPeriod;Ljava/time/Instant;Ljava/util/List;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Purchase;Lcom/entitlerhq/entitler/PlanOverride;)V
 	public final fun component1 ()Lcom/entitlerhq/entitler/ProductSummary;
-	public final fun component10 ()Lcom/entitlerhq/entitler/BookedChange;
-	public final fun component11 ()Lcom/entitlerhq/entitler/Purchase;
+	public final fun component10 ()Ljava/util/List;
+	public final fun component11 ()Lcom/entitlerhq/entitler/BookedChange;
+	public final fun component12 ()Lcom/entitlerhq/entitler/Purchase;
+	public final fun component13 ()Lcom/entitlerhq/entitler/PlanOverride;
 	public final fun component2 ()Lcom/entitlerhq/entitler/PlanSummary;
 	public final fun component3 ()J
 	public final fun component4 ()Ljava/lang/Long;
@@ -3254,13 +3317,14 @@ public final class com/entitlerhq/entitler/Subscription {
 	public final fun component6 ()Ljava/time/Instant;
 	public final fun component7 ()Ljava/time/Instant;
 	public final fun component8 ()Lcom/entitlerhq/entitler/ProviderPeriod;
-	public final fun component9 ()Ljava/util/List;
-	public final fun copy (Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;JLjava/lang/Long;Lcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Ljava/time/Instant;Lcom/entitlerhq/entitler/ProviderPeriod;Ljava/util/List;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Purchase;)Lcom/entitlerhq/entitler/Subscription;
-	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Subscription;Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;JLjava/lang/Long;Lcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Ljava/time/Instant;Lcom/entitlerhq/entitler/ProviderPeriod;Ljava/util/List;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Purchase;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Subscription;
+	public final fun component9 ()Ljava/time/Instant;
+	public final fun copy (Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;JLjava/lang/Long;Lcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Ljava/time/Instant;Lcom/entitlerhq/entitler/ProviderPeriod;Ljava/time/Instant;Ljava/util/List;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Purchase;Lcom/entitlerhq/entitler/PlanOverride;)Lcom/entitlerhq/entitler/Subscription;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/Subscription;Lcom/entitlerhq/entitler/ProductSummary;Lcom/entitlerhq/entitler/PlanSummary;JLjava/lang/Long;Lcom/entitlerhq/entitler/PlanPeriod;Ljava/time/Instant;Ljava/time/Instant;Lcom/entitlerhq/entitler/ProviderPeriod;Ljava/time/Instant;Ljava/util/List;Lcom/entitlerhq/entitler/BookedChange;Lcom/entitlerhq/entitler/Purchase;Lcom/entitlerhq/entitler/PlanOverride;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Subscription;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAddOns ()Ljava/util/List;
 	public final fun getBilling ()Lcom/entitlerhq/entitler/ProviderPeriod;
 	public final fun getCohort ()Ljava/lang/Long;
+	public final fun getOverride ()Lcom/entitlerhq/entitler/PlanOverride;
 	public final fun getPending ()Lcom/entitlerhq/entitler/BookedChange;
 	public final fun getPeriod ()Lcom/entitlerhq/entitler/PlanPeriod;
 	public final fun getPlan ()Lcom/entitlerhq/entitler/PlanSummary;
@@ -3268,6 +3332,7 @@ public final class com/entitlerhq/entitler/Subscription {
 	public final fun getPurchase ()Lcom/entitlerhq/entitler/Purchase;
 	public final fun getRenewsAt ()Ljava/time/Instant;
 	public final fun getStartedAt ()Ljava/time/Instant;
+	public final fun getUntil ()Ljava/time/Instant;
 	public final fun getVersion ()J
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

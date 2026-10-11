@@ -225,7 +225,7 @@ public data class Entitlement(
     val held: Long? = null,
     val remaining: Limit? = null,
     val resetsAt: Instant? = null,
-    val upgrades: List<Upgrade> = emptyList(),
+    val upgrades: List<Upgrade>,
 )
 
 /**
@@ -647,9 +647,9 @@ public data class Channel(
 public data class ListingChannel(
     val channel: Channel,
     val name: String,
-    val mode: ConnectionMode? = null,
+    val mode: ConnectionMode?,
     val purchasable: Boolean,
-    val ids: Map<String, String>? = null,
+    val ids: Map<String, String>?,
     val price: ProviderPrice? = null,
 )
 
@@ -736,11 +736,14 @@ public data class Pricing(
  *
  * @property count How many units.
  * @property unit The unit.
+ * @property anchor Where windows start: from the billing period, the default, or on calendar
+ *   boundaries; null when the answer does not say.
  */
 @Serializable
 public data class MeterWindow(
     val count: Int,
     val unit: MeterUnit,
+    val anchor: MeterAnchor? = null,
 )
 
 /**

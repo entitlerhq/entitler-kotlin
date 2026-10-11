@@ -191,6 +191,26 @@ class CacheTest {
         }
 
     @Test
+    fun `ten thousand writes within the horizon prune a bounded number of times and never leave a stale entry fresh`() =
+        runTest {
+            api.server().use { server ->
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                val seen = server.customer("seen")
+                seen.check("export_pdf")
+                val engine = (seen as CustomerImpl).engine
+                repeat(10_000) {
+                    api.now += 1
+                    engine.bump(if (it == 5_000) "seen" else "u$it")
+                }
+                assertEquals(10_000, engine.trackedWrites)
+                assertTrue(engine.prunes <= 4, "${engine.prunes}")
+                seen.check("export_pdf")
+                assertEquals(2, api.server.requestCount)
+            }
+        }
+
+    @Test
     fun `a read that started before a write and answered after it is never kept as fresh`() =
         runTest {
             val readArrived = CountDownLatch(1)

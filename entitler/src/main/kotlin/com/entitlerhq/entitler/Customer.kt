@@ -407,7 +407,10 @@ internal class HoldHandle(
 
     suspend fun dispose() {
         runCatching { act { if (used == null) customer.releaseUsage(id, timeout = customer.engine.timeout) else settle() } }
-            .onFailure { if (it !is CancellationException) customer.engine.report(it) }
+            .onFailure {
+                if (it is CancellationException || it !is Exception) throw it
+                customer.engine.report(it)
+            }
     }
 
     private suspend fun act(action: suspend () -> UsageResult): UsageResult {

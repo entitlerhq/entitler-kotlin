@@ -1,6 +1,7 @@
 package com.entitlerhq.entitler
 
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -19,6 +20,83 @@ class DecodingTest {
     fun close() {
         server.close()
         api.close()
+    }
+
+    @Test
+    fun `answers carry the fields the live schemas require, and lack none of them`() =
+        runTest {
+            api.replyFixture("details-full")
+            val details = customer.details()
+            val activity = details.activity.first()
+            assertEquals(Triple("Support key", "agent@example.com", "Goodwill"), Triple(activity.by, activity.actor, activity.reason))
+            val subscription = details.subscription!!
+            assertEquals(java.time.Instant.parse("2026-12-01T00:00:00Z"), subscription.until)
+            assertEquals(
+                PlanOverride(
+                    PlanSummary("p_free", "free", "Free"),
+                    null,
+                    Channel(Provider.Stripe, "c_1"),
+                    java.time.Instant.parse("2026-10-01T00:00:00Z"),
+                    "Support key",
+                ),
+                subscription.override,
+            )
+            api.replyFixture("provider-page")
+            assertEquals(Provider.Stripe, customer.billingPortal("https://a.example").provider)
+            val window = """{"count":1,"unit":"months","anchor":"calendar"}"""
+            assertEquals(MeterWindow(1, MeterUnit.Months, MeterAnchor.Calendar), decode(window, MeterWindow.serializer()))
+            assertEquals(null, decode("""{"count":1,"unit":"days"}""", MeterWindow.serializer()).anchor)
+        }
+
+    @Test
+    fun `an answer without products, an activity's by, a portal's provider or an entitlement's upgrades cannot be read`() =
+        runTest {
+            val details2 = fixtureJson("details")
+            val activityEntry = (details2["activity"] as kotlinx.serialization.json.JsonArray).first().jsonObject
+            val missing =
+                mapOf(
+                    "billing without products" to ("billing" to kotlinx.serialization.json.JsonObject(fixtureJson("billing") - "products")),
+                    "activity without by" to
+                        (
+                            "details" to
+                                kotlinx.serialization.json.JsonObject(
+                                    details2 +
+                                        (
+                                            "activity" to
+                                                kotlinx.serialization.json.JsonArray(
+                                                    listOf(
+                                                        kotlinx.serialization.json.JsonObject(activityEntry - "by"),
+                                                    ),
+                                                )
+                                        ),
+                                )
+                        ),
+                    "portal without provider" to
+                        ("portal" to kotlinx.serialization.json.JsonObject(fixtureJson("provider-page") - "provider")),
+                    "entitlement without upgrades" to ("entitlements" to withoutUpgrades(fixtureJson("entitlements"))),
+                )
+            for ((name, pair) in missing) {
+                val (read, body) = pair
+                api.reply(200, body.toString())
+                val failure =
+                    kotlin.test.assertFailsWith<EntitlerApiException>(name) {
+                        when (read) {
+                            "billing" -> customer.billing()
+                            "details" -> customer.details()
+                            "portal" -> customer.billingPortal("https://a.example")
+                            else -> customer.entitlements()
+                        }
+                    }
+                assertEquals(ErrorCode.InvalidResponse, failure.code, name)
+            }
+        }
+
+    private fun withoutUpgrades(answer: kotlinx.serialization.json.JsonObject): kotlinx.serialization.json.JsonObject {
+        val items =
+            (answer["entitlements"] as kotlinx.serialization.json.JsonArray).map {
+                kotlinx.serialization.json.JsonObject(it.jsonObject - "upgrades")
+            }
+        return kotlinx.serialization.json.JsonObject(answer + ("entitlements" to kotlinx.serialization.json.JsonArray(items)))
     }
 
     @Test

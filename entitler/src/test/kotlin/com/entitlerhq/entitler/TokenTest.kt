@@ -42,6 +42,24 @@ class TokenTest {
             }
         }
 
+    private class Fatal : Error("fatal")
+
+    @Test
+    fun `an Error from the provider is never turned into a token error or sent to onError, even from a hold's disposal`() =
+        runTest {
+            var calls = 0
+            client {
+                if (++calls > 1) throw Fatal()
+                customerToken(exp = api.now / 1000 + 120)
+            }.use { client ->
+                api.replyFixture("usage-held")
+                val hold = client.me.startHold(Feature.Metered("ai_credits"), 100, "k") as HoldHandle
+                api.now += 61_000
+                assertFailsWith<Fatal> { hold.dispose() }
+                assertTrue(api.errors.isEmpty(), "${api.errors}")
+            }
+        }
+
     @Test
     fun `the provider is asked on first use and its token kept`() =
         runTest {

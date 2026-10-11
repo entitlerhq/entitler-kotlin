@@ -23,6 +23,7 @@ internal class Visitor(
         val answer =
             runCatching { checkNotNull(source)() }.getOrElse {
                 if (it is CancellationException) currentCoroutineContext().ensureActive()
+                if (it !is Exception) throw it
                 throw EntitlerTokenException("The visitor source failed: ${it.javaClass.simpleName}.", it)
             }
         return try {

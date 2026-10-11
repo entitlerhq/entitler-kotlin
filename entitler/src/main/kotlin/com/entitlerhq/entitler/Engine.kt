@@ -37,6 +37,7 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
@@ -199,6 +200,8 @@ internal class Engine(
     private val generations = ConcurrentHashMap<String, Long>()
     private val bumpedAt = ConcurrentHashMap<String, Long>()
     private val writes = AtomicLong()
+    private val pruneAt = AtomicInteger(PRUNE_AT)
+    private val pruned = AtomicInteger()
     private val longestFreshMillis = AtomicLong()
 
     @Volatile private var outageUntil = 0L
@@ -217,18 +220,22 @@ internal class Engine(
 
     val trackedWrites: Int get() = bumpedAt.size
 
+    val prunes: Int get() = pruned.get()
+
     fun bump(customer: String) {
         if (cache == null) return
         val now = clock()
         generations[customer] = writes.incrementAndGet()
         bumpedAt[customer] = now
-        if (bumpedAt.size > PRUNE_AT) prune(now)
+        if (bumpedAt.size > pruneAt.get()) prune(now)
     }
 
     private fun prune(now: Long) {
         val horizon = now - longestFreshMillis.get()
         bumpedAt.entries.removeIf { it.value < horizon }
         generations.keys.retainAll(bumpedAt.keys)
+        pruneAt.set(maxOf(PRUNE_AT, 2 * bumpedAt.size))
+        pruned.incrementAndGet()
     }
 
     fun close() {
