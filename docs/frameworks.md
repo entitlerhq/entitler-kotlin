@@ -68,7 +68,7 @@ class EntitlerConfiguration {
 ```
 
 The handler takes the customer id from the authenticated `Principal`, such as the one Spring Security
-sets, never from a request header:
+sets, never from a request header, and answers `401` when nobody is signed in:
 
 ```kotlin
 @RestController
@@ -78,8 +78,9 @@ class ReportController(
     /** Exports a report when the customer is entitled to it. */
     @GetMapping("/reports/pdf")
     suspend fun exportPdf(
-        principal: Principal,
+        principal: Principal?,
     ): ResponseEntity<String> {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         if (!entitler.customer(principal.name).isEntitled(Features.exportPdf)) {
             return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body("Upgrade to export PDFs.")
         }

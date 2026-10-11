@@ -1,8 +1,11 @@
 package com.entitlerhq.entitler.generator
 
 import com.entitlerhq.entitler.EntitlerApiException
+import com.entitlerhq.entitler.EntitlerConnectionException
 import com.entitlerhq.entitler.EntitlerException
 import com.entitlerhq.entitler.EntitlerServer
+import com.entitlerhq.entitler.EntitlerTimeoutException
+import com.entitlerhq.entitler.ErrorCode
 import com.entitlerhq.entitler.FeatureList
 import com.entitlerhq.entitler.SnapshotKeys
 import kotlinx.coroutines.runBlocking
@@ -15,7 +18,7 @@ private const val DEFAULT_KEYS_OUT = "entitler-snapshot-keys.json"
 
 private val usage =
     """
-    Usage: entitler <command> [options]
+    Usage: java -jar entitler-generator.jar <command> [options]
 
     Commands:
       generate        Writes a Kotlin file of typed feature constants from your Entitler catalogue.
@@ -37,7 +40,7 @@ private val usage =
     """.trimIndent()
 
 /**
- * Runs `entitler generate` or `entitler snapshot-keys`, for example from
+ * Runs the `generate` or `snapshot-keys` command, for example
  * `java -jar entitler-generator.jar generate --package com.example`. Exits with 0 on success or when the
  * file is up to date, and 1 otherwise.
  */
@@ -188,13 +191,23 @@ private fun fetch(
 private fun <T> request(block: suspend () -> T): T =
     try {
         runBlocking { block() }
-    } catch (error: EntitlerApiException) {
-        exit(1, "Entitler request failed: ${error.message.orEmpty().removeSuffix(".")} (${error.code}).", error)
     } catch (error: EntitlerException) {
-        exit(1, "Entitler request failed: ${error.message.orEmpty().removeSuffix(".")}.", error)
+        exit(1, requestFailure(error), error)
     } catch (error: IllegalArgumentException) {
         exit(1, error.message.orEmpty(), error)
     }
+
+internal fun requestFailure(error: EntitlerException): String {
+    val code =
+        when (error) {
+            is EntitlerApiException -> error.code.value
+            is EntitlerTimeoutException -> ErrorCode.TimedOut.value
+            is EntitlerConnectionException -> ErrorCode.ConnectionFailed.value
+            else -> null
+        }
+    val message = error.message.orEmpty().removeSuffix(".")
+    return if (code == null) "$message." else "Entitler request failed: $message ($code)."
+}
 
 private fun snapshotKeys(options: Options): String {
     val file = File(options.values["out"] ?: DEFAULT_KEYS_OUT)

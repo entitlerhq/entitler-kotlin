@@ -205,6 +205,10 @@ internal class Engine(
     private val writes = AtomicLong()
     private val pruneAt = AtomicInteger(PRUNE_AT)
     private val pruned = AtomicInteger()
+    private val pruneLock = Any()
+    private val forgottenGeneration = AtomicLong()
+
+    @Volatile private var forgottenAt = Long.MIN_VALUE
     private val longestFreshMillis = AtomicLong()
 
     @Volatile private var outageUntil = 0L
@@ -236,11 +240,23 @@ internal class Engine(
     }
 
     private fun prune(now: Long) {
-        val horizon = now - longestFreshMillis.get()
-        bumpedAt.entries.removeIf { it.value < horizon }
-        generations.keys.retainAll(bumpedAt.keys)
-        pruneAt.set(maxOf(PRUNE_AT, 2 * bumpedAt.size))
-        pruned.incrementAndGet()
+        synchronized(pruneLock) {
+            if (bumpedAt.size <= pruneAt.get()) return
+            val horizon = now - longestFreshMillis.get()
+            bumpedAt.entries.removeIf { it.value < horizon }
+            if (bumpedAt.size > KEPT_AFTER_PRUNE) forget(bumpedAt.entries.sortedBy { it.value }.take(bumpedAt.size - KEPT_AFTER_PRUNE))
+            generations.keys.retainAll(bumpedAt.keys)
+            pruneAt.set(minOf(MOST_TRACKED, maxOf(PRUNE_AT, 2 * bumpedAt.size)))
+            pruned.incrementAndGet()
+        }
+    }
+
+    private fun forget(oldest: List<Map.Entry<String, Long>>) {
+        for ((customer, at) in oldest) {
+            forgottenAt = maxOf(forgottenAt, at)
+            generations[customer]?.let { generation -> forgottenGeneration.accumulateAndGet(generation, ::maxOf) }
+            bumpedAt.remove(customer, at)
+        }
     }
 
     fun close() {
@@ -307,6 +323,7 @@ internal class Engine(
         deserializer: DeserializationStrategy<T>,
     ): T {
         val startedAt = clock()
+        val writesBefore = writes.get()
         val generation = customer?.let { generations[it] }
         val (answer, result) =
             try {
@@ -316,7 +333,7 @@ internal class Engine(
             } catch (error: EntitlerException) {
                 return standIn(kept.takeIf { credential == null || credentials.isCurrent(credential) }, error, deserializer)
             }
-        val moved = customer != null && generations[customer] != generation
+        val moved = customer != null && (generations[customer] != generation || forgottenGeneration.get() > writesBefore)
         val entry = if (moved) result.first else result.first.copy(receivedAt = Instant.ofEpochMilli(clock()))
         val directives = directives(entry.cacheControl)
         directives.maxAge?.let { longestFreshMillis.accumulateAndGet(it * MILLIS_PER_SECOND, ::maxOf) }
@@ -358,7 +375,7 @@ internal class Engine(
         val maxAge = directives.maxAge ?: return false
         longestFreshMillis.accumulateAndGet(maxAge * MILLIS_PER_SECOND, ::maxOf)
         val received = entry.receivedAt.toEpochMilli()
-        val writtenSince = customer != null && (bumpedAt[customer] ?: Long.MIN_VALUE) >= received
+        val writtenSince = received <= forgottenAt || (customer != null && (bumpedAt[customer] ?: Long.MIN_VALUE) >= received)
         val age = now - received + (entry.age ?: 0) * MILLIS_PER_SECOND
         return !directives.noCache && !writtenSince && age < maxAge * MILLIS_PER_SECOND
     }
@@ -648,6 +665,8 @@ internal class Engine(
         const val HTTP_UNAUTHORISED = 401
         const val BACKOFF_BASE_SECONDS = 0.5
         const val PRUNE_AT = 1024
+        const val MOST_TRACKED = 10_000
+        const val KEPT_AFTER_PRUNE = MOST_TRACKED / 2
 
         fun isRetried(error: EntitlerException): Boolean = error !is EntitlerApiException || error.status in retriedStatuses
     }

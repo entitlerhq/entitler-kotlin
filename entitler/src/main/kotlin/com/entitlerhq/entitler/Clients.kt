@@ -36,7 +36,11 @@ public abstract class EntitlerConfig internal constructor() {
     /** The API's base URL; trailing slashes are removed. */
     public var baseUrl: String = "https://api.entitler.dev"
 
-    /** How long each attempt may take, from connecting to the last byte of the answer. */
+    /**
+     * How long each attempt may take, from connecting to the last byte of the answer: a positive duration,
+     * or [Duration.INFINITE] for no deadline. A call's own `timeout` follows the same rule and is checked
+     * before any token provider runs or anything is sent.
+     */
     public var timeout: Duration = 10.seconds
 
     /** How many times a failed request is retried after the first attempt. */
@@ -480,17 +484,23 @@ internal class ServerClient(
                     ApiRequest("POST", "/usage/events", body = body, idempotencyKey = batchKey(events, register), timeout = timeout),
                     UsageEventsResult.serializer(),
                 )
+            val byIndex = answer.results.associateBy { it.index }
+            if (answer.results.size != slice.size || byIndex.keys != slice.indices.toSet()) return failed(slice, missingResult)
             slice.mapIndexed { position, (index, event) ->
-                val result =
-                    answer.results.firstOrNull { it.index == position } ?: answer.results.getOrNull(position)
-                        ?: UsageEventResult(position, UsageOutcome.Error, null, false, missingResult, null)
-                result.copy(index = index, idempotencyKey = event.idempotencyKey, replayed = answer.replayed)
+                byIndex.getValue(position).copy(index = index, idempotencyKey = event.idempotencyKey, replayed = answer.replayed)
             }
         } catch (error: EntitlerException) {
-            val failure = batchError(error)
-            slice.map { (index, event) -> UsageEventResult(index, UsageOutcome.Error, null, false, failure, event.idempotencyKey) }
+            failed(slice, batchError(error))
         }
     }
+
+    private fun failed(
+        slice: List<IndexedValue<UsageBatchEvent>>,
+        failure: UsageEventError,
+    ): List<UsageEventResult> =
+        slice.map { (index, event) ->
+            UsageEventResult(index, UsageOutcome.Error, null, false, failure, event.idempotencyKey)
+        }
 
     override suspend fun pricing(
         visitor: String?,

@@ -61,6 +61,23 @@ class TokenTest {
         }
 
     @Test
+    fun `a call's timeout is refused before the provider runs or anything is sent`() =
+        runTest {
+            val calls = AtomicInteger()
+            client {
+                calls.incrementAndGet()
+                customerToken()
+            }.use { client ->
+                for (timeout in listOf(kotlin.time.Duration.ZERO, kotlin.time.Duration.parse("-1s"))) {
+                    val failure = assertFailsWith<IllegalArgumentException> { client.me.check("export_pdf", timeout = timeout) }
+                    assertEquals("Pass timeout as a positive duration.", failure.message)
+                }
+                assertEquals(0, calls.get())
+                assertEquals(0, api.server.requestCount)
+            }
+        }
+
+    @Test
     fun `the provider is asked on first use and its token kept`() =
         runTest {
             val calls = AtomicInteger()

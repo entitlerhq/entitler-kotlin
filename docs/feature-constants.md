@@ -1,6 +1,6 @@
 # Feature constants
 
-`entitler generate` reads your catalogue (as `features()` does, with a key holding `plans:read`) and
+The generator's `generate` command reads your catalogue (as `features()` does, with a key holding `plans:read`) and
 writes an `object Features` with one typed constant per feature, sorted by key:
 
 ```kotlin
@@ -21,10 +21,10 @@ Entitler.")`.
 
 ## Running it
 
-Download `entitler-generator-0.1.0-all.jar` from Maven Central and run it:
+Download `entitler-generator-0.1.0-all.jar` from Maven Central, save it as `entitler-generator.jar`, and run it:
 
 ```sh
-java -jar entitler-generator-0.1.0-all.jar generate --package com.example
+java -jar entitler-generator.jar generate --package com.example
 ```
 
 | Option | Default | Meaning |
@@ -75,7 +75,7 @@ new release with the same features stays up to date. Run it nightly and on `main
 pull request check, since pull requests from forks have no key:
 
 ```sh
-java -jar entitler-generator-0.1.0-all.jar generate --check --package com.example
+java -jar entitler-generator.jar generate --check --package com.example
 ```
 
 ## From build tooling
@@ -89,7 +89,7 @@ The same JAR writes the keys an app pins to verify [offline snapshots](offline-s
 key, and writes nothing when Entitler publishes no keys:
 
 ```sh
-java -jar entitler-generator-0.1.0-all.jar snapshot-keys --out src/main/resources/snapshot-keys.json
+java -jar entitler-generator.jar snapshot-keys --out src/main/resources/snapshot-keys.json
 ```
 
 `--out` defaults to `entitler-snapshot-keys.json`. Run it from a `JavaExec` task like the one above,

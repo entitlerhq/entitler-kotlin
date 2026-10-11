@@ -263,6 +263,17 @@ class SnapshotTest {
     }
 
     @Test
+    fun `a now outside years 0001 to 9999 is an argument error`() {
+        for (now in listOf(Instant.MAX, Instant.MIN, Instant.parse("+10000-01-01T00:00:00Z"))) {
+            val error =
+                assertFailsWith<IllegalArgumentException> {
+                    verifySnapshot(sign(claims()), SnapshotExpectation(listOf(key), "user_1", "e_1", now = now))
+                }
+            assertEquals("Pass now as a valid instant.", error.message)
+        }
+    }
+
+    @Test
     fun `a blank expected customer or environment is an argument error`() {
         val message = "Provide the customer and environment the snapshot must be for."
         assertEquals(message, assertFailsWith<IllegalArgumentException> { verify(sign(claims()), customer = " ") }.message)

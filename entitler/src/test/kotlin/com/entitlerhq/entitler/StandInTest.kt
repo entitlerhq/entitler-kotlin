@@ -140,6 +140,37 @@ class StandInTest {
         }
 
     @Test
+    fun `a probe that ends in an error or a cancellation lets the next read probe again`() =
+        runTest {
+            api.server { maxRetries = 0 }.use { server ->
+                api.replyFixture("check", 200, etag)
+                api.reply(503, "")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                assertTrue(customer.check("export_pdf").stale)
+                api.now += 30_000
+                api.reply(403, """{"error":{"code":"scope_required","message":"No."}}""")
+                assertFailsWith<EntitlerApiException> { customer.check("export_pdf") }
+                api.server.enqueue(
+                    MockResponse
+                        .Builder()
+                        .code(304)
+                        .headersDelay(5, TimeUnit.SECONDS)
+                        .build(),
+                )
+                withContext(Dispatchers.IO) {
+                    val probe = async { customer.check("export_pdf") }
+                    kotlinx.coroutines.delay(300)
+                    probe.cancel()
+                    probe.join()
+                }
+                api.reply(304, "")
+                assertFalse(customer.check("export_pdf").stale)
+                assertEquals(5, api.server.requestCount)
+            }
+        }
+
+    @Test
     fun `a successful answer ends the window, even after an absurd Retry-After`() =
         runTest {
             for (failure in listOf("503" to "", "429" to "99999999999999999999999")) {

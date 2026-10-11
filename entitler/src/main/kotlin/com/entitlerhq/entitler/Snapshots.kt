@@ -136,7 +136,7 @@ public data class SnapshotExpectation
  * ```
  *
  * @throws EntitlerSnapshotException when the snapshot is not valid or has expired.
- * @throws IllegalArgumentException when [expected] is blank or its skew is out of range.
+ * @throws IllegalArgumentException when [expected] is blank, or its skew or `now` is out of range.
  */
 public fun verifySnapshot(
     token: String,
@@ -146,6 +146,7 @@ public fun verifySnapshot(
         "Provide the customer and environment the snapshot must be for."
     }
     require(expected.clockSkewSeconds in 0..MAX_SKEW_SECONDS) { "Pass clockSkewSeconds as a whole number from 0 to 300." }
+    require(expected.now?.let(::isInRange) != false) { "Pass now as a valid instant." }
     val parts = token.split('.')
     val header = parts.takeIf { it.size == 3 && decodeBase64Url(it[1]) != null }?.let { decodeJwtPart(it[0]) }
     val signature = parts.getOrNull(2)?.let(::decodeBase64Url)

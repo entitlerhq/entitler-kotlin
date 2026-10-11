@@ -705,10 +705,12 @@ internal open class CustomerImpl(
         timeout: Duration?,
     ): Hold {
         val held = hold(feature, amount, idempotencyKey, ttl, timeout, MAX_HOLD_KEY_LENGTH)
-        val open = held.outcome == UsageOutcome.Held || held.outcome == UsageOutcome.Duplicate
+        val expired = held.outcome == UsageOutcome.Duplicate && held.expiresAt?.isAfter(held.asOf) == false
+        val open = held.outcome == UsageOutcome.Held || (held.outcome == UsageOutcome.Duplicate && !expired)
+        val replayed = expired || held.outcome == UsageOutcome.Settled || held.outcome == UsageOutcome.Released
         return when {
             open && held.holdId != null -> HoldHandle(this, feature, idempotencyKey, held)
-            held.outcome == UsageOutcome.Settled || held.outcome == UsageOutcome.Released -> throw EntitlerUsageReplayedException(held)
+            replayed -> throw EntitlerUsageReplayedException(held)
             else -> throw EntitlerUsageRefusedException(held)
         }
     }

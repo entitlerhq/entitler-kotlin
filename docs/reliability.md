@@ -9,7 +9,9 @@ connecting to the last byte of the answer; it is OkHttp's call timeout. Override
 suspend fun quickCheck(customer: Customer): Boolean = customer.check(Features.exportPdf, timeout = 1.seconds).entitled
 ```
 
-An injected `OkHttpClient` keeps its own timeouts beside this one. Every method honours coroutine
+A timeout is a positive duration, or `Duration.INFINITE` for no deadline; any other is an
+`IllegalArgumentException` (`Pass timeout as a positive duration.`), raised before a token provider
+runs or anything is sent. An injected `OkHttpClient` keeps its own timeouts beside this one. Every method honours coroutine
 cancellation: cancelling the caller cancels the request and ends a retry wait at once.
 
 ## Retries

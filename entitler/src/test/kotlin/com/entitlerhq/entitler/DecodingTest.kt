@@ -100,34 +100,32 @@ class DecodingTest {
     }
 
     @Test
-    fun `every error code the customers and keys APIs list is a known constant`() {
+    fun `every error code in the frozen customers and keys documents is a known constant`() {
         val known =
             ErrorCode.Companion::class.java.methods
                 .filter { it.returnType == ErrorCode::class.java && it.parameterCount == 0 }
                 .map { (it.invoke(ErrorCode.Companion) as ErrorCode).value }
                 .toSet()
-        val listed =
-            """
-            allowance_reached already_connected as_of_not_allowed billed_elsewhere body_too_large browser_not_allowed cap_reached
-            capability_required carry_forward_conflict catalogue_not_empty change_locked change_required connection_in_use
-            connection_mode connection_required connection_unreadable credential_not_allowed customer_not_found email_taken
-            email_unconfirmed experiment_running feature_not_found hold_expired hold_released hold_settled idempotency_key_required
-            idempotency_mismatch internal invalid_amount invalid_body invalid_idempotency_key invalid_occurred_at invalid_path
-            last_environment limit_reached listing_gaps listing_invalid method_not_allowed not_found not_listed not_metered
-            not_self_serve payment_required person_required plan_still_billed provider_account_changed provider_partial
-            publication_failed rate_limited registration_closed return_url_required review_required scope_required sign_ups_closed
-            snapshot_key_unavailable stale switch_in_use switch_needed switch_off too_many_customers track_closed unauthorised
-            unavailable
-            """.split(Regex("\\s+")).filter {
-                it.isNotEmpty()
-            }
-        assertEquals(emptyList(), listed.filter { it !in known })
+        val documents = fixtureJson("error-codes")
+        assertEquals(setOf("openapi/customers.json", "openapi/keys.json"), documents.keys)
+        for ((document, codes) in documents) {
+            val listed = (codes as kotlinx.serialization.json.JsonArray).map { (it as kotlinx.serialization.json.JsonPrimitive).content }
+            assertTrue("internal" in listed && listed.size > 50, document)
+            assertEquals(emptyList(), listed.filter { it !in known }, document)
+        }
     }
 
     @Test
     fun `an impossible date in an answer is an answer the SDK cannot read`() =
         runTest {
-            for (date in listOf("2026-02-31T00:00:00Z", "2025-02-29T00:00:00Z", "2026-13-01T00:00:00Z", "2026-04-31T00:00:00Z")) {
+            for (date in listOf(
+                "2026-02-31T00:00:00Z",
+                "2025-02-29T00:00:00Z",
+                "2026-13-01T00:00:00Z",
+                "2026-04-31T00:00:00Z",
+                "2026-10-09T24:00:00Z",
+                "2026-10-09T10:00:00+25:00",
+            )) {
                 api.reply(
                     200,
                     kotlinx.serialization.json

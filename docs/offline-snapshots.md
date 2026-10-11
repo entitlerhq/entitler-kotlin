@@ -63,7 +63,7 @@ The keys decide which snapshots your app trusts. Ship them with the app, written
 command-line tool, which needs no key:
 
 ```sh
-java -jar entitler-generator-0.1.0-all.jar snapshot-keys --out src/main/resources/snapshot-keys.json
+java -jar entitler-generator.jar snapshot-keys --out src/main/resources/snapshot-keys.json
 ```
 
 Run it from a Gradle task, as [feature constants](feature-constants.md) shows for `generate`, so pinning

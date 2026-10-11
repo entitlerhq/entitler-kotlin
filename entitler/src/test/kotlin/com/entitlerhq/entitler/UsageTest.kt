@@ -177,6 +177,33 @@ class UsageTest {
         }
 
     @Test
+    fun `a duplicate hold is open only while its expiresAt is after the answer's asOf`() =
+        runTest {
+            api.reply(
+                body =
+                    result(
+                        "usage-held",
+                        "outcome" to "duplicate",
+                        "asOf" to "2026-10-09T01:00:00.000Z",
+                        "expiresAt" to "2026-10-09T01:05:00.000Z",
+                    ),
+            )
+            assertTrue(customer.startHold(credits, 100, "open").isDuplicate)
+            api.reply(
+                body =
+                    result(
+                        "usage-held",
+                        "outcome" to "duplicate",
+                        "asOf" to "2026-10-09T01:05:00.000Z",
+                        "expiresAt" to "2026-10-09T01:05:00.000Z",
+                    ),
+            )
+            var ran = false
+            assertFailsWith<EntitlerUsageReplayedException> { customer.withHold(credits, 100, "expired") { ran = true } }
+            assertFalse(ran)
+        }
+
+    @Test
     fun `a fresh hold is open whatever the client's clock says about expiresAt`() =
         runTest {
             api.now =
@@ -416,16 +443,23 @@ class UsageTest {
         }
 
     @Test
-    fun `a batch answer with fewer results than events answers the missing ones with invalid_response`() =
+    fun `a batch answer that does not cover each event exactly once answers that request's events invalid_response`() =
         runTest {
-            val one = """{"index":0,"outcome":"recorded","id":"u1","late":false,"error":null}"""
-            api.reply(200, """{"results":[$one],"recorded":1,"duplicates":0,"errors":0}""")
+            fun result(index: Int) = """{"index":$index,"outcome":"recorded","id":"u$index","late":false,"error":null}"""
             val events = listOf("a", "b").map { UsageBatchEvent("u", credits, 1, idempotencyKey = it) }
-            val answer = server.recordUsageBatch(events)
-            assertEquals(UsageOutcome.Recorded, answer.results[0].outcome)
-            assertEquals(UsageOutcome.Error, answer.results[1].outcome)
-            assertEquals(ErrorCode.InvalidResponse, answer.results[1].error?.code)
-            assertEquals(1, answer.errors)
+            for (results in listOf(listOf(0), listOf(0, 0), listOf(0, 2), listOf(1, 0, 1))) {
+                api.reply(200, """{"results":[${results.joinToString(",") { result(it) }}],"recorded":2,"duplicates":0,"errors":0}""")
+                val answer = server.recordUsageBatch(events)
+                assertTrue(
+                    answer.results.all { it.outcome == UsageOutcome.Error && it.error?.code == ErrorCode.InvalidResponse },
+                    "$results",
+                )
+                assertEquals(listOf("a", "b"), answer.results.map { it.idempotencyKey })
+                assertEquals(2, answer.errors)
+                assertEquals(0, answer.recorded)
+            }
+            api.reply(200, """{"results":[${result(1)},${result(0)}],"recorded":2,"duplicates":0,"errors":0}""")
+            assertEquals(listOf("u0", "u1"), server.recordUsageBatch(events).results.map { it.id })
         }
 
     @Test

@@ -203,10 +203,39 @@ class CacheTest {
                     api.now += 1
                     engine.bump(if (it == 5_000) "seen" else "u$it")
                 }
-                assertEquals(10_000, engine.trackedWrites)
+                assertTrue(engine.trackedWrites <= 10_000, "${engine.trackedWrites}")
                 assertTrue(engine.prunes <= 4, "${engine.prunes}")
                 seen.check("export_pdf")
                 assertEquals(2, api.server.requestCount)
+            }
+        }
+
+    @Test
+    fun `a customer forgotten past the bound still revalidates an entry from before their write`() =
+        runTest {
+            api.server().use { server ->
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                val seen = server.customer("seen")
+                val other = server.customer("other")
+                seen.check("export_pdf")
+                api.now += 1
+                val engine = (seen as CustomerImpl).engine
+                engine.bump("seen")
+                val started = System.nanoTime()
+                repeat(100_000) {
+                    api.now += 1
+                    engine.bump("u$it")
+                }
+                assertTrue(System.nanoTime() - started < 5_000_000_000L, "100,000 writes took too long")
+                assertTrue(engine.trackedWrites <= 10_000, "${engine.trackedWrites}")
+                assertTrue(engine.prunes <= 30, "${engine.prunes}")
+                seen.check("export_pdf")
+                assertEquals(2, api.server.requestCount)
+                other.check("export_pdf")
+                other.check("export_pdf")
+                assertEquals(3, api.server.requestCount)
             }
         }
 

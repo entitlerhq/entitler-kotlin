@@ -106,7 +106,8 @@ public interface FakeCustomer : ServerCustomer {
  *   `404 feature_not_found`, so `isEntitled` answers its default. [plans] and [pricing] answer `plans()`
  *   and `pricing()`, built with [Answers].
  * - Usage writes move the meters as Entitler does: a gated report past the allowance answers `refused`,
- *   holds settle and release, and a reused key replays.
+ *   holds settle and release, `cancelUsage` moves the meter back, a reused key replays, and settle and
+ *   release conflicts answer the API's errors. Every write that moves a meter adds to the usage log.
  * - Writes it does not model answer a plain success (`subscribe` a `Done` step made now, the plan changes
  *   a [PlanChange] made now), which [FakeCustomer.answer] replaces.
  */
@@ -163,6 +164,13 @@ private class Fake(
     private val replays = mutableMapOf<String, UsageResult>()
     private val holds = mutableMapOf<String, OpenHold>()
     private val log = mutableListOf<UsageEvent>()
+    private val reports = mutableMapOf<String, Report>()
+
+    private class Report(
+        val feature: String,
+        val amount: Long,
+        var cancelled: Boolean = false,
+    )
 
     override val writes: List<FakeWrite> get() = synchronized(recorded) { recorded.toList() }
 
@@ -377,6 +385,7 @@ private class Fake(
         refusal: UsageRefusal? = null,
         holdId: String? = null,
         meterChange: Long = 0,
+        usageId: String? = null,
     ): UsageResult {
         val meter = meterOf(key)
         val overBy = (meter.value as? FeatureValue.Amount)?.let { (meter.used - it.value).coerceAtLeast(0) } ?: 0
@@ -385,7 +394,7 @@ private class Fake(
                 val kind = if (outcome == UsageOutcome.Adjusted) UsageEventKind.Adjust else UsageEventKind.Use
                 log +=
                     UsageEvent(
-                        "u_${log.size + 1}",
+                        usageId ?: "u_${log.size + 1}",
                         key,
                         meterChange,
                         kind,
@@ -408,6 +417,7 @@ private class Fake(
             held = meter.held,
             mode = mode,
             refusal = refusal,
+            id = usageId,
             holdId = holdId,
             meterChange = meterChange,
             overBy = overBy,
@@ -425,13 +435,14 @@ private class Fake(
         record: () -> UsageResult,
     ): UsageResult =
         synchronized(replays) {
-            replays[key]?.let { it.copy(outcome = replayedOutcome(it), replayed = true) }
+            replays[key]?.let { it.copy(outcome = replayedOutcome(it), meterChange = 0, replayed = true) }
                 ?: record().also { if (it.outcome != UsageOutcome.Refused) replays[key] = it }
         }
 
     private fun replayedOutcome(first: UsageResult): UsageOutcome =
         when {
             first.holdId != null -> holds[first.holdId]?.state?.takeIf { it != UsageOutcome.Held } ?: UsageOutcome.Duplicate
+            reports[first.id]?.cancelled == true -> UsageOutcome.Cancelled
             else -> UsageOutcome.Duplicate
         }
 
@@ -453,7 +464,9 @@ private class Fake(
                     result(UsageOutcome.Refused, feature.key, amount, refusal = UsageRefusal.OverAllowance)
                 } else {
                     meter.used += amount
-                    result(UsageOutcome.Recorded, feature.key, amount, mode ?: UsageMode.Gate, meterChange = amount)
+                    val usageId = "r_${reports.size + 1}"
+                    reports[usageId] = Report(feature.key, amount)
+                    result(UsageOutcome.Recorded, feature.key, amount, mode ?: UsageMode.Gate, meterChange = amount, usageId = usageId)
                 }
             }
         }
@@ -537,10 +550,14 @@ private class Fake(
                 if (hold.state == UsageOutcome.Settled && hold.settled == amount) {
                     return@synchronized result(UsageOutcome.Duplicate, hold.feature, amount, holdId = holdId)
                 }
-                if (hold.state != UsageOutcome.Held) {
-                    throw EntitlerApiException(CONFLICT, ErrorCode.HoldSettled, "The hold was already ${hold.state}.")
+                when (hold.state) {
+                    UsageOutcome.Settled -> throw EntitlerApiException(CONFLICT, ErrorCode.HoldSettled, "The hold was already settled.")
+                    UsageOutcome.Released -> throw EntitlerApiException(CONFLICT, ErrorCode.HoldReleased, "The hold was released.")
                 }
-                require(amount in 0..hold.amount) { "Pass amount as a whole number from 0 to the held amount." }
+                require(amount >= 0) { "Pass amount as a whole number of 0 or more." }
+                if (amount > hold.amount) {
+                    throw EntitlerApiException(BAD_REQUEST, ErrorCode.InvalidBody, "Settle at most the ${hold.amount} the hold holds.")
+                }
                 hold.state = UsageOutcome.Settled
                 hold.settled = amount
                 meter.held -= hold.amount
@@ -557,6 +574,9 @@ private class Fake(
         write("releaseUsage", "holdId" to holdId) {
             synchronized(replays) {
                 val hold = openHold(holdId)
+                if (hold.state == UsageOutcome.Settled) {
+                    throw EntitlerApiException(CONFLICT, ErrorCode.HoldSettled, "The hold was already settled.")
+                }
                 if (hold.state == UsageOutcome.Held) {
                     hold.state = UsageOutcome.Released
                     meterOf(hold.feature).held -= hold.amount
@@ -776,7 +796,18 @@ private class Fake(
         timeout: Duration?,
     ): UsageResult =
         write("cancelUsage", "usageId" to usageId, "actor" to actor) {
-            throw EntitlerApiException(NOT_FOUND, ErrorCode.NotFound, "There is no usage report $usageId.")
+            synchronized(replays) {
+                val report =
+                    reports[usageId] ?: throw EntitlerApiException(NOT_FOUND, ErrorCode.NotFound, "There is no usage report $usageId.")
+                if (report.cancelled) return@synchronized result(UsageOutcome.Cancelled, report.feature, report.amount, usageId = usageId)
+                report.cancelled = true
+                meterOf(report.feature).used -= report.amount
+                synchronized(log) {
+                    val index = log.indexOfFirst { it.id == usageId }
+                    if (index >= 0) log[index] = log[index].copy(cancelledAt = Answers.AS_OF)
+                }
+                result(UsageOutcome.Cancelled, report.feature, report.amount, usageId = usageId).copy(meterChange = -report.amount)
+            }
         }
 
     override fun toString(): String = "FakeCustomer(id=$id)"

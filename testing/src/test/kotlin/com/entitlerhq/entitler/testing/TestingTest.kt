@@ -140,6 +140,47 @@ class TestingTest {
         }
 
     @Test
+    fun `settle, release, replay and cancel answer as the API does`() =
+        runTest {
+            val customer = fakeCustomer("ai_credits" to metered(value = 100))
+            val over = customer.holdUsage(credits, 10, idempotencyKey = "over")
+            val tooMuch = assertFailsWith<EntitlerApiException> { customer.settleUsage(over.holdId!!, 11) }
+            assertEquals(400 to ErrorCode.InvalidBody, tooMuch.status to tooMuch.code)
+            assertEquals(UsageOutcome.Settled, customer.settleUsage(over.holdId!!, 6).outcome)
+            assertEquals(UsageOutcome.Duplicate, customer.settleUsage(over.holdId!!, 6).outcome)
+            val settledAgain = assertFailsWith<EntitlerApiException> { customer.settleUsage(over.holdId!!, 7) }
+            assertEquals(409 to ErrorCode.HoldSettled, settledAgain.status to settledAgain.code)
+            val releaseSettled = assertFailsWith<EntitlerApiException> { customer.releaseUsage(over.holdId!!) }
+            assertEquals(409 to ErrorCode.HoldSettled, releaseSettled.status to releaseSettled.code)
+            val replayedHold = customer.holdUsage(credits, 10, idempotencyKey = "over")
+            assertEquals(UsageOutcome.Settled to 0L, replayedHold.outcome to replayedHold.meterChange)
+            val freed = customer.holdUsage(credits, 10, idempotencyKey = "freed")
+            assertEquals(UsageOutcome.Duplicate, customer.holdUsage(credits, 10, idempotencyKey = "freed").outcome)
+            assertEquals(UsageOutcome.Released, customer.releaseUsage(freed.holdId!!).outcome)
+            assertEquals(UsageOutcome.Released, customer.releaseUsage(freed.holdId!!).outcome)
+            val settleReleased = assertFailsWith<EntitlerApiException> { customer.settleUsage(freed.holdId!!, 1) }
+            assertEquals(409 to ErrorCode.HoldReleased, settleReleased.status to settleReleased.code)
+            assertFailsWith<EntitlerUsageReplayedException> { customer.startHold(credits, 10, idempotencyKey = "freed") }
+            val report = customer.recordUsage(credits, 5, idempotencyKey = "report")
+            val replay = customer.recordUsage(credits, 5, idempotencyKey = "report")
+            assertEquals(UsageOutcome.Duplicate to 0L, replay.outcome to replay.meterChange)
+            assertEquals(11, customer.check(credits).used)
+            val cancelled = customer.cancelUsage(report.id!!)
+            assertEquals(UsageOutcome.Cancelled to -5L, cancelled.outcome to cancelled.meterChange)
+            assertEquals(6, customer.check(credits).used)
+            val afterCancel = customer.recordUsage(credits, 5, idempotencyKey = "report")
+            assertEquals(UsageOutcome.Cancelled to 0L, afterCancel.outcome to afterCancel.meterChange)
+            assertTrue(
+                customer
+                    .usageLog()
+                    .toList()
+                    .single { it.id == report.id }
+                    .cancelledAt != null,
+            )
+            assertEquals(404, assertFailsWith<EntitlerApiException> { customer.cancelUsage("r_missing") }.status)
+        }
+
+    @Test
     fun `billing writes answer a plain success, and a replaced answer stands in`() =
         runTest {
             val customer = fakeCustomer()

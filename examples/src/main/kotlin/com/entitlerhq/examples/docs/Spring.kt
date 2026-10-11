@@ -29,8 +29,9 @@ class ReportController(
     /** Exports a report when the customer is entitled to it. */
     @GetMapping("/reports/pdf")
     suspend fun exportPdf(
-        principal: Principal,
+        principal: Principal?,
     ): ResponseEntity<String> {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         if (!entitler.customer(principal.name).isEntitled(Features.exportPdf)) {
             return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body("Upgrade to export PDFs.")
         }

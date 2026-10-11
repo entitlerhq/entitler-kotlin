@@ -82,14 +82,14 @@ records usage and runs the billing page is written once.
 
 ## Feature constants and the generator
 
-`entitler generate` writes an `object Features` with one typed constant per feature in your catalogue,
+The generator's `generate` command writes an `object Features` with one typed constant per feature in your catalogue,
 so `check(Features.aiCredits)` answers a metered check and usage methods accept only metered features:
 
 ```sh
-java -jar entitler-generator-0.1.0-all.jar generate --package com.example
+java -jar entitler-generator.jar generate --package com.example
 ```
 
-It writes `src/main/kotlin/EntitlerFeatures.kt` unless `--out` names another file. `entitler snapshot-keys`
+It writes `src/main/kotlin/EntitlerFeatures.kt` unless `--out` names another file. Its `snapshot-keys` command
 writes the keys an app pins to verify offline snapshots. See [feature constants](docs/feature-constants.md)
 for the Gradle task, `--check` in CI, and declaring features by hand.
 
