@@ -207,6 +207,45 @@ class RetryTest {
         }
 
     @Test
+    fun `a sub-millisecond timeout still times out, and a per-call timeout must be positive`() =
+        runTest {
+            api.server { maxRetries = 0 }.use { server ->
+                api.server.enqueue(
+                    MockResponse
+                        .Builder()
+                        .body(fixture("check"))
+                        .headersDelay(2, TimeUnit.SECONDS)
+                        .build(),
+                )
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    assertFailsWith<EntitlerTimeoutException> {
+                        server.customer("u").check("export_pdf", timeout = kotlin.time.Duration.parse("500us"))
+                    }
+                }
+                for (timeout in listOf(kotlin.time.Duration.ZERO, (-1).milliseconds)) {
+                    val failure = assertFailsWith<IllegalArgumentException> { server.customer("u").check("export_pdf", timeout = timeout) }
+                    assertEquals("Pass timeout as a positive duration.", failure.message)
+                }
+            }
+            api
+                .server {
+                    maxRetries = 0
+                    timeout = kotlin.time.Duration.parse("500us")
+                }.use { server ->
+                    api.server.enqueue(
+                        MockResponse
+                            .Builder()
+                            .body(fixture("check"))
+                            .headersDelay(2, TimeUnit.SECONDS)
+                            .build(),
+                    )
+                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        assertFailsWith<EntitlerTimeoutException> { server.customer("u").check("export_pdf") }
+                    }
+                }
+        }
+
+    @Test
     fun `cancellation ends a retry wait at once`() =
         runTest {
             api.server().use { server ->

@@ -521,7 +521,6 @@ internal open class CustomerImpl(
             .cached(ApiRequest("GET", base + path, visitor = visitor, timeout = timeout, asOf = asOf), pathId, deserializer, revalidate)
             .also(::noteCustomer)
 
-    @Suppress("LongParameterList")
     protected suspend fun <T> write(
         method: String,
         path: String,

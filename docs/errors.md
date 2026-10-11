@@ -6,8 +6,8 @@ blank customer id, are `IllegalArgumentException`s, raised before any request.
 
 | Exception | When | Carries |
 | --- | --- | --- |
-| `EntitlerApiException` | the API answered with a status that is not 2xx | `status`, `code`, `message`, `requestId`, `retryAfter`, `idempotencyKey`, `payment` |
-| `EntitlerConnectionException` | no answer arrived, or one the SDK cannot read | `cause`, `idempotencyKey` |
+| `EntitlerApiException` | the API answered with a status that is not 2xx, or a 2xx answer the SDK cannot read (`invalid_response`) | `status`, `code`, `message`, `requestId`, `retryAfter`, `idempotencyKey`, `payment` |
+| `EntitlerConnectionException` | no answer arrived: DNS, TLS, or a connection refused or reset | `cause`, `idempotencyKey` |
 | `EntitlerTimeoutException` | an attempt took longer than its timeout | `idempotencyKey` |
 | `EntitlerTokenException` | a token provider failed or answered an unusable token | `cause` |
 | `EntitlerSnapshotException` | a snapshot failed verification | `code`: `snapshot_invalid` or `snapshot_expired` |

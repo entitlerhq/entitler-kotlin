@@ -6,7 +6,8 @@ credentials, each acting on one customer, the one it names, through `me`. Before
 
 ## Customer tokens from your server
 
-Your server mints a customer token for the signed-in customer, for at most an hour, with the fewest
+Your server mints a customer token for the signed-in customer, whose id it takes from the session its
+sign-in verified, never from what the app sends. The token lasts at most an hour, with the fewest
 scopes the app needs, from `entitlements:read`, `plans:read`, `usage:read`, `usage:write` and
 `billing:self`:
 

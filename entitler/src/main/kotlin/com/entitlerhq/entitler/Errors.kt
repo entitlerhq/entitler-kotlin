@@ -39,7 +39,7 @@ public sealed class EntitlerException(
 
 /**
  * The API answered with a status that is not 2xx, or with a 2xx answer this SDK cannot read
- * ([ErrorCode.InvalidResponse], with the decoding failure as its cause).
+ * ([ErrorCode.InvalidResponse], whose cause names the decoding failure and the answer it expected, never the body).
  *
  * @property status The HTTP status.
  * @property code The error code, or [ErrorCode.HttpError] when the answer had none.

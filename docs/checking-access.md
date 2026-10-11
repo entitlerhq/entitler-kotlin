@@ -45,7 +45,8 @@ val check = customer.check(Features.exportPdf, revalidate = true)
 if (check.entitled) showExportButton()
 ```
 
-Every read takes `revalidate`: `check`, `isEntitled`, `entitlements`, `plans`, `pricing` and `usage`.
+The cached reads take `revalidate`: `check`, `isEntitled`, `entitlements`, `plans`, `pricing` and the server's
+`features`. `usage` is never cached, so it always asks Entitler.
 
 ## `isEntitled`: a check that never fails
 

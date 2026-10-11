@@ -170,6 +170,27 @@ class CacheTest {
         }
 
     @Test
+    fun `writes track nothing with the cache off, and tracking is pruned once entries can no longer be fresh`() =
+        runTest {
+            api.server { cache = null }.use { server ->
+                repeat(3) { api.replyFixture("summary") }
+                repeat(3) { server.customer("u$it").update(name = "x") }
+                assertEquals(0, (server.customer("u") as CustomerImpl).engine.trackedWrites)
+            }
+            api.server().use { server ->
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                server.customer("seen").check("export_pdf")
+                repeat(1_100) { api.replyFixture("summary") }
+                repeat(1_000) { server.customer("u$it").update(name = "x") }
+                val engine = (server.customer("u") as CustomerImpl).engine
+                assertEquals(1_000, engine.trackedWrites)
+                api.now += 601_000
+                repeat(100) { server.customer("v$it").update(name = "x") }
+                assertTrue(engine.trackedWrites <= 100, "${engine.trackedWrites}")
+            }
+        }
+
+    @Test
     fun `a read that started before a write and answered after it is never kept as fresh`() =
         runTest {
             val readArrived = CountDownLatch(1)
@@ -501,6 +522,24 @@ class CacheTest {
                 val customer = server.customer("u")
                 customer.check("export_pdf")
                 assertFailsWith<EntitlerApiException> { customer.check("export_pdf") }
+            }
+        }
+
+    @Test
+    fun `after a 401 refresh, an entry kept under the previous token never stands in`() =
+        runTest {
+            var calls = 0
+            EntitlerClient({ customerToken(sub = "s${++calls}") }) {
+                api.setUp(this)
+                maxRetries = 0
+            }.use { client ->
+                api.replyFixture("check", 200, etag)
+                api.reply(401, """{"error":{"code":"unauthorised","message":"Expired."}}""")
+                api.reply(503, "")
+                client.me.check("export_pdf")
+                val failure = assertFailsWith<EntitlerApiException> { client.me.check("export_pdf") }
+                assertEquals(503, failure.status)
+                assertEquals(2, calls)
             }
         }
 

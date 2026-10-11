@@ -113,9 +113,7 @@ public class EntitlerClientConfig internal constructor() : EntitlerConfig() {
         require(visitor == null || visitorSource == null) { "Pass either visitor or visitorSource, not both." }
     }
 
-    internal var testStore: CacheStore? = null
-
-    override val store: CacheStore? get() = testStore ?: cache
+    override val store: CacheStore? get() = cache
 }
 
 /**
@@ -343,8 +341,8 @@ public fun EntitlerPublishableClient(
 ): EntitlerPublishableClient = PublishableClient(requirePublishable(key), configure)
 
 private const val PUBLISHABLE_PREFIX = "ent_pk_"
-private const val CUSTOMER_TOKEN_REQUIRED = "Provide a customer token minted by your server."
-private const val IDENTITY_TOKEN_REQUIRED = "Provide the identity token your sign-in provider issued."
+internal const val CUSTOMER_TOKEN_REQUIRED = "Provide a customer token minted by your server."
+internal const val IDENTITY_TOKEN_REQUIRED = "Provide the identity token your sign-in provider issued."
 private const val BATCH_SIZE = 500
 
 private fun requireKey(key: String): String =
@@ -352,14 +350,14 @@ private fun requireKey(key: String): String =
         require(it.isNotEmpty()) { "Provide an Entitler API key from the dashboard." }
     }
 
-private fun requirePublishable(key: String): String =
+internal fun requirePublishable(key: String): String =
     requireKey(key).also {
         require(it.startsWith(PUBLISHABLE_PREFIX)) {
             "A secret key belongs on your server, in EntitlerServer. Use a publishable key (ent_pk_…) in an app."
         }
     }
 
-private fun requireToken(
+internal fun requireToken(
     token: String,
     message: String,
 ): String = trimCredential(token).also { require(it.isNotEmpty()) { message } }
@@ -572,12 +570,19 @@ internal class AppClient(
     token: String?,
     provider: (suspend () -> String)?,
     configure: EntitlerClientConfig.() -> Unit,
+    store: CacheStore? = null,
 ) : EntitlerIdentityClient {
     private val config = EntitlerClientConfig().apply(configure).also { it.validate() }
     private val scope = clientScope()
     private val visitorSource = Visitor(config.visitor, config.visitorSource)
     private val engine =
-        Engine(config, Credentials(key, TokenSource(token, provider, config.clock, config.timeout, scope)), visitorSource, scope)
+        Engine(
+            config,
+            Credentials(key, TokenSource(token, provider, config.clock, config.timeout, scope)),
+            visitorSource,
+            scope,
+            store ?: config.store,
+        )
 
     override val me: Customer = CustomerImpl(engine, "me", null)
 
@@ -607,10 +612,11 @@ internal class AppClient(
 internal class PublishableClient(
     key: String,
     configure: EntitlerClientConfig.() -> Unit,
+    store: CacheStore? = null,
 ) : EntitlerPublishableClient {
     private val config = EntitlerClientConfig().apply(configure).also { it.validate() }
     private val visitorSource = Visitor(config.visitor, config.visitorSource)
-    private val engine = Engine(config, Credentials(key, null, publishable = true), visitorSource, clientScope())
+    private val engine = Engine(config, Credentials(key, null, publishable = true), visitorSource, clientScope(), store ?: config.store)
 
     override suspend fun pricing(
         visitor: String?,

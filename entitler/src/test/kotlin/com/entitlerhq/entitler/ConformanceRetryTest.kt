@@ -1,9 +1,7 @@
 package com.entitlerhq.entitler
 
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.double
@@ -12,21 +10,14 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
-import org.junit.jupiter.api.DynamicTest
-import org.junit.jupiter.api.DynamicTest.dynamicTest
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
-import java.time.Instant
-import java.time.OffsetDateTime
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 /** The conformance cases for retry timing and token refresh (sections 7.2, 7.5, 3.5 and 4.3). */
@@ -45,7 +36,6 @@ class ConformanceRetryTest {
         val waits: List<Long> get() = received.map { it.at }.zipWithNext { a, b -> b - a }
     }
 
-    @Suppress("LongParameterList")
     private fun attempts(
         credential: JsonObject,
         now: String,

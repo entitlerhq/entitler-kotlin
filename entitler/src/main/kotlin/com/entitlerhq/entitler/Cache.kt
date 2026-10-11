@@ -35,9 +35,9 @@ public data class CacheEntry(
 /**
  * Where the answer cache keeps answers. Implementations must be safe for concurrent use.
  *
- * Keys are lowercase hex SHA-256 digests and never hold a credential. Implement it to share answers
- * through Redis, or to keep them across app launches. A `get` that throws counts as a miss and a
- * `set` that throws is skipped; both go to `onError` and neither fails the call.
+ * Keys are lowercase hex SHA-256 digests and never hold a credential. Implement it on the server to
+ * share answers between processes through a store such as Redis. A `get` that throws counts as a
+ * miss and a `set` that throws is skipped; both go to `onError` and neither fails the call.
  *
  * ```kotlin
  * class RedisCacheStore(private val redis: Redis) : CacheStore {

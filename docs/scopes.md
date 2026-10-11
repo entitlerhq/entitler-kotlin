@@ -18,7 +18,7 @@ For an identity client, `registration` says whether the sign-in provider lets a 
 | `recordUsage`, `startHold`, `withHold`, `holdUsage`, `settleUsage`, `releaseUsage`, `recordUsageBatch` | `usage:write` |
 | `subscribe`, `cancel`, `undoPendingChange`, `billingPortal`, `syncBilling` | `customers:write` on the server; `billing:self` in an app |
 | `register` | `customers:register`; changing an existing customer's details also needs `customers:write` or `customers:profile` |
-| `details`, `customers.list`, `billing` | `customers:read` |
+| `details`, `detailsLog`, `customers.list`, `billing` | `customers:read` |
 | `update` | `customers:write` or `customers:profile` |
 | `customers.create`, `erase`, `setPlan`, `setAddOn`, `grant`, `revokeGrant`, `adjustMeter`, `cancelUsage` | `customers:write` |
 | `token` | `tokens:mint` |

@@ -3,7 +3,6 @@ package com.entitlerhq.entitler
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -21,6 +20,36 @@ class DecodingTest {
         server.close()
         api.close()
     }
+
+    @Test
+    fun `an impossible date in an answer is an answer the SDK cannot read`() =
+        runTest {
+            for (date in listOf("2026-02-31T00:00:00Z", "2025-02-29T00:00:00Z", "2026-13-01T00:00:00Z", "2026-04-31T00:00:00Z")) {
+                api.reply(
+                    200,
+                    kotlinx.serialization.json
+                        .JsonObject(fixtureJson("check") + ("asOf" to kotlinx.serialization.json.JsonPrimitive(date)))
+                        .toString(),
+                )
+                val failure = kotlin.test.assertFailsWith<EntitlerApiException>(date) { customer.check("export_pdf") }
+                assertEquals(ErrorCode.InvalidResponse, failure.code, date)
+            }
+            assertEquals(null, parseInstant("2026-02-31T00:00:00Z"))
+        }
+
+    @Test
+    fun `an unreadable answer's cause names the failure and the shape, never the body`() =
+        runTest {
+            for (body in listOf("""{"secret":"leaked_value"""", """{"secret":"leaked_value","entitled":"leaked_value"}""")) {
+                api.reply(200, body)
+                val failure = kotlin.test.assertFailsWith<EntitlerApiException> { customer.check("export_pdf") }
+                assertEquals(ErrorCode.InvalidResponse, failure.code)
+                val causes = generateSequence(failure.cause) { it.cause }.toList()
+                assertTrue(causes.isNotEmpty())
+                assertTrue(causes.none { it.message.orEmpty().contains("leaked_value") }, causes.joinToString { it.message.orEmpty() })
+                assertTrue(causes.first().message!!.contains("Check"), causes.first().message)
+            }
+        }
 
     @Test
     fun `an answer missing a required field, nullable ones included, is an answer the SDK cannot read`() =

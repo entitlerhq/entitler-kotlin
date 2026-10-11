@@ -177,6 +177,26 @@ class UsageTest {
         }
 
     @Test
+    fun `a fresh hold is open whatever the client's clock says about expiresAt`() =
+        runTest {
+            api.now =
+                java.time.Instant
+                    .parse("2030-01-01T00:00:00Z")
+                    .toEpochMilli()
+            api.replyFixture("usage-held")
+            api.replyFixture("usage-settled")
+            var ran = false
+            customer.withHold(credits, 100, "late-clock") { hold ->
+                assertTrue(hold.expiresAt!! < java.time.Instant.ofEpochMilli(api.now))
+                ran = true
+                hold.used = 40
+            }
+            assertTrue(ran)
+            api.take()
+            assertEquals("""{"amount":40}""", api.take().bodyText)
+        }
+
+    @Test
     fun `withHold settles the amount the work reports and answers the work's result`() =
         runTest {
             api.replyFixture("usage-held")

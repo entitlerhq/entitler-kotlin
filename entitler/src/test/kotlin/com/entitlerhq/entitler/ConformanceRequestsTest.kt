@@ -1,34 +1,23 @@
 package com.entitlerhq.entitler
 
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
-import org.junit.jupiter.api.DynamicTest
-import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import java.time.Instant
 import java.time.OffsetDateTime
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.random.Random
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 /** The conformance cases for cache keys, path encoding and idempotency keys (sections 7.3, 6.1, 4.3, 5.5, 7.2 and 5.2). */
 class ConformanceRequestsTest {
@@ -98,13 +87,12 @@ class ConformanceRequestsTest {
         }
         val inApp: EntitlerClientConfig.() -> Unit = {
             common()
-            testStore = store
             visitor = case.str("clientVisitor") ?: case.str("visitor")
         }
         val credential = case.str("credential")
         return when (case.str("principalKind")) {
             "key" if credential!!.trim().startsWith("ent_pk_") -> {
-                EntitlerPublishableClient(credential, inApp)
+                PublishableClient(requirePublishable(credential), inApp, store)
             }
 
             "key" -> {
@@ -115,11 +103,17 @@ class ConformanceRequestsTest {
             }
 
             "customer-token" -> {
-                EntitlerClient(case.str("credential")!!, inApp)
+                AppClient(null, requireToken(case.str("credential")!!, CUSTOMER_TOKEN_REQUIRED), null, inApp, store)
             }
 
             else -> {
-                EntitlerIdentityClient(case.str("key")!!, case.str("identityToken")!!, inApp)
+                AppClient(
+                    requirePublishable(case.str("key")!!),
+                    requireToken(case.str("identityToken")!!, IDENTITY_TOKEN_REQUIRED),
+                    null,
+                    inApp,
+                    store,
+                )
             }
         }
     }

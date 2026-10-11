@@ -13,8 +13,8 @@ All notable changes to this project are documented here. The format follows
 - `EntitlerServer`, `EntitlerClient`, `EntitlerIdentityClient` and `EntitlerPublishableClient`, the
   first three sharing one `Customer` interface; each closes with `close()`, and an app holds one client
   per signed-in customer.
-- Checks, `isEntitled`, entitlement lists, customer plans, pricing and the usage log, each with
-  `revalidate`; server reads `asOf` an instant, per call.
+- Checks, `isEntitled`, entitlement lists, customer plans and pricing, each with `revalidate`; the
+  usage log by page, or as a `Flow` through `usageLog`; server reads `asOf` an instant, per call.
 - Usage in gate and observe modes with required idempotency keys, the `startHold` handle, `withHold`,
   holds by hand, and batches whose request keys derive from their events.
 - Billing by intent: `subscribe` answering a `SubscribeStep` (done, pay, confirming or manage), with an

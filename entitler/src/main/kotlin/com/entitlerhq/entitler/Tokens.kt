@@ -52,6 +52,8 @@ internal class TokenSource(
 
     val refreshable: Boolean get() = provider != null
 
+    fun holds(token: String): Boolean = current?.token == token
+
     suspend fun get(): String {
         val held = current
         if (held != null && !(refreshable && held.expiresSoon(clock()))) return held.token
@@ -123,6 +125,8 @@ internal class Credentials(
     val refreshable: Boolean get() = token?.refreshable == true
 
     suspend fun current(): Credential = credentialOf(token?.get())
+
+    fun isCurrent(credential: Credential): Boolean = token?.holds(credential.identityToken ?: credential.bearer) ?: true
 
     suspend fun refresh(seen: Credential): Credential = credentialOf(token?.refresh(seen.identityToken ?: seen.bearer))
 

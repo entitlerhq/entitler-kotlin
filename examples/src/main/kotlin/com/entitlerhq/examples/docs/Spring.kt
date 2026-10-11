@@ -7,8 +7,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RestController
+import java.security.Principal
 
 /** Spring: one shared client, closed with the application context. */
 @Configuration
@@ -18,7 +18,10 @@ class EntitlerConfiguration {
     fun entitler(): EntitlerServer = EntitlerServer(System.getenv("ENTITLER_KEY"))
 }
 
-/** Spring: a controller that gates a feature. */
+/**
+ * Spring: a controller that gates a feature. The customer id is the name of the principal your
+ * authentication, such as Spring Security, verified; never a header the caller can set.
+ */
 @RestController
 class ReportController(
     private val entitler: EntitlerServer,
@@ -26,9 +29,9 @@ class ReportController(
     /** Exports a report when the customer is entitled to it. */
     @GetMapping("/reports/pdf")
     suspend fun exportPdf(
-        @RequestHeader("X-User-Id") userId: String,
+        principal: Principal,
     ): ResponseEntity<String> {
-        if (!entitler.customer(userId).isEntitled(Features.exportPdf)) {
+        if (!entitler.customer(principal.name).isEntitled(Features.exportPdf)) {
             return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body("Upgrade to export PDFs.")
         }
         return ResponseEntity.ok("Your PDF is ready.")
