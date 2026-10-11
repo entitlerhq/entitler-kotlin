@@ -311,7 +311,7 @@ class LiveApiTest {
             assertFalse(customer.cancel().changed)
             assertFalse(customer.syncBilling().changed)
             val portal = assertFailsWith<EntitlerApiException> { customer.billingPortal("https://example.com") }
-            assertEquals(ErrorCode.Stale, portal.code)
+            assertEquals(ErrorCode.NotFound, portal.code)
         }
 
     @Test

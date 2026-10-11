@@ -37,11 +37,17 @@ class ClientTest {
         assertEquals("Pass an id that is not made only of dots.", message { EntitlerServer("key").customer(".") })
         assertEquals("Pass an id that is valid Unicode.", message { EntitlerServer("key").customer("a\uD800") })
         assertEquals("Pass an id that is not made only of dots.", message { Plan("..") })
-        assertEquals("Name the feature by its key.", message { Feature.Metered("") })
-        assertEquals("Name the feature by its key.", message { Feature.OnOff(" ") })
-        assertEquals("Name the feature by its key.", message { Feature.Config("") })
-        assertEquals("Name the feature by its key.", message { Feature.Group("") })
-        assertEquals("Name the feature by its key.", message { Feature.Unknown("", FeatureType("future")) })
+        val anyone = EntitlerServer("key").customer("c")
+        assertEquals(
+            "Name the feature by its key.",
+            message { kotlinx.coroutines.runBlocking { anyone.recordUsage(Feature.Metered(""), 1, "k") } },
+        )
+        assertEquals("Name the feature by its key.", message { kotlinx.coroutines.runBlocking { anyone.isEntitled(Feature.OnOff(" ")) } })
+        assertEquals("Name the feature by its key.", message { kotlinx.coroutines.runBlocking { anyone.grant(Feature.Config("")) } })
+        assertEquals(
+            "Name the feature by its key.",
+            message { kotlinx.coroutines.runBlocking { anyone.holdUsage(Feature.Metered("\t"), 1, "k") } },
+        )
         EntitlerClient({ "token" }).close()
     }
 

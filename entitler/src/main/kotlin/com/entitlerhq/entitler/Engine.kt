@@ -383,7 +383,7 @@ internal class Engine(
         deserializer: DeserializationStrategy<T>,
     ): T =
         try {
-            decode(body, deserializer, replayed = answer.headers["Idempotent-Replayed"].equals("true", ignoreCase = true))
+            decode(body, deserializer, replayed = answer.headers["Idempotent-Replayed"] == "true")
         } catch (error: SerializationException) {
             throw EntitlerApiException(
                 status = answer.status,
@@ -630,8 +630,6 @@ internal fun apiExceptionOf(
         retryAfter = headers["Retry-After"]?.let { retryAfterOf(it, now) },
         idempotencyKey = idempotencyKey,
         payment = if (status == HTTP_PAYMENT_REQUIRED) readable?.let(::paymentOf) else null,
-        listingGaps = readable?.let { listOf(it, "listingGaps", ListingGap.serializer()) }.orEmpty(),
-        listingProblems = readable?.let { listOf(it, "listingProblems", ListingProblem.serializer()) }.orEmpty(),
     )
 }
 
@@ -639,15 +637,6 @@ private fun paymentOf(error: JsonObject): Payment? {
     val payment = error["payment"] as? JsonObject ?: return null
     val status = payment.string("status")?.let(::PaymentStatus)?.takeIf { it in knownPayments } ?: return null
     return Payment(status, payment.string("url"))
-}
-
-private fun <T> listOf(
-    error: JsonObject,
-    name: String,
-    serializer: kotlinx.serialization.KSerializer<T>,
-): List<T>? {
-    val items = error[name] as? JsonArray ?: return null
-    return runCatching { json.decodeFromJsonElement(ListSerializer(serializer), items) }.getOrNull()
 }
 
 private fun transportException(

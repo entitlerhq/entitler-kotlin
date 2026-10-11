@@ -92,7 +92,7 @@ class MirrorTest {
                 }
 
                 FeatureValue.On -> {
-                    "true"
+                    if (json.isString) "" else "true"
                 }
 
                 FeatureValue.Unlimited -> {

@@ -298,7 +298,7 @@ public interface Customer {
 
     /**
      * Opens the provider's page for payment details and invoices, `POST /customers/{id}/billing-portal`. It
-     * changes no plan, and a customer the provider has never billed answers `409 stale`.
+     * changes no plan, and a customer the provider has never billed answers `404 not_found`.
      *
      * @param returnUrl Where the portal sends the customer back.
      */
@@ -655,6 +655,7 @@ internal open class CustomerImpl(
         register: Boolean,
         timeout: Duration?,
     ): UsageResult {
+        checkId(feature.key, FEATURE_REQUIRED)
         checkAmount(amount)
         val body =
             buildJsonObject {
@@ -683,6 +684,7 @@ internal open class CustomerImpl(
         timeout: Duration?,
         maxKeyLength: Int,
     ): UsageResult {
+        checkId(feature.key, FEATURE_REQUIRED)
         checkIdempotencyKey(idempotencyKey, maxKeyLength)
         checkAmount(amount)
         val body =

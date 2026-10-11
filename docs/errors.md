@@ -6,7 +6,7 @@ blank customer id, are `IllegalArgumentException`s, raised before any request.
 
 | Exception | When | Carries |
 | --- | --- | --- |
-| `EntitlerApiException` | the API answered with a status that is not 2xx | `status`, `code`, `message`, `requestId`, `retryAfter`, `idempotencyKey`, `payment`, `listingGaps`, `listingProblems` |
+| `EntitlerApiException` | the API answered with a status that is not 2xx | `status`, `code`, `message`, `requestId`, `retryAfter`, `idempotencyKey`, `payment` |
 | `EntitlerConnectionException` | no answer arrived, or one the SDK cannot read | `cause`, `idempotencyKey` |
 | `EntitlerTimeoutException` | an attempt took longer than its timeout | `idempotencyKey` |
 | `EntitlerTokenException` | a token provider failed or answered an unusable token | `cause` |
@@ -83,7 +83,7 @@ most likely to handle:
 | --- | --- |
 | `subscribe` | `not_self_serve`, `return_url_required`, `payment_required` (a declined payment), `scope_required` (in-app without `billing:self`), `capability_required` (in-app without the customer portal) |
 | `cancel`, `undoPendingChange` | `not_self_serve`, `scope_required`, `capability_required` |
-| `billingPortal` | `stale` (no provider has billed the customer), `scope_required`, `capability_required` |
+| `billingPortal` | `not_found` (no provider has billed the customer), `scope_required`, `capability_required` |
 | `syncBilling` | `scope_required`, `capability_required` |
 | `setPlan` | `billed_elsewhere` (a store SKU where Stripe bills the product), `payment_required` (with `payment.status`), `not_found` (no such plan or SKU) |
 | `setAddOn`, `grant`, `revokeGrant`, `adjustMeter` | `customer_not_found`, `feature_not_found`, `not_found`, `scope_required` |

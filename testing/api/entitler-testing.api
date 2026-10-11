@@ -49,8 +49,8 @@ public final class com/entitlerhq/entitler/testing/Answers {
 	public final fun getAS_OF ()Ljava/time/Instant;
 	public final fun getENVIRONMENT ()Lcom/entitlerhq/entitler/Environment;
 	public final fun getTRACK ()Lcom/entitlerhq/entitler/Track;
-	public final fun grantChange (Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/String;)Lcom/entitlerhq/entitler/GrantChange;
-	public static synthetic fun grantChange$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/GrantChange;
+	public final fun grantChange (Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/time/Instant;Ljava/lang/String;)Lcom/entitlerhq/entitler/GrantChange;
+	public static synthetic fun grantChange$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/time/Instant;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/GrantChange;
 	public final fun issuedCustomerToken (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/entitlerhq/entitler/IssuedCustomerToken;
 	public static synthetic fun issuedCustomerToken$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/entitlerhq/entitler/IssuedCustomerToken;
 	public final fun issuedSnapshot (Ljava/lang/String;)Lcom/entitlerhq/entitler/IssuedSnapshot;

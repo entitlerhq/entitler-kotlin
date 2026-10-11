@@ -147,10 +147,10 @@ public fun verifySnapshot(
     token: String,
     expected: SnapshotExpectation,
 ): VerifiedSnapshot {
-    require(expected.clockSkewSeconds in 0..MAX_SKEW_SECONDS) { "Pass clockSkewSeconds as a whole number from 0 to 300." }
     require(expected.customer.isNotBlank() && expected.environment.isNotBlank()) {
         "Provide the customer and environment the snapshot must be for."
     }
+    require(expected.clockSkewSeconds in 0..MAX_SKEW_SECONDS) { "Pass clockSkewSeconds as a whole number from 0 to 300." }
     val parts = token.split('.')
     val header = parts.takeIf { it.size == 3 && decodeBase64Url(it[1]) != null }?.let { decodeJwtPart(it[0]) }
     val signature = parts.getOrNull(2)?.let(::decodeBase64Url)

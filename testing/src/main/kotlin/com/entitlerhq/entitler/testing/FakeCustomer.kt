@@ -669,7 +669,7 @@ private class Fake(
         timeout: Duration?,
     ): GrantChange =
         write("grant", "feature" to feature, "value" to value, "days" to days, "actor" to actor, "reason" to reason) {
-            Answers.grantChange(feature.key, actor = actor)
+            Answers.grantChange(feature.key, value ?: FeatureValue.On, actor = actor)
         }
 
     override suspend fun revokeGrant(

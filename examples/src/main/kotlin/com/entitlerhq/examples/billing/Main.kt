@@ -32,7 +32,7 @@ fun main(): Unit =
             try {
                 println("Billing portal: ${customer.billingPortal(RETURN_URL).url}")
             } catch (error: EntitlerApiException) {
-                if (error.code != ErrorCode.Stale) throw error
+                if (error.code != ErrorCode.NotFound) throw error
                 println("No provider has billed this customer yet, so there is no billing portal.")
             }
 

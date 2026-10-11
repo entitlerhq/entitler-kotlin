@@ -5,6 +5,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
@@ -34,7 +35,7 @@ class ConformanceRequestsTest {
     @Test
     fun `every conformance file matches its manifest entry`() {
         Conformance.verified
-        assertEquals(8, Conformance.files.size)
+        assertEquals(10, Conformance.files.size)
     }
 
     @TestFactory
@@ -52,7 +53,8 @@ class ConformanceRequestsTest {
             val store = RecordingStore()
             val built = case["built"]!!.jsonObject
             cacheClient(case, transport, store).use { client ->
-                val outcome = runCatching { readRoute(client, built, case.str("visitor"), asOfOf(case)) }
+                val callVisitor = if (client is EntitlerServer || case.str("clientVisitor") != null) case.str("visitor") else null
+                val outcome = runCatching { readRoute(client, built, callVisitor, asOfOf(case)) }
                 outcome.exceptionOrNull()?.let { error ->
                     if (error !is EntitlerApiException || error.code != ErrorCode.InvalidResponse) throw error
                 }
@@ -97,9 +99,14 @@ class ConformanceRequestsTest {
         val inApp: EntitlerClientConfig.() -> Unit = {
             common()
             testStore = store
-            visitor = case.str("visitor")
+            visitor = case.str("clientVisitor") ?: case.str("visitor")
         }
+        val credential = case.str("credential")
         return when (case.str("principalKind")) {
+            "key" if credential!!.trim().startsWith("ent_pk_") -> {
+                EntitlerPublishableClient(credential, inApp)
+            }
+
             "key" -> {
                 EntitlerServer(case.str("credential")!!) {
                     common()
@@ -129,6 +136,11 @@ class ConformanceRequestsTest {
         val params = built["params"]!!.jsonObject
         val server = client as? EntitlerServer
         val serverCustomer = server?.customer(params.str("id") ?: "-")
+        if (client is EntitlerPublishableClient) {
+            assertEquals("/pricing", built.str("route"))
+            client.pricing(visitor)
+            return
+        }
         val customer = serverCustomer ?: (client as EntitlerClient).me
         if (asOf != null) {
             checkNotNull(serverCustomer).check(params.str("feature")!!, asOf = asOf)
@@ -155,12 +167,13 @@ class ConformanceRequestsTest {
                 cache = null
                 maxRetries = 0
             }.use { server ->
+                transport.answer = { Canned.Status(200, body = pathAnswer(it)) }
                 val error =
                     runCatching {
-                        if (kind == "query") {
-                            server.customers.page(q = case.str("value") ?: utf16(case["valueUtf16"]!!))
-                        } else {
-                            segmentCall(server, case)
+                        when (kind) {
+                            "query" -> queryCall(server, case)
+                            "arguments" -> argumentsCall(server, case["call"]!!.jsonObject)
+                            else -> segmentCall(server, case)
                         }
                     }.exceptionOrNull()
                 val outcome = case["outcome"]!!.jsonObject
@@ -176,6 +189,60 @@ class ConformanceRequestsTest {
             }
         }
 
+    private fun pathAnswer(request: Received): String =
+        when {
+            request.url.contains("/entitlements/") -> CHECK_BODY
+            request.url.contains("?erase=true") -> ""
+            request.url.contains("/grants/") -> fixture("grant-change")
+            request.url.contains("/usage") || request.url.contains("/meters/") -> fixture("usage-result")
+            request.url.endsWith("/customers") || request.url.contains("/customers?") -> fixture("customers")
+            else -> fixture("plan-change")
+        }
+
+    private suspend fun queryCall(
+        server: EntitlerServer,
+        case: JsonObject,
+    ) {
+        val value = case.str("value") ?: utf16(case["valueUtf16"]!!)
+        val request = case["request"]!!.jsonObject
+        when (case.str("parameter")) {
+            "q" -> {
+                server.customers.page(q = value)
+            }
+
+            "cursor" -> {
+                server.customers.page(cursor = value)
+            }
+
+            else -> {
+                val customer = server.customer(request["params"]!!.jsonObject.str("id")!!)
+                if (request
+                        .str(
+                            "route",
+                        )!!
+                        .endsWith("/pending")
+                ) {
+                    customer.undoPendingChange(product = value)
+                } else {
+                    customer.cancel(product = value)
+                }
+            }
+        }
+    }
+
+    private suspend fun argumentsCall(
+        server: EntitlerServer,
+        call: JsonObject,
+    ) {
+        val options = call["options"]!!.jsonObject
+        val customer = server.customer(call.str("customer")!!)
+        when (call.str("method")) {
+            "cancel" -> customer.cancel(addOn = options.str("addOn"), product = options.str("product"))
+            "undoPendingChange" -> customer.undoPendingChange(addOn = options.str("addOn"), product = options.str("product"))
+            else -> fail("Unknown method.")
+        }
+    }
+
     private suspend fun segmentCall(
         server: EntitlerServer,
         case: JsonObject,
@@ -185,58 +252,170 @@ class ConformanceRequestsTest {
         case.str("parameter")?.let { parameter ->
             params[if (parameter == "customer") "id" else parameter] = case.str("id") ?: utf16(case["idUtf16"]!!)
         }
+        val options = request["options"] as? JsonObject ?: JsonObject(emptyMap())
         val customer = server.customer(params.getValue("id"))
-        when (request.str("route")) {
-            "/customers/{id}/entitlements/{feature}" -> customer.check(params.getValue("feature"))
-            "/customers/{id}/subscription/add-ons/{plan}" -> customer.cancel(addOn = params.getValue("plan"))
-            "/customers/{id}/usage/holds/{holdId}" -> customer.releaseUsage(params.getValue("holdId"))
-            "/customers/{id}/grants/{grantId}" -> customer.revokeGrant(params.getValue("grantId"))
-            "/customers/{id}/usage/{usageId}" -> customer.cancelUsage(params.getValue("usageId"))
-            else -> fail("Unknown route.")
+        val route = request.str("method") + " " + request.str("route")
+        if (route.contains("/usage") || route.contains("/grants/")) return usageSegmentCall(customer, route, params, options)
+        when (route) {
+            "GET /customers/{id}/entitlements/{feature}" -> {
+                customer.check(params.getValue("feature"))
+            }
+
+            "DELETE /customers/{id}?erase=true" -> {
+                customer.erase()
+            }
+
+            "DELETE /customers/{id}/subscription/add-ons/{addOn}" -> {
+                customer.cancel(addOn = params.getValue("addOn"))
+            }
+
+            "DELETE /customers/{id}/subscription/add-ons/{addOn}/pending" -> {
+                customer.undoPendingChange(addOn = params.getValue("addOn"))
+            }
+
+            "PUT /customers/{id}/add-ons/{addOn}" -> {
+                customer.setAddOn(params.getValue("addOn"), options["quantity"]!!.jsonPrimitive.long)
+            }
+
+            "POST /customers/{id}/meters/{feature}/adjustments" -> {
+                customer.adjustMeter(
+                    Feature.Metered(params.getValue("feature")),
+                    idempotencyKey = options.str("idempotencyKey")!!,
+                    by = options["by"]!!.jsonPrimitive.long,
+                )
+            }
+
+            else -> {
+                fail("Unknown route.")
+            }
+        }
+    }
+
+    private suspend fun usageSegmentCall(
+        customer: ServerCustomer,
+        route: String,
+        params: Map<String, String>,
+        options: JsonObject,
+    ) {
+        when (route) {
+            "POST /customers/{id}/usage/holds/{holdId}/settle" -> {
+                customer.settleUsage(params.getValue("holdId"), options["amount"]!!.jsonPrimitive.long)
+            }
+
+            "DELETE /customers/{id}/usage/holds/{holdId}" -> {
+                customer.releaseUsage(params.getValue("holdId"))
+            }
+
+            "DELETE /customers/{id}/grants/{grantId}" -> {
+                customer.revokeGrant(params.getValue("grantId"))
+            }
+
+            "DELETE /customers/{id}/usage/{usageId}" -> {
+                customer.cancelUsage(params.getValue("usageId"))
+            }
+
+            else -> {
+                fail("Unknown route.")
+            }
         }
     }
 
     private fun idempotencyKey(case: JsonObject) =
         runTest {
             val transport = FakeTransport { 0 }
+            transport.answer = { Canned.Status(200, body = keyAnswer(it)) }
             EntitlerServer(CONFORMANCE_KEY) {
                 httpClient = transport.client
                 cache = null
                 maxRetries = 0
             }.use { server ->
-                val error = runCatching { sendWithKey(server, case, transport) }.exceptionOrNull()
                 val outcome = case["outcome"]!!.jsonObject
+                if (case.str("method") == "recordUsageBatch") {
+                    assertBatch(server, case, outcome, transport)
+                    return@use
+                }
+                val error = runCatching { sendWithKey(server, case) }.exceptionOrNull()
                 if (outcome.str("kind") == "ArgumentError") {
                     assertArgumentError(outcome, error)
                     assertEquals(0, transport.received.size)
                 } else {
-                    if (error is IllegalArgumentException || (case.str("method") == "withHold" && error != null)) throw error
+                    error?.let { throw it }
                     assertKeysSent(case, outcome, transport.received)
+                    if (case.str("key") == null) {
+                        val first = transport.received.first().headers["Idempotency-Key"]
+                        transport.received.clear()
+                        sendWithKey(server, case)
+                        val second = transport.received.first().headers["Idempotency-Key"]
+                        assertTrue(first != second, "each call sends its own key")
+                    }
                 }
             }
         }
 
+    private fun keyAnswer(request: Received): String {
+        val url = request.url
+        return when {
+            url.endsWith("/usage/holds") -> fixture("usage-held").replace("\"amount\": 100", "\"amount\": 1")
+            url.endsWith("/settle") -> fixture("usage-settled")
+            url.endsWith("/usage") || url.contains("/adjustments") -> fixture("usage-result")
+            url.endsWith("/tokens") -> fixture("token")
+            url.endsWith("/snapshots") -> fixture("snapshot")
+            url.endsWith("/billing-portal") -> fixture("provider-page")
+            url.endsWith("/billing/sync") -> fixture("billing-sync")
+            url.endsWith("/usage/events") -> "{}"
+            else -> fixture("plan-change")
+        }
+    }
+
     private suspend fun sendWithKey(
         server: EntitlerServer,
         case: JsonObject,
-        transport: FakeTransport,
     ) {
         val key = case.str("key")
         val credits = Feature.Metered("ai_credits")
         val customer = server.customer("user_42")
         when (case.str("method")) {
-            "write" -> {
+            "recordUsage" -> {
                 customer.recordUsage(credits, 1, idempotencyKey = checkNotNull(key))
             }
 
-            "withHold" -> {
-                val answers = listOf("usage-held", "usage-settled", "usage-result").map { Canned.Status(200, body = fixture(it)) }
-                transport.queue.addAll(answers)
-                customer.withHold(credits, 100, idempotencyKey = checkNotNull(key)) { it.used = 130 }
+            "holdUsage" -> {
+                customer.holdUsage(credits, 1, idempotencyKey = checkNotNull(key))
             }
 
-            "batchEvent" -> {
-                server.recordUsageBatch(listOf(UsageBatchEvent("user_42", credits, 1, idempotencyKey = checkNotNull(key))))
+            "startHold" -> {
+                customer.startHold(credits, 1, idempotencyKey = checkNotNull(key)).use {
+                    it.used = 2
+                    it.finish()
+                }
+            }
+
+            "withHold" -> {
+                customer.withHold(credits, 1, idempotencyKey = checkNotNull(key)) { it.used = 2 }
+            }
+
+            "adjustMeter" -> {
+                customer.adjustMeter(credits, idempotencyKey = checkNotNull(key), by = 1)
+            }
+
+            "cancel" -> {
+                customer.cancel(idempotencyKey = key)
+            }
+
+            "token" -> {
+                customer.token()
+            }
+
+            "snapshot" -> {
+                customer.snapshot()
+            }
+
+            "billingPortal" -> {
+                customer.billingPortal(returnUrl = "https://app.example.com/billing")
+            }
+
+            "syncBilling" -> {
+                customer.syncBilling()
             }
 
             else -> {
@@ -251,44 +430,75 @@ class ConformanceRequestsTest {
         received: List<Received>,
     ) {
         val key = case.str("key")
-        when (case.str("method")) {
-            "write" -> {
-                assertEquals(key, received.single().headers["Idempotency-Key"])
-            }
+        val sent = assertNotNull(received.first().headers["Idempotency-Key"])
+        if (key != null) assertEquals(key, sent) else assertTrue(UUID_V4.matches(sent), "$sent is a UUID v4")
+        outcome.str("excessKey")?.let { excessKey ->
+            assertEquals(excessKey, received.last { it.url.endsWith("/usage") }.headers["Idempotency-Key"])
+        }
+    }
 
-            "withHold" -> {
-                assertEquals(key, received.first().headers["Idempotency-Key"])
-                assertEquals(outcome.str("excessKey"), received.last().headers["Idempotency-Key"])
+    private suspend fun assertBatch(
+        server: EntitlerServer,
+        case: JsonObject,
+        outcome: JsonObject,
+        transport: FakeTransport,
+    ) {
+        val events = batchEvents(case)
+        val register = case.bool("register")
+        repeat(case["calls"]?.jsonPrimitive?.int ?: 1) {
+            transport.received.clear()
+            val result = if (register == null) server.recordUsageBatch(events) else server.recordUsageBatch(events, register)
+            val refused = outcome["refused"]!!.jsonArray.map { it.jsonObject }
+            val errors = result.results.withIndex().filter { (index, _) -> refused.any { it["index"]!!.jsonPrimitive.int == index } }
+            assertEquals(refused.size, errors.size)
+            refused.zip(errors).forEach { (expected, actual) ->
+                assertEquals(UsageOutcome.Error, actual.value.outcome)
+                assertEquals(
+                    expected.str("code"),
+                    actual.value.error
+                        ?.code
+                        .toString(),
+                )
+                assertEquals(expected.str("message"), actual.value.error?.message)
             }
-
-            "batchEvent" -> {
-                val events = Json.parseToJsonElement(received.single().body).jsonObject["events"]!!.jsonArray
-                assertEquals(key, events.single().jsonObject.str("idempotencyKey"))
-            }
-
-            else -> {
-                assertBatchRequests(outcome["requests"]!!.jsonArray.map { it.jsonObject }, received)
+            val requests = outcome["requests"]!!.jsonArray.map { it.jsonObject }
+            assertEquals(requests.size, transport.received.size)
+            requests.zip(transport.received).forEach { (expected, request) ->
+                val sent = Json.parseToJsonElement(request.body).jsonObject["events"]!!.jsonArray
+                assertEquals(expected["events"]!!.jsonPrimitive.int, sent.size)
+                assertEquals(expected.str("idempotencyKey"), "batch:" + sha256(expected.str("serialised")!!))
+                assertEquals(expected.str("idempotencyKey"), request.headers["Idempotency-Key"])
             }
         }
     }
 
-    private fun assertBatchRequests(
-        requests: List<JsonObject>,
-        received: List<Received>,
-    ) {
-        assertEquals(requests.size, received.size)
-        val generated = mutableSetOf<String>()
-        requests.zip(received).forEach { (expected, request) ->
-            val events = Json.parseToJsonElement(request.body).jsonObject["events"]!!.jsonArray
-            assertEquals(expected["events"]!!.jsonPrimitive.int, events.size)
-            val sent = assertNotNull(request.headers["Idempotency-Key"])
-            val wanted = expected.str("idempotencyKey")
-            if (wanted != null) {
-                assertEquals(wanted, sent)
-            } else {
-                assertTrue(UUID_V4.matches(sent), "$sent is a UUID v4")
-                assertTrue(generated.add(sent), "each request has its own key")
-            }
+    private fun batchEvents(case: JsonObject): List<UsageBatchEvent> {
+        val listed = case["events"]?.jsonArray?.map { it.jsonObject }
+        val pattern = case["eventPattern"]?.jsonObject
+        val events =
+            (
+                listed ?: List(pattern!!["count"]!!.jsonPrimitive.int) { i ->
+                    JsonObject(
+                        mapOf(
+                            "customer" to JsonPrimitive(pattern.str("customerPrefix") + (i % pattern["customers"]!!.jsonPrimitive.int)),
+                            "feature" to JsonPrimitive(pattern.str("feature")),
+                            "amount" to JsonPrimitive(i + 1),
+                            "idempotencyKey" to JsonPrimitive(pattern.str("keyPrefix") + i),
+                        ),
+                    )
+                }
+            ).toMutableList()
+        case["overrides"]?.jsonArray?.forEach { override ->
+            events[override.jsonObject["index"]!!.jsonPrimitive.int] = override.jsonObject["event"]!!.jsonObject
+        }
+        return events.map { event ->
+            UsageBatchEvent(
+                event.str("customer")!!,
+                Feature.Metered(event.str("feature")!!),
+                event["amount"]!!.jsonPrimitive.long,
+                idempotencyKey = event.str("idempotencyKey")!!,
+                occurredAt = event.str("occurredAt")?.let { OffsetDateTime.parse(it).toInstant() },
+            )
         }
     }
 }

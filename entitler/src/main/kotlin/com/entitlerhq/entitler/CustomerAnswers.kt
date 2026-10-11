@@ -189,7 +189,7 @@ public data class ProductSubscription(
  *
  * @property id The grant's id.
  * @property feature The feature's key.
- * @property value The value granted: an amount, `unlimited`, or empty for an on/off feature.
+ * @property value The value granted: [FeatureValue.On] for an on/off feature, an amount, or unlimited.
  * @property from When it started.
  * @property until When it ends, or null.
  * @property revokedAt When it was revoked, or null.
@@ -201,7 +201,8 @@ public data class ProductSubscription(
 public data class Grant(
     val id: String,
     val feature: String,
-    val value: String,
+    @Serializable(with = GrantValueSerializer::class)
+    val value: FeatureValue,
     val from: Instant,
     val until: Instant? = null,
     val revokedAt: Instant? = null,

@@ -139,6 +139,10 @@ class ConformanceRetryTest {
                 assertIs<EntitlerTimeoutException>(error)
             }
 
+            "ConnectionError" -> {
+                assertIs<EntitlerConnectionException>(error)
+            }
+
             else -> {
                 fail("Unknown result kind.")
             }
@@ -248,15 +252,19 @@ class ConformanceRetryTest {
             val transport = FakeTransport(clock::now).apply { answer = { Canned.Status(200, body = CHECK_BODY) } }
             val calls = AtomicInteger()
             val token = case.str("token")!!
-            EntitlerClient({
+            val provider: suspend () -> String = {
                 calls.incrementAndGet()
                 token
-            }) {
+            }
+            val configure: EntitlerClientConfig.() -> Unit = {
                 httpClient = transport.client
                 this.clock = clock::now
                 cache = null
                 maxRetries = 0
-            }.use { client ->
+            }
+            val key = case.str("key")
+            val client = if (key != null) EntitlerIdentityClient(key, provider, configure) else EntitlerClient(provider, configure)
+            client.use {
                 val outcome = case["outcome"]!!.jsonObject
                 if (outcome.str("kind") == "TokenError") {
                     val error = runCatching { client.me.check("export_pdf") }.exceptionOrNull()
@@ -265,11 +273,22 @@ class ConformanceRetryTest {
                     return@use
                 }
                 client.me.check("export_pdf")
-                val expected = outcome["requestHeaders"]!!.jsonObject.str("Authorization")
-                assertEquals(expected, transport.received.single().headers["Authorization"])
+                for ((name, value) in outcome["requestHeaders"]!!.jsonObject) {
+                    assertEquals(stringOf(value), transport.received.single().headers[name], name)
+                }
                 assertEquals(1, calls.get())
+                repeat(case["close"]?.jsonPrimitive?.int ?: 0) { client.close() }
                 clock.base = millisOf(case.str("now")!!)
-                client.me.check("export_pdf")
+                val later = runCatching { client.me.check("export_pdf") }.exceptionOrNull()
+                val expectedLater = outcome["later"] as? JsonObject
+                if (expectedLater != null) {
+                    assertEquals("ClosedError", expectedLater.str("kind"))
+                    assertIs<IllegalStateException>(later)
+                    assertEquals(expectedLater.str("message"), later.message)
+                    assertEquals(1, transport.received.size)
+                } else {
+                    later?.let { throw it }
+                }
                 assertEquals(outcome["asksProvider"]!!.jsonPrimitive.boolean, calls.get() == 2, "asks the provider again")
             }
         }

@@ -465,6 +465,8 @@ class UsageTest {
             assertTrue(customer.recordUsage(credits, 1, "k").replayed)
             api.replyFixture("usage-result")
             assertFalse(customer.recordUsage(credits, 1, "k").replayed)
+            api.reply(200, fixture("usage-result"), "Idempotent-Replayed" to "TRUE")
+            assertFalse(customer.recordUsage(credits, 1, "k").replayed)
         }
 
     @Test

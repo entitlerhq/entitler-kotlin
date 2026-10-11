@@ -157,22 +157,16 @@ class DecodingTest {
             assertEquals("req_9", payment.requestId)
             assertEquals("sub-1", payment.idempotencyKey)
             assertEquals(Payment(PaymentStatus.RequiresAction, "https://pay.example"), payment.payment)
-            assertTrue(payment.listingGaps.isEmpty())
 
             api.reply(402, """{"error":{"code":"payment_required","message":"x","payment":{"status":"mystery","url":null}}}""")
             assertNull(kotlin.test.assertFailsWith<EntitlerApiException> { customer.subscribe("pro") }.payment)
 
             api.reply(
                 409,
-                """{"error":{"code":"listing_gaps","message":"Gaps.",
-                "listingGaps":[{"kind":"unlisted","plan":"n_1","key":"pro","period":"Monthly","channel":null}],
-                "listingProblems":[{"channel":{"provider":"stripe","connectionId":"cn"},"plan":"n_1","period":"Monthly","ids":{},
-                "problem":"price_inactive"}]}}""",
+                """{"error":{"code":"rate_limited","message":"Slow down."}}""",
                 "Retry-After" to "7",
             )
             val gaps = kotlin.test.assertFailsWith<EntitlerApiException> { customer.subscribe("pro") }
-            assertEquals("pro", gaps.listingGaps.single().key)
-            assertEquals(ListingProblemKind.PriceInactive, gaps.listingProblems.single().problem)
             assertEquals(7.seconds, gaps.retryAfter)
 
             api.reply(409, """{"error":{"code":"brand_new_code","message":"New."}}""")

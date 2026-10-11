@@ -113,39 +113,71 @@ class ConformanceDecodingTest {
             val headers = case["headers"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
             transport.answer = { Canned.Status(case["status"]!!.jsonPrimitive.int, headers, case.str("body")!!) }
             val call = case["call"]!!.jsonObject
-            EntitlerServer(CONFORMANCE_KEY) {
-                httpClient = transport.client
-                this.clock = clock::now
-                maxRetries = 0
-            }.use { server ->
-                val customer = server.customer(call.str("customer")!!)
-                val error =
-                    runCatching {
-                        when (call.str("method")) {
-                            "check" -> {
-                                customer.check(call.str("feature")!!)
-                            }
+            val client = call["client"] as? JsonObject
+            val error =
+                if (client != null) {
+                    EntitlerIdentityClient(client.str("key")!!, client.str("identityToken")!!) {
+                        httpClient = transport.client
+                        this.clock = clock::now
+                        maxRetries = 0
+                    }.use { runCatching { it.register(idempotencyKey = call.str("idempotencyKey")) }.exceptionOrNull() }
+                } else {
+                    EntitlerServer(CONFORMANCE_KEY) {
+                        httpClient = transport.client
+                        this.clock = clock::now
+                        maxRetries = 0
+                    }.use { server -> runCatching { errorCall(server.customer(call.str("customer")!!), call) }.exceptionOrNull() }
+                }
+            assertApiError(case["outcome"]!!.jsonObject, error)
+        }
 
-                            "recordUsage" -> {
-                                customer.recordUsage(
-                                    Feature.Metered(call.str("feature")!!),
-                                    call["amount"]!!.jsonPrimitive.long,
-                                    idempotencyKey = call.str("idempotencyKey") ?: "conformance",
-                                )
-                            }
+    private suspend fun errorCall(
+        customer: ServerCustomer,
+        call: JsonObject,
+    ) {
+        val key = call.str("idempotencyKey")
+        when (call.str("method")) {
+            "check" -> {
+                val asOf =
+                    call.str("asOf")?.let {
+                        java.time.OffsetDateTime
+                            .parse(it)
+                            .toInstant()
+                    }
+                if (asOf != null) customer.check(call.str("feature")!!, asOf = asOf) else customer.check(call.str("feature")!!)
+            }
 
-                            "subscribe" -> {
-                                customer.subscribe(call.str("plan")!!, call.str("period"), idempotencyKey = call.str("idempotencyKey"))
-                            }
+            "recordUsage" -> {
+                customer.recordUsage(
+                    Feature.Metered(call.str("feature")!!),
+                    call["amount"]!!.jsonPrimitive.long,
+                    idempotencyKey =
+                        key ?: "conformance",
+                )
+            }
 
-                            else -> {
-                                fail("Unknown call.")
-                            }
-                        }
-                    }.exceptionOrNull()
-                assertApiError(case["outcome"]!!.jsonObject, error)
+            "subscribe" -> {
+                customer.subscribe(call.str("plan")!!, call.str("period"), idempotencyKey = key)
+            }
+
+            "setPlan" -> {
+                val sku = call["sku"] as? JsonObject
+                if (sku != null) {
+                    customer.setPlan(
+                        Sku(sku.str("connector")!!, sku["ids"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }),
+                        until = call.str("until")?.let(java.time.Instant::parse),
+                        idempotencyKey = key,
+                    )
+                } else {
+                    customer.setPlan(call.str("plan")!!, period = call.str("period"), idempotencyKey = key)
+                }
+            }
+
+            else -> {
+                fail("Unknown call.")
             }
         }
+    }
 
     private fun assertApiError(
         expected: JsonObject,
@@ -167,37 +199,6 @@ class ConformanceDecodingTest {
             val actual = assertNotNull(failure.payment, "payment")
             assertOpen(payment.jsonObject["status"]!!, actual.status, "payment.status")
             assertEquals(stringOf(payment.jsonObject["url"]), actual.url, "payment.url")
-        }
-        val gaps = jsonArrayOf(expected["listingGaps"]).map { it.jsonObject }
-        assertEquals(gaps.size, failure.listingGaps.size, "listingGaps")
-        gaps.zip(failure.listingGaps).forEach { (gap, actual) ->
-            assertOpen(gap["kind"]!!, actual.kind, "listingGaps.kind")
-            assertEquals(gap.str("plan"), actual.plan)
-            assertEquals(gap.str("key"), actual.key)
-            assertEquals(gap.str("period"), actual.period)
-            assertChannel(gap["channel"]!!, actual.channel)
-        }
-        val problems = jsonArrayOf(expected["listingProblems"]).map { it.jsonObject }
-        assertEquals(problems.size, failure.listingProblems.size, "listingProblems")
-        problems.zip(failure.listingProblems).forEach { (problem, actual) ->
-            assertChannel(problem["channel"]!!, actual.channel)
-            assertEquals(problem.str("plan"), actual.plan)
-            assertEquals(problem.str("period"), actual.period)
-            assertEquals(problem["ids"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }, actual.ids)
-            assertOpen(problem["problem"]!!, actual.problem, "listingProblems.problem")
-        }
-    }
-
-    private fun assertChannel(
-        expected: kotlinx.serialization.json.JsonElement,
-        actual: Channel?,
-    ) {
-        if (expected is JsonNull) {
-            assertNull(actual, "channel")
-        } else {
-            val channel = assertNotNull(actual, "channel")
-            assertOpen(expected.jsonObject["provider"]!!, channel.provider, "channel.provider")
-            assertEquals(expected.jsonObject.str("connectionId"), channel.connectionId)
         }
     }
 

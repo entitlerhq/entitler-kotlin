@@ -122,14 +122,14 @@ suspend fun cancelAndUndo(customer: Customer) {
 ## The billing portal
 
 `billingPortal` opens the provider's page for payment details and invoices. It changes no plan and
-always needs `returnUrl`. A customer the provider has never billed answers `409 stale`:
+always needs `returnUrl`. A customer the provider has never billed answers `404 not_found`:
 
 ```kotlin
 suspend fun portal(customer: Customer): String? =
     try {
         customer.billingPortal(returnUrl = "https://example.com/account").url
     } catch (error: EntitlerApiException) {
-        if (error.code != ErrorCode.Stale) throw error
+        if (error.code != ErrorCode.NotFound) throw error
         null
     }
 ```

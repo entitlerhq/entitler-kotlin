@@ -47,8 +47,6 @@ public sealed class EntitlerException(
  * @property retryAfter How long the API asked to wait before trying again, or null.
  * @property idempotencyKey The key the request sent, to repeat the call with later, or null.
  * @property payment For `402 payment_required`, the payment a plan change waits on, or null.
- * @property listingGaps For `409 listing_gaps`, the gaps, else empty.
- * @property listingProblems For `409 listing_invalid`, the problems, else empty.
  */
 public class EntitlerApiException(
     public val status: Int,
@@ -58,8 +56,6 @@ public class EntitlerApiException(
     public val retryAfter: Duration? = null,
     public val idempotencyKey: String? = null,
     public val payment: Payment? = null,
-    public val listingGaps: List<ListingGap> = emptyList(),
-    public val listingProblems: List<ListingProblem> = emptyList(),
     cause: Throwable? = null,
 ) : EntitlerException(message, cause)
 
@@ -156,40 +152,4 @@ public class EntitlerUsageSettlementException(
 public data class Payment(
     val status: PaymentStatus,
     val url: String? = null,
-)
-
-/**
- * A gap a rollout or experiment would leave in the listings.
- *
- * @property kind [ListingGapKind.StopsSelling] or [ListingGapKind.Unlisted].
- * @property plan The plan's id.
- * @property key The plan's key.
- * @property period The period.
- * @property channel The connection, or null.
- */
-@Serializable
-public data class ListingGap(
-    val kind: ListingGapKind,
-    val plan: String,
-    val key: String,
-    val period: String,
-    val channel: Channel? = null,
-)
-
-/**
- * A listing whose provider price fails the checks.
- *
- * @property channel The connection.
- * @property plan The plan's id.
- * @property period The period.
- * @property ids The provider's ids.
- * @property problem What is wrong with the price.
- */
-@Serializable
-public data class ListingProblem(
-    val channel: Channel,
-    val plan: String,
-    val period: String,
-    val ids: Map<String, String>,
-    val problem: ListingProblemKind,
 )

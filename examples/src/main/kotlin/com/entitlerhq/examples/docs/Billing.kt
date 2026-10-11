@@ -63,7 +63,7 @@ suspend fun portal(customer: Customer): String? =
     try {
         customer.billingPortal(returnUrl = "https://example.com/account").url
     } catch (error: EntitlerApiException) {
-        if (error.code != ErrorCode.Stale) throw error
+        if (error.code != ErrorCode.NotFound) throw error
         null
     }
 

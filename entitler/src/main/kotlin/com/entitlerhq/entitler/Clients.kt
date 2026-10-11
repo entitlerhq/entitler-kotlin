@@ -317,6 +317,7 @@ public fun EntitlerIdentityClient(
     identityToken: String,
     configure: EntitlerClientConfig.() -> Unit = {},
 ): EntitlerIdentityClient {
+    requireKey(key)
     val token = requireToken(identityToken, IDENTITY_TOKEN_REQUIRED)
     return AppClient(requirePublishable(key), token, null, configure)
 }

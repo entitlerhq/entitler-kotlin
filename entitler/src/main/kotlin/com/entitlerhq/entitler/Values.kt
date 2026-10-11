@@ -73,6 +73,33 @@ internal object LimitSerializer : KSerializer<Limit> {
 
 private const val UNLIMITED = "unlimited"
 
+private val digits = Regex("^[0-9]+$")
+
+internal object GrantValueSerializer : KSerializer<FeatureValue> {
+    override val descriptor = PrimitiveSerialDescriptor("com.entitlerhq.entitler.GrantValue", PrimitiveKind.STRING)
+
+    override fun deserialize(decoder: Decoder): FeatureValue {
+        val text = decoder.decodeString()
+        return when {
+            text.isEmpty() -> FeatureValue.On
+            text == UNLIMITED -> FeatureValue.Unlimited
+            digits.matches(text) -> text.toLongOrNull()?.takeIf { it <= MAX_AMOUNT }?.let(FeatureValue::Amount)
+            else -> null
+        } ?: throw kotlinx.serialization.SerializationException("A grant's value is empty, unlimited or a whole number.")
+    }
+
+    override fun serialize(
+        encoder: Encoder,
+        value: FeatureValue,
+    ) {
+        when (value) {
+            FeatureValue.On -> encoder.encodeString("")
+            is FeatureValue.Amount -> encoder.encodeString(value.value.toString())
+            FeatureValue.Unlimited -> encoder.encodeString(UNLIMITED)
+        }
+    }
+}
+
 private fun decodeLimit(element: kotlinx.serialization.json.JsonElement): Limit {
     if (element is JsonPrimitive) {
         if (element.isString && element.content == UNLIMITED) return FeatureValue.Unlimited
@@ -105,10 +132,6 @@ public sealed class Feature {
     public data class OnOff(
         override val key: String,
     ) : Feature() {
-        init {
-            requireKey(key)
-        }
-
         override val type: FeatureType get() = FeatureType.Boolean
     }
 
@@ -116,10 +139,6 @@ public sealed class Feature {
     public data class Config(
         override val key: String,
     ) : Feature() {
-        init {
-            requireKey(key)
-        }
-
         override val type: FeatureType get() = FeatureType.Config
     }
 
@@ -127,10 +146,6 @@ public sealed class Feature {
     public data class Metered(
         override val key: String,
     ) : Feature() {
-        init {
-            requireKey(key)
-        }
-
         override val type: FeatureType get() = FeatureType.Metered
     }
 
@@ -140,10 +155,6 @@ public sealed class Feature {
         /** The group's leaf member keys, for documentation. */
         val includes: List<String> = emptyList(),
     ) : Feature() {
-        init {
-            requireKey(key)
-        }
-
         override val type: FeatureType get() = FeatureType.Group
     }
 
@@ -151,13 +162,7 @@ public sealed class Feature {
     public data class Unknown(
         override val key: String,
         override val type: FeatureType,
-    ) : Feature() {
-        init {
-            requireKey(key)
-        }
-    }
+    ) : Feature()
 }
 
 internal const val FEATURE_REQUIRED = "Name the feature by its key."
-
-private fun requireKey(key: String) = require(key.isNotBlank()) { FEATURE_REQUIRED }

@@ -17,11 +17,13 @@ import kotlinx.serialization.json.long
 import kotlinx.serialization.json.longOrNull
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Buffer
+import okio.buffer
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.security.MessageDigest
@@ -93,6 +95,8 @@ sealed class Canned {
 
     data object TimeoutFailure : Canned()
 
+    data object CutOff : Canned()
+
     companion object {
         fun of(answer: JsonObject): Canned =
             when (answer.str("failure")) {
@@ -102,6 +106,10 @@ sealed class Canned {
 
                 "timeout" -> {
                     TimeoutFailure
+                }
+
+                "cut-off" -> {
+                    CutOff
                 }
 
                 else -> {
@@ -141,6 +149,18 @@ class FakeTransport(
                 throw InterruptedIOException("timeout")
             }
 
+            Canned.CutOff -> {
+                Response
+                    .Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("")
+                    .header("Content-Type", "application/json")
+                    .body(CutOffBody)
+                    .build()
+            }
+
             is Canned.Status -> {
                 Response
                     .Builder()
@@ -160,6 +180,33 @@ class FakeTransport(
     }
 
     val client: OkHttpClient by lazy { shared.newBuilder().addInterceptor(this).build() }
+}
+
+/** A JSON body whose first part arrives, then the read fails as a dropped connection does. */
+object CutOffBody : okhttp3.ResponseBody() {
+    override fun contentType() = "application/json".toMediaType()
+
+    override fun contentLength() = -1L
+
+    override fun source(): okio.BufferedSource =
+        object : okio.Source {
+            private var sent = false
+
+            override fun read(
+                sink: Buffer,
+                byteCount: Long,
+            ): Long {
+                if (sent) throw IOException("connection reset")
+                sent = true
+                val part = """{"customer":"user_42","feature":"""
+                sink.writeUtf8(part)
+                return part.length.toLong()
+            }
+
+            override fun timeout() = okio.Timeout.NONE
+
+            override fun close() = Unit
+        }.buffer()
 }
 
 /** A clock that starts at [base] and moves with the test scheduler's virtual time once one is set. */
@@ -198,64 +245,24 @@ const val CHECK_BODY =
         """"environment":{"id":"env_conformance_test","name":"Development","kind":"test"},""" +
         """"track":{"id":"trk_all_customers","name":"All customers"},"release":2,"change":null,"testers":true,"experiment":null}"""
 
-/** One dynamic test per case of a conformance [file], named after the case. */
+/** The `appliesWhere` conditions that hold in Kotlin. */
+private val kotlinHolds =
+    setOf("strings can hold lone surrogates", "the type of clockSkewSeconds can hold a negative number")
+
+/** One dynamic test per case of a conformance [file], named after the case; a case whose `appliesWhere` fails in Kotlin is skipped. */
 fun conformanceTests(
     file: String,
     run: (JsonObject) -> Unit,
 ): List<org.junit.jupiter.api.DynamicTest> =
     Conformance.cases(file).map { case ->
         org.junit.jupiter.api.DynamicTest.dynamicTest(case.str("name")) {
-            contradicted(file, case)?.let {
+            case.str("appliesWhere")?.takeIf { it !in kotlinHolds }?.let {
                 org.junit.jupiter.api.Assumptions
-                    .abort<Unit>(it)
+                    .abort<Unit>("Applies only where $it.")
             }
             run(case)
         }
     }
-
-/**
- * Why a case of the suite built for spec 8 contradicts spec 9, until the suite is rebuilt; null when it
- * still holds.
- */
-fun contradicted(
-    file: String,
-    case: JsonObject,
-): String? =
-    when (file) {
-        "cache-keys.json" -> contradictedCacheKey(case)
-        "idempotency-keys.json" -> contradictedKey(case)
-        else -> null
-    }
-
-private fun contradictedCacheKey(case: JsonObject): String? {
-    val route = (case["built"] as? JsonObject)?.str("route").orEmpty()
-    return when {
-        case.str(
-            "principalKind",
-        ) == "identity" -> "Spec 9, 4.3: identity clients take only ent_pk_ keys, and the case's ent_pub_ key is refused."
-
-        case.str("asOf") == null -> null
-
-        case.str("principalKind") != "key" -> "Spec 9, 4.3 and 6.6: in-app clients take no as-of."
-
-        !route.startsWith("/customers/") -> "Spec 9, 6.6: pricing never sends as-of; only a server customer's reads take it."
-
-        else -> null
-    }
-}
-
-private fun contradictedKey(case: JsonObject): String? {
-    val refused = (case["outcome"] as? JsonObject)?.str("kind") == "ArgumentError"
-    return when {
-        case.str("method") == "recordUsageBatch" -> "Spec 9, 5.2: a batch takes no key; each request's key derives from its events."
-
-        case.str(
-            "method",
-        ) == "batchEvent" && refused -> "Spec 9, 5.2: an invalid event key is answered error without a request, not raised."
-
-        else -> null
-    }
-}
 
 fun JsonObject.str(name: String): String? = (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
 

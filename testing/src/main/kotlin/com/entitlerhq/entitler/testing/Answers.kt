@@ -452,7 +452,7 @@ public object Answers {
     /** A grant made or revoked. */
     public fun grantChange(
         feature: String = "sso",
-        value: String = "",
+        value: FeatureValue = FeatureValue.On,
         revokedAt: Instant? = null,
         actor: String? = null,
     ): GrantChange = GrantChange(Grant("g_1", feature, value, AS_OF, null, revokedAt, "", "Test key", actor))
