@@ -287,6 +287,38 @@ class CacheTest {
         }
 
     @Test
+    fun `with a clock that never moves, a read answered after a write is kept fresh`() =
+        runTest {
+            api.server().use { server ->
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                api.replyFixture("summary")
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                customer.update(name = "x")
+                customer.check("export_pdf")
+                customer.check("export_pdf")
+                assertEquals(3, api.server.requestCount)
+            }
+        }
+
+    @Test
+    fun `with a clock that never moves, an answer exactly max-age old is not fresh`() =
+        runTest {
+            api.server().use { server ->
+                api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                api.reply(304, "")
+                val customer = server.customer("u")
+                customer.check("export_pdf")
+                customer.check("export_pdf")
+                assertEquals(1, api.server.requestCount)
+                api.now += 600_000
+                customer.check("export_pdf")
+                assertEquals(2, api.server.requestCount)
+            }
+        }
+
+    @Test
     fun `a read that started before a write and answered after it is never kept as fresh`() =
         runTest {
             val readArrived = CountDownLatch(1)

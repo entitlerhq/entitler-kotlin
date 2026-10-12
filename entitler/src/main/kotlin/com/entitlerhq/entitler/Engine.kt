@@ -217,6 +217,7 @@ internal class Engine(
     private val forgottenGeneration = AtomicLong()
 
     @Volatile private var forgottenAt = Long.MIN_VALUE
+    private val lastStamp = AtomicLong(Long.MIN_VALUE)
     private val longestFreshMillis = AtomicLong()
 
     @Volatile private var outageUntil = 0L
@@ -241,17 +242,25 @@ internal class Engine(
 
     fun bump(customer: String) {
         if (cache == null) return
-        val now = clock()
+        val stamp = stamp()
         generations[customer] = writes.incrementAndGet()
-        bumpedAt[customer] = now
-        if (bumpedAt.size > pruneAt.get()) prune(now)
+        bumpedAt[customer] = stamp
+        if (bumpedAt.size > pruneAt.get()) prune(stamp)
+    }
+
+    private fun stamp(): Long {
+        val reading = clock().coerceIn(Long.MIN_VALUE / NANOS_PER_MILLI, Long.MAX_VALUE / NANOS_PER_MILLI) * NANOS_PER_MILLI
+        return lastStamp.updateAndGet { last -> if (reading > last) reading else last + 1 }
     }
 
     private fun prune(now: Long) {
         synchronized(pruneLock) {
             if (bumpedAt.size <= pruneAt.get()) return
-            val horizon = now - longestFreshMillis.get()
-            bumpedAt.entries.removeIf { it.value < horizon }
+            val horizon = now - longestFreshMillis.get() * NANOS_PER_MILLI
+            bumpedAt.entries.filter { it.value < horizon }.forEach { (customer, at) ->
+                generations[customer]?.let { generation -> forgottenGeneration.accumulateAndGet(generation, ::maxOf) }
+                bumpedAt.remove(customer, at)
+            }
             if (bumpedAt.size > KEPT_AFTER_PRUNE) forget(bumpedAt.entries.sortedBy { it.value }.take(bumpedAt.size - KEPT_AFTER_PRUNE))
             generations.keys.retainAll(bumpedAt.keys)
             pruneAt.set(minOf(MOST_TRACKED, maxOf(PRUNE_AT, 2 * bumpedAt.size)))
@@ -330,7 +339,7 @@ internal class Engine(
         kept: CacheEntry?,
         deserializer: DeserializationStrategy<T>,
     ): T {
-        val startedAt = clock()
+        val startedAt = stamp()
         val writesBefore = writes.get()
         val generation = customer?.let { generations[it] }
         val (answer, result) =
@@ -341,14 +350,26 @@ internal class Engine(
             } catch (error: EntitlerException) {
                 return standIn(kept.takeIf { credential == null || credentials.isCurrent(credential) }, error, deserializer)
             }
-        val moved = customer != null && (generations[customer] != generation || forgottenGeneration.get() > writesBefore)
-        val entry = if (moved) result.first else result.first.copy(receivedAt = Instant.ofEpochMilli(clock()))
+        val moved = movedSince(customer, generation, writesBefore, startedAt)
+        val entry = if (moved) result.first else result.first.copy(receivedAt = instantOfStamp(stamp()))
         val directives = directives(entry.cacheControl)
         directives.maxAge?.let { longestFreshMillis.accumulateAndGet(it * MILLIS_PER_SECOND, ::maxOf) }
         if (!directives.noStore && (entry.etag != null || directives.maxAge != null)) {
             storeSet(store, cacheKey(request, answer.credential), entry, staleFor + (directives.maxAge ?: 0).seconds)
         }
         return result.second
+    }
+
+    private fun movedSince(
+        customer: String?,
+        generation: Long?,
+        writesBefore: Long,
+        startedAt: Long,
+    ): Boolean {
+        if (customer == null) return false
+        val moved = generations[customer] != generation || forgottenGeneration.get() > writesBefore
+        if (moved && !bumpedAt.containsKey(customer)) synchronized(pruneLock) { forgottenAt = maxOf(forgottenAt, startedAt) }
+        return moved
     }
 
     private fun <T> standIn(
@@ -382,9 +403,10 @@ internal class Engine(
         val directives = directives(entry.cacheControl)
         val maxAge = directives.maxAge ?: return false
         longestFreshMillis.accumulateAndGet(maxAge * MILLIS_PER_SECOND, ::maxOf)
-        val received = entry.receivedAt.toEpochMilli()
+        val received = stampOf(entry.receivedAt)
         val writtenSince = received <= forgottenAt || (customer != null && (bumpedAt[customer] ?: Long.MIN_VALUE) >= received)
-        val age = now - received + (entry.age ?: 0) * MILLIS_PER_SECOND
+        val sinceReceipt = (now - entry.receivedAt.toEpochMilli()).coerceAtLeast(0)
+        val age = sinceReceipt + (entry.age ?: 0) * MILLIS_PER_SECOND
         return !directives.noCache && !writtenSince && age < maxAge * MILLIS_PER_SECOND
     }
 
@@ -399,7 +421,7 @@ internal class Engine(
             etag = headers["ETag"] ?: kept?.etag,
             cacheControl = headers.values("Cache-Control").takeIf { it.isNotEmpty() }?.joinToString(", ") ?: kept?.cacheControl,
             age = headers["Age"]?.trim()?.let(::headerSeconds) ?: kept?.age,
-            receivedAt = Instant.ofEpochMilli(receivedAt),
+            receivedAt = instantOfStamp(receivedAt),
         )
     }
 
@@ -719,6 +741,15 @@ private fun transportException(
     } else {
         EntitlerConnectionException("Entitler could not be reached: ${error.javaClass.simpleName}.", error, idempotencyKey)
     }
+
+private const val NANOS_PER_MILLI = 1_000_000L
+private const val NANOS_PER_SECOND = 1_000_000_000L
+
+private fun instantOfStamp(stamp: Long): Instant = Instant.ofEpochSecond(stamp.floorDiv(NANOS_PER_SECOND), stamp.mod(NANOS_PER_SECOND))
+
+private fun stampOf(instant: Instant): Long =
+    runCatching { Math.addExact(Math.multiplyExact(instant.epochSecond, NANOS_PER_SECOND), instant.nano.toLong()) }
+        .getOrElse { if (instant.epochSecond < 0) Long.MIN_VALUE else Long.MAX_VALUE }
 
 private const val LONGEST_ATTEMPT_MILLIS = 365L * 24 * 60 * 60 * 1000
 
