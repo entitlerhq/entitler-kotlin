@@ -439,8 +439,7 @@ internal class ServerCustomerImpl(
         val request =
             ApiRequest("DELETE", base, listOf("erase" to "true"), idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout)
         engine.ensureOpen()
-        engine.bump(pathId)
-        engine.send(request)
+        engine.writing(listOf(pathId)) { engine.send(request) }
     }
 
     override suspend fun token(

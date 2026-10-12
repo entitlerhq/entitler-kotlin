@@ -477,13 +477,10 @@ internal class ServerClient(
                 if (register) put("register", true)
                 put("events", JsonArray(events.map(::eventJson)))
             }
-        events.map { it.customer }.distinct().forEach(engine::bump)
+        val customers = events.map { it.customer }.distinct()
         return try {
-            val answer =
-                engine.call(
-                    ApiRequest("POST", "/usage/events", body = body, idempotencyKey = batchKey(events, register), timeout = timeout),
-                    UsageEventsResult.serializer(),
-                )
+            val request = ApiRequest("POST", "/usage/events", body = body, idempotencyKey = batchKey(events, register), timeout = timeout)
+            val answer = engine.writing(customers) { engine.call(request, UsageEventsResult.serializer()) }
             val byIndex = answer.results.associateBy { it.index }
             if (answer.results.size != slice.size || byIndex.keys != slice.indices.toSet()) return failed(slice, missingResult)
             slice.mapIndexed { position, (index, event) ->
@@ -602,12 +599,10 @@ internal class AppClient(
         idempotencyKey: String?,
         timeout: Duration?,
     ): RegisteredCustomer {
-        engine.bump("me")
+        val request = ApiRequest("PUT", "/customers/me", idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout)
         return engine
-            .call(
-                ApiRequest("PUT", "/customers/me", idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout),
-                RegisteredCustomer.serializer(),
-            ).also { (me as CustomerImpl).named(it.externalId) }
+            .writing(listOf("me")) { engine.call(request, RegisteredCustomer.serializer()) }
+            .also { (me as CustomerImpl).named(it.externalId) }
     }
 
     override suspend fun scopes(timeout: Duration?): Scopes = scopesOf(engine, timeout)
@@ -753,12 +748,8 @@ internal class Customers(
                 period?.let { put("period", it) }
                 metadata?.let { put("metadata", JsonObject(it.mapValues { (_, v) -> JsonPrimitive(v) })) }
             }
-        engine.bump(externalId)
-        return engine
-            .call(
-                ApiRequest("POST", "/customers", body = body, idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout),
-                CustomerDetail.serializer(),
-            )
+        val request = ApiRequest("POST", "/customers", body = body, idempotencyKey = checkIdempotencyKey(idempotencyKey), timeout = timeout)
+        return engine.writing(listOf(externalId)) { engine.call(request, CustomerDetail.serializer()) }
     }
 }
 

@@ -538,8 +538,8 @@ internal open class CustomerImpl(
     ): T {
         val request = ApiRequest(method, base + path, query, body, checkIdempotencyKey(idempotencyKey, maxKeyLength), visitor, timeout)
         engine.ensureOpen()
-        if (changesAnswers) engine.bump(pathId)
-        return engine.call(request, deserializer).also(::noteCustomer)
+        val written = if (changesAnswers) listOf(pathId) else emptyList()
+        return engine.writing(written) { engine.call(request, deserializer) }.also(::noteCustomer)
     }
 
     private fun noteCustomer(answer: Any?) {

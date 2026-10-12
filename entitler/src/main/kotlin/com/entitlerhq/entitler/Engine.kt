@@ -248,6 +248,18 @@ internal class Engine(
         if (bumpedAt.size > pruneAt.get()) prune(stamp)
     }
 
+    suspend fun <T> writing(
+        customers: Collection<String>,
+        write: suspend () -> T,
+    ): T {
+        customers.forEach(::bump)
+        try {
+            return write()
+        } finally {
+            customers.forEach(::bump)
+        }
+    }
+
     private fun stamp(): Long {
         val reading = clock().coerceIn(Long.MIN_VALUE / NANOS_PER_MILLI, Long.MAX_VALUE / NANOS_PER_MILLI) * NANOS_PER_MILLI
         return lastStamp.updateAndGet { last -> if (reading > last) reading else last + 1 }

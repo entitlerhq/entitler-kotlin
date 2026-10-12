@@ -287,6 +287,50 @@ class CacheTest {
         }
 
     @Test
+    fun `a read started while a write is in flight is never served fresh once the write settles`() =
+        runTest {
+            for (outcome in listOf("succeeds", "fails", "is cancelled")) {
+                for (readDelay in listOf(0L, 800L)) {
+                    val api = FakeApi()
+                    api.server().use { server ->
+                        val write =
+                            when (outcome) {
+                                "succeeds" -> MockResponse.Builder().body(fixture("summary"))
+                                "fails" -> MockResponse.Builder().code(400).body("""{"error":{"code":"invalid_body","message":"No."}}""")
+                                else -> MockResponse.Builder().body(fixture("summary")).headersDelay(5, TimeUnit.SECONDS)
+                            }
+                        api.server.enqueue(write.headersDelay(if (outcome == "is cancelled") 5_000 else 500, TimeUnit.MILLISECONDS).build())
+                        api.server.enqueue(
+                            MockResponse
+                                .Builder()
+                                .body(fixture("check"))
+                                .addHeader(etag.first, etag.second)
+                                .addHeader("Cache-Control", "max-age=600")
+                                .headersDelay(readDelay, TimeUnit.MILLISECONDS)
+                                .build(),
+                        )
+                        api.replyFixture("check", 200, etag, "Cache-Control" to "max-age=600")
+                        val customer = server.customer("u")
+                        withContext(Dispatchers.IO) {
+                            val writing = async { runCatching { customer.update(name = "x") } }
+                            kotlinx.coroutines.delay(150)
+                            val read = async { customer.check("export_pdf") }
+                            if (outcome == "is cancelled") {
+                                kotlinx.coroutines.delay(300)
+                                writing.cancel()
+                            }
+                            writing.join()
+                            read.await()
+                        }
+                        customer.check("export_pdf")
+                        assertEquals(3, api.server.requestCount, "a write that $outcome, read answered after ${readDelay}ms")
+                    }
+                    api.close()
+                }
+            }
+        }
+
+    @Test
     fun `with a clock that never moves, a read answered after a write is kept fresh`() =
         runTest {
             api.server().use { server ->
