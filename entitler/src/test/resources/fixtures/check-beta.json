@@ -1,0 +1,31 @@
+{
+  "customer": "test_1013",
+  "environment": {
+    "id": "e034cZCD3ad9sb8UQMo0qHm",
+    "name": "development",
+    "kind": "test"
+  },
+  "track": {
+    "id": "j034cZCFn0c0wExPg0wwqXV",
+    "name": "Beta"
+  },
+  "release": null,
+  "change": "q034cZCEdkcfitC4eoCNoMZ",
+  "testers": true,
+  "experiment": null,
+  "asOf": "2026-10-09T02:12:41.542Z",
+  "feature": "sso",
+  "type": "boolean",
+  "entitled": false,
+  "value": 0,
+  "sources": [],
+  "upgrades": [
+    {
+      "plan": "sso_addon",
+      "name": "SSO",
+      "move": "add",
+      "action": "buy",
+      "reason": null
+    }
+  ]
+}

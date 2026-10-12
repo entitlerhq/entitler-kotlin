@@ -9,3 +9,4 @@ local.properties
 *.class
 *.log
 .DS_Store
+*.hprof

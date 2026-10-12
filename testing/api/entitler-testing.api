@@ -1,0 +1,118 @@
+public final class com/entitlerhq/entitler/testing/Answers {
+	public static final field INSTANCE Lcom/entitlerhq/entitler/testing/Answers;
+	public final fun billingSync (Z)Lcom/entitlerhq/entitler/BillingSync;
+	public static synthetic fun billingSync$default (Lcom/entitlerhq/entitler/testing/Answers;ZILjava/lang/Object;)Lcom/entitlerhq/entitler/BillingSync;
+	public final fun body (Lcom/entitlerhq/entitler/BillingSync;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/Check;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/CustomerBilling;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/CustomerDetail;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/CustomerPage;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/CustomerPlans;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/CustomerSummary;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/CustomerTrack;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/CustomerUsage;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/Entitlements;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/FeatureList;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/GrantChange;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/IssuedCustomerToken;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/IssuedSnapshot;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/MeteredCheck;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/PlanChange;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/Pricing;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/ProviderPage;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/RegisteredCustomer;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/SnapshotKeys;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/SubscribeStep;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/UsageEventsResult;)Ljava/lang/String;
+	public final fun body (Lcom/entitlerhq/entitler/UsageResult;)Ljava/lang/String;
+	public final fun check (Ljava/lang/String;ZLcom/entitlerhq/entitler/FeatureValue;Lcom/entitlerhq/entitler/FeatureType;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/Long;Lcom/entitlerhq/entitler/Limit;Ljava/time/Instant;Ljava/util/List;Ljava/time/Instant;)Lcom/entitlerhq/entitler/Check;
+	public static synthetic fun check$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;ZLcom/entitlerhq/entitler/FeatureValue;Lcom/entitlerhq/entitler/FeatureType;Ljava/lang/String;Ljava/lang/Long;Ljava/lang/Long;Lcom/entitlerhq/entitler/Limit;Ljava/time/Instant;Ljava/util/List;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Check;
+	public final fun customerBilling ()Lcom/entitlerhq/entitler/CustomerBilling;
+	public final fun customerDetail (Lcom/entitlerhq/entitler/CustomerSummary;Ljava/util/List;Ljava/util/List;)Lcom/entitlerhq/entitler/CustomerDetail;
+	public static synthetic fun customerDetail$default (Lcom/entitlerhq/entitler/testing/Answers;Lcom/entitlerhq/entitler/CustomerSummary;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerDetail;
+	public final fun customerPage (Ljava/util/List;Ljava/lang/String;JLcom/entitlerhq/entitler/Limit;)Lcom/entitlerhq/entitler/CustomerPage;
+	public static synthetic fun customerPage$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/util/List;Ljava/lang/String;JLcom/entitlerhq/entitler/Limit;ILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerPage;
+	public final fun customerPlans (Ljava/util/List;Ljava/util/List;Ljava/lang/String;Ljava/time/Instant;)Lcom/entitlerhq/entitler/CustomerPlans;
+	public static synthetic fun customerPlans$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/util/List;Ljava/util/List;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerPlans;
+	public final fun customerSummary (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/PlanSummary;Ljava/util/Map;)Lcom/entitlerhq/entitler/CustomerSummary;
+	public static synthetic fun customerSummary$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lcom/entitlerhq/entitler/PlanSummary;Ljava/util/Map;ILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerSummary;
+	public final fun customerTrack (Lcom/entitlerhq/entitler/Track;Ljava/lang/String;)Lcom/entitlerhq/entitler/CustomerTrack;
+	public static synthetic fun customerTrack$default (Lcom/entitlerhq/entitler/testing/Answers;Lcom/entitlerhq/entitler/Track;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerTrack;
+	public final fun customerUsage (Ljava/util/List;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;)Lcom/entitlerhq/entitler/CustomerUsage;
+	public static synthetic fun customerUsage$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/util/List;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/CustomerUsage;
+	public final fun entitlement (Ljava/lang/String;ZLcom/entitlerhq/entitler/FeatureValue;Lcom/entitlerhq/entitler/FeatureType;Ljava/lang/Long;Ljava/lang/Long;Lcom/entitlerhq/entitler/Limit;Ljava/util/List;)Lcom/entitlerhq/entitler/Entitlement;
+	public static synthetic fun entitlement$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;ZLcom/entitlerhq/entitler/FeatureValue;Lcom/entitlerhq/entitler/FeatureType;Ljava/lang/Long;Ljava/lang/Long;Lcom/entitlerhq/entitler/Limit;Ljava/util/List;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Entitlement;
+	public final fun entitlements (Ljava/util/List;Ljava/lang/String;Ljava/time/Instant;)Lcom/entitlerhq/entitler/Entitlements;
+	public static synthetic fun entitlements$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/util/List;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Entitlements;
+	public final fun featureList (Ljava/util/List;)Lcom/entitlerhq/entitler/FeatureList;
+	public static synthetic fun featureList$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/util/List;ILjava/lang/Object;)Lcom/entitlerhq/entitler/FeatureList;
+	public final fun getAS_OF ()Ljava/time/Instant;
+	public final fun getENVIRONMENT ()Lcom/entitlerhq/entitler/Environment;
+	public final fun getTRACK ()Lcom/entitlerhq/entitler/Track;
+	public final fun grantChange (Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/time/Instant;Ljava/lang/String;)Lcom/entitlerhq/entitler/GrantChange;
+	public static synthetic fun grantChange$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;Ljava/time/Instant;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/GrantChange;
+	public final fun issuedCustomerToken (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/entitlerhq/entitler/IssuedCustomerToken;
+	public static synthetic fun issuedCustomerToken$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/entitlerhq/entitler/IssuedCustomerToken;
+	public final fun issuedSnapshot (Ljava/lang/String;)Lcom/entitlerhq/entitler/IssuedSnapshot;
+	public static synthetic fun issuedSnapshot$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/IssuedSnapshot;
+	public final fun meteredCheck (Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;JJLcom/entitlerhq/entitler/Limit;ZLjava/lang/String;Ljava/time/Instant;Ljava/util/List;Ljava/time/Instant;)Lcom/entitlerhq/entitler/MeteredCheck;
+	public static synthetic fun meteredCheck$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;Lcom/entitlerhq/entitler/FeatureValue;JJLcom/entitlerhq/entitler/Limit;ZLjava/lang/String;Ljava/time/Instant;Ljava/util/List;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/MeteredCheck;
+	public final fun plan (Ljava/lang/String;)Lcom/entitlerhq/entitler/PlanSummary;
+	public final fun planChange (Ljava/lang/String;Ljava/lang/Long;Lcom/entitlerhq/entitler/Effective;ZLjava/time/Instant;)Lcom/entitlerhq/entitler/PlanChange;
+	public static synthetic fun planChange$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;Ljava/lang/Long;Lcom/entitlerhq/entitler/Effective;ZLjava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/PlanChange;
+	public final fun pricing (Ljava/util/List;Ljava/util/List;Ljava/lang/String;)Lcom/entitlerhq/entitler/Pricing;
+	public static synthetic fun pricing$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/util/List;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/Pricing;
+	public final fun providerPage (Ljava/lang/String;)Lcom/entitlerhq/entitler/ProviderPage;
+	public static synthetic fun providerPage$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;ILjava/lang/Object;)Lcom/entitlerhq/entitler/ProviderPage;
+	public final fun registeredCustomer (Ljava/lang/String;Z)Lcom/entitlerhq/entitler/RegisteredCustomer;
+	public static synthetic fun registeredCustomer$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;ZILjava/lang/Object;)Lcom/entitlerhq/entitler/RegisteredCustomer;
+	public final fun scopesBody (Ljava/util/List;Ljava/lang/Boolean;)Ljava/lang/String;
+	public static synthetic fun scopesBody$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/util/List;Ljava/lang/Boolean;ILjava/lang/Object;)Ljava/lang/String;
+	public final fun snapshotKeys (Ljava/util/List;)Lcom/entitlerhq/entitler/SnapshotKeys;
+	public static synthetic fun snapshotKeys$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/util/List;ILjava/lang/Object;)Lcom/entitlerhq/entitler/SnapshotKeys;
+	public final fun usageEvent (Ljava/lang/String;JLcom/entitlerhq/entitler/UsageEventKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;)Lcom/entitlerhq/entitler/UsageEvent;
+	public static synthetic fun usageEvent$default (Lcom/entitlerhq/entitler/testing/Answers;Ljava/lang/String;JLcom/entitlerhq/entitler/UsageEventKind;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/UsageEvent;
+	public final fun usageEventsResult (Ljava/util/List;)Lcom/entitlerhq/entitler/UsageEventsResult;
+	public final fun usageResult (Lcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;JLcom/entitlerhq/entitler/FeatureValue;JJLcom/entitlerhq/entitler/UsageMode;Lcom/entitlerhq/entitler/UsageRefusal;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JJLjava/lang/String;Ljava/time/Instant;)Lcom/entitlerhq/entitler/UsageResult;
+	public static synthetic fun usageResult$default (Lcom/entitlerhq/entitler/testing/Answers;Lcom/entitlerhq/entitler/UsageOutcome;Ljava/lang/String;JLcom/entitlerhq/entitler/FeatureValue;JJLcom/entitlerhq/entitler/UsageMode;Lcom/entitlerhq/entitler/UsageRefusal;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JJLjava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)Lcom/entitlerhq/entitler/UsageResult;
+}
+
+public abstract interface class com/entitlerhq/entitler/testing/FakeCustomer : com/entitlerhq/entitler/ServerCustomer {
+	public abstract fun answer (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public abstract fun getWrites ()Ljava/util/List;
+}
+
+public final class com/entitlerhq/entitler/testing/FakeCustomerKt {
+	public static final fun fakeCustomer ([Lkotlin/Pair;Ljava/lang/String;Lcom/entitlerhq/entitler/CustomerPlans;Lcom/entitlerhq/entitler/Pricing;)Lcom/entitlerhq/entitler/testing/FakeCustomer;
+	public static synthetic fun fakeCustomer$default ([Lkotlin/Pair;Ljava/lang/String;Lcom/entitlerhq/entitler/CustomerPlans;Lcom/entitlerhq/entitler/Pricing;ILjava/lang/Object;)Lcom/entitlerhq/entitler/testing/FakeCustomer;
+	public static final fun metered (JJ)Lcom/entitlerhq/entitler/testing/FakeMeter;
+	public static synthetic fun metered$default (JJILjava/lang/Object;)Lcom/entitlerhq/entitler/testing/FakeMeter;
+}
+
+public final class com/entitlerhq/entitler/testing/FakeMeter {
+	public fun <init> (Lcom/entitlerhq/entitler/FeatureValue;J)V
+	public synthetic fun <init> (Lcom/entitlerhq/entitler/FeatureValue;JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/entitlerhq/entitler/FeatureValue;
+	public final fun component2 ()J
+	public final fun copy (Lcom/entitlerhq/entitler/FeatureValue;J)Lcom/entitlerhq/entitler/testing/FakeMeter;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/testing/FakeMeter;Lcom/entitlerhq/entitler/FeatureValue;JILjava/lang/Object;)Lcom/entitlerhq/entitler/testing/FakeMeter;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getUsed ()J
+	public final fun getValue ()Lcom/entitlerhq/entitler/FeatureValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/entitlerhq/entitler/testing/FakeWrite {
+	public fun <init> (Ljava/lang/String;Ljava/util/Map;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/util/Map;)Lcom/entitlerhq/entitler/testing/FakeWrite;
+	public static synthetic fun copy$default (Lcom/entitlerhq/entitler/testing/FakeWrite;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lcom/entitlerhq/entitler/testing/FakeWrite;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArguments ()Ljava/util/Map;
+	public final fun getMethod ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

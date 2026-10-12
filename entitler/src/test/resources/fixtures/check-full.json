@@ -1,0 +1,43 @@
+{
+  "customer": "test_1001",
+  "environment": {
+    "id": "e034cZCD3ad9sb8UQMo0qHm",
+    "name": "development",
+    "kind": "test"
+  },
+  "track": {
+    "id": "j034cZCFcZyk42tVBYDCN4t",
+    "name": "All customers"
+  },
+  "release": 2,
+  "change": null,
+  "testers": true,
+  "experiment": {
+    "id": "x_1",
+    "arm": "variant"
+  },
+  "asOf": "2026-10-09T02:12:29.534Z",
+  "feature": "export_pdf",
+  "type": "boolean",
+  "entitled": true,
+  "value": true,
+  "sources": [
+    {
+      "type": "plan",
+      "plan": "pro",
+      "name": "Pro",
+      "version": 1,
+      "byDefault": false,
+      "value": true
+    }
+  ],
+  "upgrades": [
+    {
+      "plan": "team",
+      "name": "Team",
+      "move": "upgrade",
+      "action": "buy",
+      "reason": null
+    }
+  ]
+}

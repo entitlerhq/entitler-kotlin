@@ -1,0 +1,17 @@
+complexity:
+  TooManyFunctions:
+    active: false
+  LongParameterList:
+    active: false
+style:
+  MaxLineLength:
+    maxLineLength: 140
+  ReturnCount:
+    max: 3
+    excludeGuardClauses: true
+  ThrowsCount:
+    max: 4
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreNumbers: ['-1', '0', '1', '2', '3']

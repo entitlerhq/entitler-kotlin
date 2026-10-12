@@ -1,0 +1,820 @@
+{
+  "customer": {
+    "id": "c034cZCGNGv3SumpZ3nPjaw",
+    "externalId": "test_1001",
+    "name": "Alice Ng",
+    "email": "alice@example.com",
+    "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+    "sample": true,
+    "createdAt": "2026-09-18T21:30:19.974Z",
+    "plan": {
+      "id": "n034cZCEdkcfitBL3jmQ6jy",
+      "key": "pro",
+      "name": "Pro",
+      "version": 1
+    },
+    "plans": [
+      {
+        "id": "n034cZCEdkcfitBL3jmQ6jy",
+        "key": "pro",
+        "name": "Pro",
+        "version": 1,
+        "product": "main"
+      }
+    ],
+    "defaultPlan": null,
+    "status": "Active, renews 18 Oct 2026",
+    "kind": "recurring",
+    "metadata": {},
+    "track": {
+      "id": "j034cZCFcZyk42tVBYDCN4t",
+      "name": "All customers"
+    },
+    "testCustomer": true
+  },
+  "environment": {
+    "id": "e034cZCD3ad9sb8UQMo0qHm",
+    "name": "development",
+    "kind": "test"
+  },
+  "asOf": "2026-10-09T02:12:36.279Z",
+  "subscription": {
+    "purchase": {
+      "money": "real",
+      "channel": {
+        "provider": "stripe",
+        "connectionId": "cn_1"
+      },
+      "release": 1,
+      "change": null,
+      "arm": "variant"
+    },
+    "product": {
+      "key": "main",
+      "name": "Main"
+    },
+    "plan": {
+      "id": "n034cZCEdkcfitBL3jmQ6jy",
+      "key": "pro",
+      "name": "Pro"
+    },
+    "version": 1,
+    "cohort": 2,
+    "period": {
+      "key": "monthly",
+      "label": "Monthly"
+    },
+    "startedAt": "2026-09-18T21:30:19.974Z",
+    "renewsAt": "2026-10-18T21:30:19.974Z",
+    "billing": {
+      "provider": "stripe",
+      "startsAt": "2026-10-01T00:00:00.000Z",
+      "endsAt": "2026-11-01T00:00:00.000Z",
+      "trialEndsAt": null,
+      "cancelsAt": "2026-11-01T00:00:00.000Z"
+    },
+    "until": "2026-12-01T00:00:00.000Z",
+    "addOns": [
+      {
+        "purchase": {
+          "money": "test",
+          "channel": null,
+          "release": 1,
+          "change": null,
+          "arm": null
+        },
+        "plan": {
+          "id": "n034cZCEdkcfitBLzDmlgqo",
+          "key": "sso_addon",
+          "name": "SSO"
+        },
+        "version": 1,
+        "quantity": 1,
+        "countable": false,
+        "addedAt": "2026-09-28T21:30:19.974Z",
+        "movingTo": {
+          "id": "n_4",
+          "key": "support_premium",
+          "name": "Support premium"
+        }
+      }
+    ],
+    "pending": {
+      "type": "move",
+      "plan": {
+        "id": "n_2",
+        "key": "pro_basic",
+        "name": "Pro basic"
+      }
+    },
+    "override": {
+      "from": {
+        "id": "p_free",
+        "key": "free",
+        "name": "Free"
+      },
+      "period": null,
+      "billedBy": {
+        "provider": "stripe",
+        "connectionId": "c_1"
+      },
+      "since": "2026-10-01T00:00:00.000Z",
+      "by": "Support key"
+    }
+  },
+  "defaultPlan": {
+    "id": "n034cZCEdkcfitBG6SqHAJH",
+    "key": "free",
+    "name": "Free"
+  },
+  "products": [
+    {
+      "product": {
+        "key": "main",
+        "name": "Main"
+      },
+      "defaultPlan": {
+        "id": "n034cZCEdkcfitBG6SqHAJH",
+        "key": "free",
+        "name": "Free"
+      },
+      "subscription": {
+        "purchase": {
+          "money": "test",
+          "channel": null,
+          "release": 1,
+          "change": null,
+          "arm": null
+        },
+        "product": {
+          "key": "main",
+          "name": "Main"
+        },
+        "plan": {
+          "id": "n034cZCEdkcfitBL3jmQ6jy",
+          "key": "pro",
+          "name": "Pro"
+        },
+        "version": 1,
+        "cohort": 2,
+        "period": {
+          "key": "monthly",
+          "label": "Monthly"
+        },
+        "startedAt": "2026-09-18T21:30:19.974Z",
+        "renewsAt": "2026-10-18T21:30:19.974Z",
+        "billing": null,
+        "until": null,
+        "addOns": [
+          {
+            "purchase": {
+              "money": "test",
+              "channel": null,
+              "release": 1,
+              "change": null,
+              "arm": null
+            },
+            "plan": {
+              "id": "n034cZCEdkcfitBLzDmlgqo",
+              "key": "sso_addon",
+              "name": "SSO"
+            },
+            "version": 1,
+            "quantity": 1,
+            "countable": false,
+            "addedAt": "2026-09-28T21:30:19.974Z",
+            "movingTo": null
+          }
+        ],
+        "pending": null,
+        "override": null
+      }
+    }
+  ],
+  "addOns": [
+    {
+      "purchase": {
+        "money": "test",
+        "channel": null,
+        "release": 1,
+        "change": null,
+        "arm": null
+      },
+      "plan": {
+        "id": "n034cZCEdkcfitBLzDmlgqo",
+        "key": "sso_addon",
+        "name": "SSO"
+      },
+      "version": 1,
+      "quantity": 1,
+      "countable": false,
+      "addedAt": "2026-09-28T21:30:19.974Z",
+      "movingTo": {
+        "id": "n_4",
+        "key": "support_premium",
+        "name": "Support premium"
+      }
+    }
+  ],
+  "entitlements": [
+    {
+      "key": "export_pdf",
+      "type": "boolean",
+      "value": true,
+      "sources": [
+        {
+          "type": "plan",
+          "plan": "pro",
+          "name": "Pro",
+          "version": 1,
+          "byDefault": false,
+          "value": true
+        }
+      ],
+      "entitled": true,
+      "upgrades": []
+    },
+    {
+      "key": "priority_support",
+      "type": "boolean",
+      "value": true,
+      "sources": [
+        {
+          "type": "plan",
+          "plan": "pro",
+          "name": "Pro",
+          "version": 1,
+          "byDefault": false,
+          "value": true
+        }
+      ],
+      "entitled": true,
+      "upgrades": []
+    },
+    {
+      "key": "support_sla_hours",
+      "type": "config",
+      "value": 24,
+      "sources": [
+        {
+          "type": "plan",
+          "plan": "pro",
+          "name": "Pro",
+          "version": 1,
+          "byDefault": false,
+          "value": 24
+        }
+      ],
+      "entitled": true,
+      "upgrades": []
+    },
+    {
+      "key": "ai_credits",
+      "type": "metered",
+      "value": 300,
+      "sources": [
+        {
+          "type": "plan",
+          "plan": "pro",
+          "name": "Pro",
+          "version": 1,
+          "byDefault": false,
+          "value": 300
+        }
+      ],
+      "used": 0,
+      "remaining": 300,
+      "resetsAt": "2026-10-18T21:30:19.974Z",
+      "entitled": true,
+      "held": 0,
+      "upgrades": []
+    },
+    {
+      "key": "sso",
+      "type": "boolean",
+      "value": true,
+      "sources": [
+        {
+          "type": "addon",
+          "plan": "sso_addon",
+          "name": "SSO",
+          "version": 1,
+          "quantity": 1,
+          "value": true
+        }
+      ],
+      "entitled": true,
+      "upgrades": []
+    },
+    {
+      "key": "ai_credits_pack",
+      "type": "metered",
+      "entitled": true,
+      "value": "unlimited",
+      "sources": [
+        {
+          "type": "grant",
+          "grant": "g_2",
+          "until": null,
+          "value": "unlimited"
+        },
+        {
+          "type": "banked",
+          "value": 50
+        },
+        {
+          "type": "addon",
+          "plan": "pack",
+          "name": "Pack",
+          "version": 1,
+          "quantity": 2,
+          "value": 100
+        }
+      ],
+      "used": 3,
+      "held": 1,
+      "remaining": "unlimited",
+      "resetsAt": null,
+      "upgrades": []
+    }
+  ],
+  "banked": {
+    "ai_credits": 50
+  },
+  "moveOptions": [
+    {
+      "plan": {
+        "id": "n034cZCEdkcfitBJnglELre",
+        "key": "pro_basic",
+        "name": "Pro basic",
+        "kind": "plan",
+        "description": "",
+        "default": false
+      },
+      "product": {
+        "key": "main",
+        "name": "Main"
+      },
+      "move": "upgrade",
+      "from": {
+        "id": "n034cZCEdkcfitBL3jmQ6jy",
+        "key": "pro",
+        "name": "Pro"
+      },
+      "when": "end",
+      "impact": [
+        {
+          "kind": "loses",
+          "text": "Priority support"
+        },
+        {
+          "kind": "changes",
+          "text": "Support SLA from 24 to 48 hours"
+        },
+        {
+          "kind": "changes",
+          "text": "AI credits from 300 to 200 credits"
+        },
+        {
+          "kind": "loses",
+          "text": "Single sign-on"
+        }
+      ],
+      "skus": [
+        {
+          "period": {
+            "key": "monthly",
+            "label": "Monthly"
+          },
+          "connector": "stripe",
+          "ids": {
+            "price": "price_1"
+          },
+          "price": {
+            "amount": 2900,
+            "currency": "aud",
+            "interval": "month",
+            "intervalCount": 1,
+            "tax": "inclusive"
+          }
+        }
+      ],
+      "action": "buy",
+      "reason": null,
+      "periods": [
+        {
+          "key": "monthly",
+          "label": "Monthly"
+        }
+      ]
+    },
+    {
+      "plan": {
+        "id": "n034cZCEdkcfitBIKXtknBq",
+        "key": "starter",
+        "name": "Starter",
+        "kind": "plan",
+        "description": "",
+        "default": false
+      },
+      "product": {
+        "key": "main",
+        "name": "Main"
+      },
+      "move": "upgrade",
+      "from": {
+        "id": "n034cZCEdkcfitBL3jmQ6jy",
+        "key": "pro",
+        "name": "Pro"
+      },
+      "when": "end",
+      "impact": [
+        {
+          "kind": "loses",
+          "text": "Priority support"
+        },
+        {
+          "kind": "loses",
+          "text": "Support SLA"
+        },
+        {
+          "kind": "loses",
+          "text": "AI credits"
+        },
+        {
+          "kind": "loses",
+          "text": "Single sign-on"
+        }
+      ],
+      "skus": [],
+      "action": "unavailable",
+      "reason": "Starter is no longer sold",
+      "periods": [
+        {
+          "key": "monthly",
+          "label": "Monthly"
+        }
+      ]
+    },
+    {
+      "plan": {
+        "id": "n034cZCEdkcfitBG6SqHAJH",
+        "key": "free",
+        "name": "Free",
+        "kind": "plan",
+        "description": "",
+        "default": false
+      },
+      "product": {
+        "key": "main",
+        "name": "Main"
+      },
+      "move": "upgrade",
+      "from": {
+        "id": "n034cZCEdkcfitBL3jmQ6jy",
+        "key": "pro",
+        "name": "Pro"
+      },
+      "when": "end",
+      "impact": [
+        {
+          "kind": "loses",
+          "text": "Export to PDF"
+        },
+        {
+          "kind": "loses",
+          "text": "Priority support"
+        },
+        {
+          "kind": "loses",
+          "text": "Support SLA"
+        },
+        {
+          "kind": "changes",
+          "text": "AI credits from 300 to 20 credits"
+        },
+        {
+          "kind": "loses",
+          "text": "Single sign-on"
+        }
+      ],
+      "skus": [],
+      "action": "buy",
+      "reason": null,
+      "periods": [
+        {
+          "key": "monthly",
+          "label": "Monthly"
+        }
+      ]
+    }
+  ],
+  "grants": [
+    {
+      "id": "g_1",
+      "feature": "sso",
+      "value": "",
+      "from": "2026-10-01T00:00:00.000Z",
+      "until": "2026-11-01T00:00:00.000Z",
+      "revokedAt": null,
+      "reason": "Pilot",
+      "by": "admin@example.com",
+      "actor": null
+    }
+  ],
+  "usage": {
+    "items": [
+      {
+        "id": "v034cZCGNGv3SunooPpEduZ",
+        "feature": "sso",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-08T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunnGa5Ov3U",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-08T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunlcXf9H8T",
+        "feature": "ai_credits",
+        "amount": 53,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-08T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunktXF6eP4",
+        "feature": "sso",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-06T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3Sunj9bjFHDq",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-06T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunhznSQBPM",
+        "feature": "ai_credits",
+        "amount": 53,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-06T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SungeflIyju",
+        "feature": "sso",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-04T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunfVbCV5HB",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-04T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunfFWi4maz",
+        "feature": "ai_credits",
+        "amount": 53,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-04T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SundDi13vCA",
+        "feature": "sso",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-02T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunbZmxMwJT",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-02T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3Sunb5R3OBSO",
+        "feature": "ai_credits",
+        "amount": 53,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-10-02T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3Suna7rrZD4n",
+        "feature": "sso",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-09-30T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunXy1LY9aD",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-09-30T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunWdgFzVBU",
+        "feature": "sso",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-09-28T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunVo8YhCzr",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-09-28T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunV5hfilQx",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-09-26T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunTjHoCumL",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-09-24T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v034cZCGNGv3SunSFH9WZhr",
+        "feature": "export_pdf",
+        "amount": 1,
+        "kind": "use",
+        "source": "api",
+        "actor": null,
+        "at": "2026-09-22T21:30:19.974Z",
+        "setTo": null,
+        "by": null,
+        "reason": null,
+        "cancelledAt": null
+      },
+      {
+        "id": "v_2",
+        "feature": "ai_credits",
+        "amount": -5,
+        "kind": "adjust",
+        "setTo": 10,
+        "source": "dashboard",
+        "actor": "admin@example.com",
+        "at": "2026-10-08T00:00:00.000Z",
+        "cancelledAt": "2026-10-08T01:00:00.000Z",
+        "by": null,
+        "reason": null
+      }
+    ],
+    "next": null
+  },
+  "activity": [
+    {
+      "text": "Added SSO v1",
+      "at": "2026-09-28T21:30:19.974Z",
+      "by": "Support key",
+      "actor": "agent@example.com",
+      "reason": "Goodwill"
+    },
+    {
+      "text": "Joined SSO cohort: Version 1 signups",
+      "at": "2026-09-28T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
+    },
+    {
+      "text": "Subscribed to Pro v1, Monthly",
+      "at": "2026-09-18T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
+    },
+    {
+      "text": "Joined Pro cohort: Launch offer",
+      "at": "2026-09-18T21:30:19.974Z",
+      "by": null,
+      "actor": null,
+      "reason": null
+    }
+  ]
+}

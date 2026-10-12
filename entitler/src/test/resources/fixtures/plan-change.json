@@ -1,0 +1,16 @@
+{
+  "product": {
+    "key": "main",
+    "name": "Main"
+  },
+  "plan": {
+    "id": "p_pro",
+    "key": "pro",
+    "name": "Pro"
+  },
+  "quantity": null,
+  "effective": "now",
+  "at": "2026-10-09T01:00:00.000Z",
+  "until": null,
+  "changed": true
+}

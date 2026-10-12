@@ -1,0 +1,304 @@
+{
+  "items": [
+    {
+      "id": "c034cZCGNGv3SumpZ3nPjaw",
+      "externalId": "test_1001",
+      "name": "Alice Ng",
+      "email": "alice@example.com",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2026-09-18T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBL3jmQ6jy",
+        "key": "pro",
+        "name": "Pro",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBL3jmQ6jy",
+          "key": "pro",
+          "name": "Pro",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Active, renews 18 Oct 2026",
+      "kind": "recurring",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": true
+    },
+    {
+      "id": "c034cZCGNGv3Sumt9cAeyMR",
+      "externalId": "test_1002",
+      "name": "Bob Marsh",
+      "email": "bob@example.com",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2026-08-09T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBG6SqHAJH",
+        "key": "free",
+        "name": "Free",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBG6SqHAJH",
+          "key": "free",
+          "name": "Free",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Active, renews 9 Oct 2026",
+      "kind": "recurring",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": false
+    },
+    {
+      "id": "c034cZCGNGv3Sumvzh5g2ov",
+      "externalId": "test_1003",
+      "name": "Chen Wu",
+      "email": "chen@example.com",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2026-09-13T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBL3jmQ6jy",
+        "key": "pro",
+        "name": "Pro",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBL3jmQ6jy",
+          "key": "pro",
+          "name": "Pro",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Active, has a grant until 4 Nov",
+      "kind": "recurring",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": true
+    },
+    {
+      "id": "c034cZCGNGv3SumzYPF6GWS",
+      "externalId": "test_1004",
+      "name": "Dana Kerr",
+      "email": "",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2025-12-12T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBIKXtknBq",
+        "key": "starter",
+        "name": "Starter",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBIKXtknBq",
+          "key": "starter",
+          "name": "Starter",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Active on a legacy plan",
+      "kind": "recurring",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": true
+    },
+    {
+      "id": "c034cZCGNGv3Sun1XaWy22z",
+      "externalId": "test_1005",
+      "name": "Eve Lund",
+      "email": "eve@example.com",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2026-03-22T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBL3jmQ6jy",
+        "key": "pro",
+        "name": "Pro",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBL3jmQ6jy",
+          "key": "pro",
+          "name": "Pro",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Cancelled, moves to Free on 22 Mar 2027",
+      "kind": "changing",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": true
+    },
+    {
+      "id": "c034cZCGNGv3Sun5EBz72PH",
+      "externalId": "test_1006",
+      "name": "Farid Haddad",
+      "email": "farid@example.com",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2026-08-24T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBJnglELre",
+        "key": "pro_basic",
+        "name": "Pro basic",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBJnglELre",
+          "key": "pro_basic",
+          "name": "Pro basic",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Active, renews 24 Oct 2026",
+      "kind": "recurring",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": true
+    },
+    {
+      "id": "c034cZCGNGv3Sun8ROFyyoD",
+      "externalId": "test_1007",
+      "name": "Hiro Sato",
+      "email": "",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2026-10-03T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBG6SqHAJH",
+        "key": "free",
+        "name": "Free",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBG6SqHAJH",
+          "key": "free",
+          "name": "Free",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Active, renews 3 Nov 2026",
+      "kind": "recurring",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": false
+    },
+    {
+      "id": "c034cZCGNGv3SunAkf04xaP",
+      "externalId": "test_1008",
+      "name": "Iris Moreau",
+      "email": "iris@example.com",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2026-06-30T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBL3jmQ6jy",
+        "key": "pro",
+        "name": "Pro",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBL3jmQ6jy",
+          "key": "pro",
+          "name": "Pro",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Moving to Pro basic on 30 Oct 2026",
+      "kind": "changing",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": true
+    },
+    {
+      "id": "c034cZCGNGv3SunGF3BO6IY",
+      "externalId": "test_1009",
+      "name": "Jun Park",
+      "email": "",
+      "environmentId": "e034cZCD3ad9sb8UQMo0qHm",
+      "sample": true,
+      "createdAt": "2025-05-26T21:30:19.974Z",
+      "plan": {
+        "id": "n034cZCEdkcfitBIKXtknBq",
+        "key": "starter",
+        "name": "Starter",
+        "version": 1
+      },
+      "plans": [
+        {
+          "id": "n034cZCEdkcfitBIKXtknBq",
+          "key": "starter",
+          "name": "Starter",
+          "version": 1,
+          "product": "main"
+        }
+      ],
+      "defaultPlan": null,
+      "status": "Active on a legacy plan",
+      "kind": "recurring",
+      "metadata": {},
+      "track": {
+        "id": "j034cZCFcZyk42tVBYDCN4t",
+        "name": "All customers"
+      },
+      "testCustomer": true
+    }
+  ],
+  "next": null,
+  "used": 0,
+  "limit": "unlimited"
+}
